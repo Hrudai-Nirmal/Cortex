@@ -33,7 +33,9 @@ const queryResponse = {
     },
   ],
   x_cortex: {
+    contractVersion: "v1",
     traceId: "4576b626-c27a-4409-9a51-600cf115ff4a",
+    traceEventsPath: "/v1/query/4576b626-c27a-4409-9a51-600cf115ff4a/events",
     route: "rag",
     correctedQuery: null,
     evidenceStatus: "sufficient",

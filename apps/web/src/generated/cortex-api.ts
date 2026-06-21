@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/startup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getstartupreadiness
+         * @description Report startup-safe deployment checks without hitting database or model endpoints.
+         */
+        get: operations["getStartupReadiness_health_startup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/session": {
         parameters: {
             query?: never;
@@ -238,6 +258,26 @@ export interface paths {
          * @description Execute the fixed query route and return only validated claims.
          */
         post: operations["submitQuery_v1_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chat/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submitchatcompletion
+         * @description Expose one OpenAI-compatible query facade for replacement client chat surfaces.
+         */
+        post: operations["submitChatCompletion_v1_chat_completions_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -469,6 +509,86 @@ export interface components {
             metadata?: string | null;
         };
         /**
+         * ChatCompletionChoiceMessageSchema
+         * @description Return the assistant message in the shape expected by OpenAI-style clients.
+         */
+        ChatCompletionChoiceMessageSchema: {
+            /**
+             * Role
+             * @constant
+             */
+            role: "assistant";
+            /** Content */
+            content: string;
+        };
+        /**
+         * ChatCompletionChoiceSchema
+         * @description Return one non-streaming assistant choice for the bounded Cortex answer.
+         */
+        ChatCompletionChoiceSchema: {
+            /** Index */
+            index: number;
+            message: components["schemas"]["ChatCompletionChoiceMessageSchema"];
+            /**
+             * Finish Reason
+             * @default stop
+             * @constant
+             */
+            finish_reason: "stop";
+        };
+        /**
+         * ChatCompletionRequestSchema
+         * @description Accept the minimal OpenAI-compatible request shape for client-owned chat shells.
+         */
+        ChatCompletionRequestSchema: {
+            /**
+             * Model
+             * @default cortex-bounded-rag
+             */
+            model: string;
+            /** Messages */
+            messages: components["schemas"]["ChatMessageSchema"][];
+            /**
+             * Stream
+             * @default false
+             */
+            stream: boolean;
+            cortex?: components["schemas"]["ExternalQueryOptionsSchema"];
+        };
+        /**
+         * ChatCompletionResponseSchema
+         * @description Return an OpenAI-style chat completion plus Cortex evidence extension fields.
+         */
+        ChatCompletionResponseSchema: {
+            /** Id */
+            id: string;
+            /**
+             * Object
+             * @constant
+             */
+            object: "chat.completion";
+            /** Created */
+            created: number;
+            /** Model */
+            model: string;
+            /** Choices */
+            choices: components["schemas"]["ChatCompletionChoiceSchema"][];
+            x_cortex: components["schemas"]["ExternalQueryMetadataSchema"];
+        };
+        /**
+         * ChatMessageSchema
+         * @description Carry one OpenAI-compatible chat message used by replacement query shells.
+         */
+        ChatMessageSchema: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "system" | "user" | "assistant";
+            /** Content */
+            content: string;
+        };
+        /**
          * CitationSchema
          * @description Map an answer claim to an exact versioned source span.
          */
@@ -589,6 +709,55 @@ export interface components {
             documentVersionId: string;
             /** Status */
             status: string;
+        };
+        /**
+         * ExternalQueryMetadataSchema
+         * @description Expose evidence metadata replacement query shells need beside assistant text.
+         */
+        ExternalQueryMetadataSchema: {
+            /**
+             * Contractversion
+             * @constant
+             */
+            contractVersion: "v1";
+            /**
+             * Traceid
+             * Format: uuid
+             */
+            traceId: string;
+            /** Traceeventspath */
+            traceEventsPath: string;
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "rag" | "compute" | "retrieve-then-compute";
+            /** Correctedquery */
+            correctedQuery: string | null;
+            /**
+             * Evidencestatus
+             * @enum {string}
+             */
+            evidenceStatus: "sufficient" | "partial" | "insufficient" | "conflict";
+            /** Abstained */
+            abstained: boolean;
+            /** Claims */
+            claims: components["schemas"]["ClaimSchema"][];
+            /** Citations */
+            citations: components["schemas"]["CitationSchema"][];
+            /** Stages */
+            stages: components["schemas"]["StageSchema"][];
+        };
+        /**
+         * ExternalQueryOptionsSchema
+         * @description Expose Cortex-specific query controls without leaving the OpenAI chat envelope.
+         */
+        ExternalQueryOptionsSchema: {
+            /**
+             * Showcitations
+             * @default true
+             */
+            showCitations: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -897,7 +1066,7 @@ export interface components {
             /** Detail */
             detail: string;
             /** Remediation */
-            remediation: string | null;
+            remediation?: string | null;
         };
         /**
          * RuntimeHealthResponse
@@ -1187,6 +1356,26 @@ export interface operations {
         };
     };
     getReadiness_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeHealthResponse"];
+                };
+            };
+        };
+    };
+    getStartupReadiness_health_startup_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1504,6 +1693,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QueryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submitChatCompletion_v1_chat_completions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatCompletionRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatCompletionResponseSchema"];
                 };
             };
             /** @description Validation Error */

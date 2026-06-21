@@ -1,0 +1,22 @@
+"""Generated frontend contracts should stay aligned with the packaged API boundary."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+
+def testGeneratedApiContractIncludesExternalChatFacade() -> None:
+    """The generated web contract should expose the replaceable chat facade and metadata."""
+    generatedTypesText = (
+        Path(__file__).resolve().parents[1]
+        / "apps"
+        / "web"
+        / "src"
+        / "generated"
+        / "cortex-api.ts"
+    ).read_text(encoding="utf-8")
+    assert '"/v1/chat/completions"' in generatedTypesText
+    assert "ChatCompletionResponseSchema" in generatedTypesText
+    assert "ExternalQueryMetadataSchema" in generatedTypesText
+    assert "contractVersion: \"v1\";" in generatedTypesText
+    assert "traceEventsPath: string;" in generatedTypesText
