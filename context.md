@@ -35,6 +35,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package startup now reports degraded startup/readiness components with remediation instead of generic timeouts, and the package artifacts now include corrected OpenShift Route examples plus ECS runtime and migration task examples for split-host client deployments.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
+- Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 
 ## Invariants
 - Chunk IDs are deterministic SHA-256 digests over canonical, length-delimited inputs.

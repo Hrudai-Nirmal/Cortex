@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 
 import cortex.api.routes as routeModule
+import cortex.services.runtime as runtimeModule
 from cortex.config import Settings
 from cortex.database import getDatabaseSession
 from cortex.main import createApp
@@ -40,6 +41,12 @@ def testProductionSettingsRejectLocalhostHosts() -> None:
             consoleHost="localhost",
             consolePublicUrl="http://localhost:5173",
         )
+
+
+def testProductionSettingsRequireAbsoluteObjectStorageRoot() -> None:
+    """Client package profiles should reject relative object-storage paths in production."""
+    with pytest.raises(ValidationError):
+        buildPackageSettings(objectStorageRoot=".cortex-data/object-storage")
 
 
 @pytest.mark.asyncio
@@ -85,6 +92,84 @@ async def testStartupHealthFlagsUnexpectedRemoteModelEndpoints() -> None:
     assert "ALLOW_REMOTE_MODEL_ENDPOINT" in policyComponent.detail
     assert policyComponent.remediation is not None
     assert "CORTEX_OLLAMA_BASE_URL" in policyComponent.remediation
+
+
+@pytest.mark.asyncio
+async def testStartupHealthAllowsExplicitRemoteModelEndpoints() -> None:
+    """Packages may opt into remote model endpoints only through an explicit override."""
+    settings = buildPackageSettings(
+        ollamaBaseUrl="https://models.internal.example.com",
+        allowRemoteModelEndpoint=True,
+    )
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    policyComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "model-endpoint-policy"
+    )
+    assert policyComponent.status == "ready"
+    assert policyComponent.severity == "info"
+    assert "remote model endpoints permitted" in policyComponent.detail
+    assert policyComponent.remediation is not None
+
+
+@pytest.mark.asyncio
+async def testStartupHealthFlagsObjectStorageWriteFailures(tmp_path: pytest.TempPathFactory) -> None:
+    """Packages should report an operator-facing error when object storage is not writable."""
+    blockedPath = tmp_path / "blocked-root"
+    blockedPath.write_text("not a directory", encoding="utf-8")
+    settings = buildPackageSettings(objectStorageRoot=str(blockedPath))
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    storageComponent = next(
+        component for component in runtimeHealth.components if component.name == "object-storage"
+    )
+    assert runtimeHealth.status == "degraded"
+    assert storageComponent.status == "unavailable"
+    assert storageComponent.severity == "error"
+    assert storageComponent.remediation is not None
+    assert "persistent volume" in storageComponent.remediation
+
+
+@pytest.mark.asyncio
+async def testStartupHealthFlagsAcceleratorMismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Declared accelerator expectations should fail closed when the runtime disagrees."""
+    monkeypatch.setattr(runtimeModule, "detectAvailableAccelerator", lambda: "cpu")
+    settings = buildPackageSettings(requiredAccelerator="mps")
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    acceleratorComponent = next(
+        component for component in runtimeHealth.components if component.name == "accelerator"
+    )
+    assert runtimeHealth.status == "degraded"
+    assert acceleratorComponent.status == "degraded"
+    assert acceleratorComponent.severity == "error"
+    assert "required mps, detected cpu" in acceleratorComponent.detail
+    assert acceleratorComponent.remediation is not None
 
 
 @pytest.mark.asyncio
