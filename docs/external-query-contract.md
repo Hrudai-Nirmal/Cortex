@@ -50,6 +50,7 @@ Notes:
 - Cortex currently uses the last non-empty `user` message as the deterministic query input.
 - `stream=true` is not supported on this facade.
 - Stage progress remains available through persisted trace events rather than token streaming.
+- Client shells that want progress should subscribe to `GET /v1/query/{traceId}/events` after the completion returns.
 
 ## Response
 
@@ -101,6 +102,16 @@ Example response:
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.
 - Treat `x_cortex.evidenceStatus` and `x_cortex.abstained` as answer-governance signals.
 - Store `x_cortex.traceId` with user feedback so operators can reconcile query outcomes in the console.
+- Use the returned `traceId` to fetch persisted trace detail from the fixed developer console rather than recreating hidden pipeline state in the client UI.
+
+## Replacement UI checklist
+
+- Authenticate the employee user and forward the bearer token to Cortex.
+- Call `POST /v1/chat/completions` with `stream=false`.
+- Render `choices[0].message.content` as the answer text.
+- Render `x_cortex.citations` and `x_cortex.evidenceStatus` as the evidence boundary.
+- Treat `x_cortex.abstained=true` as an intentional no-answer outcome, not a transport failure.
+- Persist `x_cortex.traceId` anywhere the client captures user feedback or support tickets.
 
 ## Non-goals of this contract
 

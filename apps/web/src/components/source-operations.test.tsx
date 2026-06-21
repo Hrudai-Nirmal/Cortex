@@ -88,6 +88,7 @@ describe("SourceOperations", () => {
 
     expect(await screen.findByText("Retention Packet")).toBeVisible();
     expect(await screen.findByText(/docling/)).toBeVisible();
+    expect(screen.getByText(/quarantine clear/i)).toBeVisible();
     expect(screen.getByRole("region", { name: "Source detail" })).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });

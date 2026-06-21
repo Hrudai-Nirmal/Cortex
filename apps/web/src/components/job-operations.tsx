@@ -63,6 +63,7 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
             <th>Job</th>
             <th>Status</th>
             <th>Type</th>
+            <th>Attempts</th>
             <th>Source</th>
             <th>Updated</th>
             <th>Error</th>
@@ -78,6 +79,7 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
                 <td><code>{job.jobId.slice(0, 8)}</code></td>
                 <td>{job.status}</td>
                 <td>{job.jobType}</td>
+                <td>{job.attempts}</td>
                 <td>{job.sourceDisplayName ?? "—"}</td>
                 <td>{new Date(job.updatedAt).toLocaleTimeString()}</td>
                 <td>{job.lastError ?? "—"}</td>
@@ -85,7 +87,7 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
             ))
           ) : (
             <tr>
-              <td colSpan={6}>
+              <td colSpan={7}>
                 <div className="empty-tab">
                   <Clock aria-hidden size={24} />
                   <p>No durable jobs yet.</p>

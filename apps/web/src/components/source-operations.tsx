@@ -332,6 +332,11 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                   <div>
                     <strong>{source.displayName}</strong>
                     <span>{source.sourceType} · {source.latestVersionLabel ?? "Pending"}</span>
+                    <small>
+                      {source.latestIngestionStatus ?? "queued"} · quarantine{" "}
+                      {source.latestQuarantineStatus ?? "unknown"} · malware{" "}
+                      {source.latestMalwareStatus ?? "unknown"}
+                    </small>
                   </div>
                   <small>{source.latestIngestionStatus ?? "queued"}</small>
                 </button>
@@ -356,13 +361,24 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                 </div>
                 <dl className="source-detail__facts">
                   <div><dt>ACLs</dt><dd>{latestVersion.principalIds.join(", ")}</dd></div>
+                  <div><dt>Activation</dt><dd>{latestVersion.activatedAt ? new Date(latestVersion.activatedAt).toLocaleString() : "inactive"}</dd></div>
                   <div><dt>Malware</dt><dd>{latestVersion.malwareStatus}</dd></div>
+                  <div><dt>Quarantine</dt><dd>{latestVersion.quarantineStatus}</dd></div>
                   <div><dt>Parser</dt><dd>{latestVersion.parserName} · {latestVersion.parserVersion}</dd></div>
                   <div><dt>Accelerators</dt><dd>{latestVersion.acceleratorReports.length || 0}</dd></div>
                 </dl>
               </div>
               <div className="source-detail__versions">
                 <h3>Version history</h3>
+                {latestVersion.failureDetail ? (
+                  <div className="query-error" role="alert" style={{ marginBottom: 12 }}>
+                    <WarningCircle aria-hidden size={18} />
+                    <div>
+                      <strong>Latest failure detail</strong>
+                      <span>{latestVersion.failureDetail}</span>
+                    </div>
+                  </div>
+                ) : null}
                 <table>
                   <thead>
                     <tr>

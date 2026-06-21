@@ -6,8 +6,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 
+import cortex.api.routes as routeModule
 from cortex.config import Settings
+from cortex.database import getDatabaseSession
 from cortex.main import createApp
+from cortex.schemas import QueryResponse, StageSchema
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.runtime import RuntimeHealthService
 
@@ -105,3 +108,103 @@ async def testStartupHealthTreatsWebsiteAllowlistAsOptionalCapability() -> None:
     assert websiteComponent.status == "ready"
     assert "uploads remain available" in websiteComponent.detail
     assert websiteComponent.remediation is not None
+
+
+@pytest.mark.asyncio
+async def testExternalChatContractRejectsStreamingRequests() -> None:
+    """Replacement chat shells must use the non-streaming facade and trace SSE separately."""
+    application = createApp(buildPackageSettings())
+
+    async def overrideDatabaseSession():
+        yield object()
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer fixture-employee"},
+            json={
+                "model": "cortex-bounded-rag",
+                "messages": [{"role": "user", "content": "What are our retention rules?"}],
+                "stream": True,
+                "cortex": {"showCitations": True},
+            },
+        )
+
+    assert response.status_code == 422
+    assert "SSE trace events" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Replacement query shells should get stable evidence metadata from the chat facade."""
+    application = createApp(buildPackageSettings())
+    capturedRequestQuery: dict[str, str] = {}
+
+    async def overrideDatabaseSession():
+        yield object()
+
+    class StubQueryService:
+        """Return one deterministic query answer without touching live dependencies."""
+
+        def __init__(self, session, settings, modelProvider) -> None:
+            self.session = session
+
+        async def answerQuery(self, request) -> QueryResponse:
+            capturedRequestQuery["value"] = request.query
+            return QueryResponse(
+                traceId="4576b626-c27a-4409-9a51-600cf115ff4a",
+                route="rag",
+                correctedQuery="What are our retention rules?",
+                answer="Raw query content is retained for 30 days.",
+                evidenceStatus="sufficient",
+                claims=[],
+                citations=[],
+                stages=[
+                    StageSchema(
+                        name="Scoped hybrid retrieval",
+                        status="complete",
+                        durationMs=120,
+                        detail="4 authorized candidates after threshold",
+                    )
+                ],
+            )
+
+    monkeypatch.setattr(routeModule, "QueryService", StubQueryService)
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer fixture-employee"},
+            json={
+                "model": "cortex-bounded-rag",
+                "messages": [
+                    {"role": "system", "content": "You are the company assistant."},
+                    {"role": "user", "content": "Ignore this older prompt."},
+                    {"role": "assistant", "content": "Earlier answer."},
+                    {"role": "user", "content": "  What are our retentin rules?  "},
+                ],
+                "stream": False,
+                "cortex": {"showCitations": True},
+            },
+        )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert capturedRequestQuery["value"] == "What are our retentin rules?"
+    assert payload["choices"][0]["message"]["content"] == "Raw query content is retained for 30 days."
+    assert payload["x_cortex"]["traceId"] == "4576b626-c27a-4409-9a51-600cf115ff4a"
+    assert payload["x_cortex"]["correctedQuery"] == "What are our retention rules?"
+    assert payload["x_cortex"]["evidenceStatus"] == "sufficient"
+    assert payload["x_cortex"]["abstained"] is False
+    assert payload["x_cortex"]["stages"][0]["name"] == "Scoped hybrid retrieval"

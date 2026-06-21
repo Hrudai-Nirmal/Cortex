@@ -165,6 +165,9 @@ derives scope from the authenticated user token.
 - keep separate services for `console-web`, `query-web`, and `api`
 - use the provided startup/readiness/liveness probes as the baseline
 - run the migration job before promoting the API and worker deployments
+- replace the example `.example.com` hosts in `infra/k8s/cortex-package.yaml` with the client-owned console and app domains before deployment
+- populate `cortex-secrets` with database and model endpoint values while keeping shared non-secret package settings in `cortex-config`
+- mount persistent storage for `/var/lib/cortex/object-storage` so uploads, website snapshots, and parsed source blobs survive pod restarts
 
 ### OpenShift
 
@@ -180,6 +183,7 @@ derives scope from the authenticated user token.
 - run `api`, `worker`, `console-web`, and `query-web` as separate services or tasks
 - keep `edge` only if you want the Nginx host router inside the package rather than at the ALB layer
 - run the migration command as a one-shot task before the API service rolls forward
+- back the object-storage root with durable shared storage or a compatible mounted filesystem volume for `api` and `worker`
 
 ## Failure hints
 

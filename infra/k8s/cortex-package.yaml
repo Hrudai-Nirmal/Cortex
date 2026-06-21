@@ -1,3 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cortex-config
+data:
+  CORTEX_AUTH_MODE: fixture
+  CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: "false"
+  CORTEX_REQUIRED_ACCELERATOR: cpu
+  CORTEX_OBJECT_STORAGE_ROOT: /var/lib/cortex/object-storage
+  CORTEX_CONSOLE_HOST: cortex-console.example.com
+  CORTEX_QUERY_HOST: cortex-app.example.com
+  CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.example.com
+  CORTEX_QUERY_PUBLIC_URL: https://cortex-app.example.com
+  CORTEX_GENERATOR_MODEL: qwen3:14b
+  CORTEX_EMBEDDING_MODEL: qwen3-embedding:0.6b
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cortex-object-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -14,8 +41,17 @@ spec:
           image: cortex/api:local
           command: ["alembic", "upgrade", "head"]
           envFrom:
+            - configMapRef:
+                name: cortex-config
             - secretRef:
                 name: cortex-secrets
+          volumeMounts:
+            - name: cortex-object-storage
+              mountPath: /var/lib/cortex/object-storage
+      volumes:
+        - name: cortex-object-storage
+          persistentVolumeClaim:
+            claimName: cortex-object-storage
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -35,6 +71,8 @@ spec:
         - name: api
           image: cortex/api:local
           envFrom:
+            - configMapRef:
+                name: cortex-config
             - secretRef:
                 name: cortex-secrets
           ports:
@@ -57,6 +95,13 @@ spec:
               port: 8000
             periodSeconds: 15
             failureThreshold: 4
+          volumeMounts:
+            - name: cortex-object-storage
+              mountPath: /var/lib/cortex/object-storage
+      volumes:
+        - name: cortex-object-storage
+          persistentVolumeClaim:
+            claimName: cortex-object-storage
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -76,8 +121,18 @@ spec:
         - name: worker
           image: cortex/worker:local
           envFrom:
+            - configMapRef:
+                name: cortex-config
             - secretRef:
                 name: cortex-secrets
+          command: ["python", "-m", "cortex.worker"]
+          volumeMounts:
+            - name: cortex-object-storage
+              mountPath: /var/lib/cortex/object-storage
+      volumes:
+        - name: cortex-object-storage
+          persistentVolumeClaim:
+            claimName: cortex-object-storage
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -186,7 +241,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: cortex-console.hrudainirmal.in
+    - host: cortex-console.example.com
       http:
         paths:
           - path: /v1
@@ -210,7 +265,7 @@ spec:
                 name: cortex-console-web
                 port:
                   number: 80
-    - host: cortex-app.hrudainirmal.in
+    - host: cortex-app.example.com
       http:
         paths:
           - path: /v1

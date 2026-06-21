@@ -81,6 +81,11 @@ and launches the API, worker, console, and app surfaces as local background proc
 Nginx routing. `infra/k8s/cortex-package.yaml` provides a generic ingress-based layout
 for Kubernetes platforms such as EKS, AKS, GKE, OpenShift, and RKE2.
 
+The Kubernetes package example uses placeholder client domains (`cortex-console.example.com`
+and `cortex-app.example.com`), a `cortex-config` ConfigMap for non-secret runtime
+settings, `cortex-secrets` for deployment-specific secrets, and a persistent volume
+claim for `/var/lib/cortex/object-storage`.
+
 The package now includes:
 
 - `GET /health/live` for liveness

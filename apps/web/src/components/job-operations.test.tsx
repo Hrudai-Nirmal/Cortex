@@ -43,6 +43,7 @@ describe("JobOperations", () => {
     );
 
     expect(await screen.findByText("Retention Packet")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Attempts" })).toBeVisible();
     expect(screen.getByText("Docling failed to parse source.pdf")).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   });

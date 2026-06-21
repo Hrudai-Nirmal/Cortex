@@ -35,6 +35,10 @@ surface isolation.
 For Kubernetes environments such as EKS, AKS, GKE, OpenShift, and RKE2, the same host
 split is expressed through ingress rules in `infra/k8s/cortex-package.yaml`.
 
+The Kubernetes package example now separates non-secret runtime settings into a
+`cortex-config` ConfigMap, expects client-specific secrets through `cortex-secrets`,
+and mounts a shared persistent volume for `/var/lib/cortex/object-storage`.
+
 ## Domain Configuration
 
 Domain values are deployment-critical and must be supplied by the operator:
