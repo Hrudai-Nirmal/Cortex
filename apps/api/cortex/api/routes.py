@@ -19,6 +19,8 @@ from cortex.domain.chunking import ChunkerConfig
 from cortex.errors import CortexError
 from cortex.schemas import (
     ActivatePipelineRequest,
+    ChatCompletionRequestSchema,
+    ChatCompletionResponseSchema,
     CreateUploadSourceResponse,
     CreateWebsiteSourceRequest,
     CreateWebsiteSourceResponse,
@@ -94,6 +96,17 @@ async def getReadiness(session: DatabaseSession) -> RuntimeHealthResponse:
         modelProvider=buildModelProvider(settings),
     )
     return await runtimeHealthService.getReadiness()
+
+
+@router.get("/health/startup", response_model=RuntimeHealthResponse)
+async def getStartupReadiness() -> RuntimeHealthResponse:
+    """Report startup-safe deployment checks without hitting database or model endpoints."""
+    runtimeHealthService = RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=buildModelProvider(settings),
+    )
+    return await runtimeHealthService.getStartupReadiness()
 
 
 @router.get("/v1/session", response_model=SessionResponse)
@@ -400,6 +413,84 @@ async def submitQuery(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="query failed"
         ) from error
+
+
+@router.post("/v1/chat/completions", response_model=ChatCompletionResponseSchema)
+async def submitChatCompletion(
+    httpRequest: Request,
+    request: ChatCompletionRequestSchema,
+    session: DatabaseSession,
+) -> ChatCompletionResponseSchema:
+    """Expose one OpenAI-compatible query facade for replacement client chat surfaces."""
+    if request.stream:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="streaming chat completions are not supported; use SSE trace events instead",
+        )
+    identity = await resolveIdentity(httpRequest, settings)
+    latestUserMessage = next(
+        (
+            message.content.strip()
+            for message in reversed(request.messages)
+            if message.role == "user" and message.content.strip()
+        ),
+        "",
+    )
+    if not latestUserMessage:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="the last user message cannot be empty",
+        )
+    queryService = QueryService(
+        session=session,
+        settings=settings,
+        modelProvider=buildModelProvider(settings),
+    )
+    try:
+        queryResponse = await queryService.answerQuery(
+            QueryRequest(
+                query=latestUserMessage,
+                accessScope={
+                    "enterpriseId": identity.enterpriseId,
+                    "actorId": identity.actorId,
+                    "principalIds": list(identity.principalIds),
+                },
+                showCitations=request.cortex.showCitations,
+            )
+        )
+    except CortexError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"chat completion failed: {error}",
+        ) from error
+    return ChatCompletionResponseSchema(
+        id=f"cortex-{queryResponse.traceId}",
+        object="chat.completion",
+        created=int(datetime.now(UTC).timestamp()),
+        model=request.model,
+        choices=[
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": queryResponse.answer,
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        x_cortex={
+            "traceId": queryResponse.traceId,
+            "route": queryResponse.route,
+            "correctedQuery": queryResponse.correctedQuery,
+            "evidenceStatus": queryResponse.evidenceStatus,
+            "abstained": queryResponse.evidenceStatus in {"insufficient", "conflict"},
+            "claims": queryResponse.claims,
+            "citations": queryResponse.citations,
+            "stages": queryResponse.stages,
+        },
+    )
 
 
 @router.get("/v1/query/{traceId}/events")

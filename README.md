@@ -21,6 +21,24 @@ host, not by path, so client deployments can use domains such as:
 The built-in query UI remains optional and replaceable. The console is the default
 operator surface and is not intended to be swapped out.
 
+## External query contract
+
+Client-owned chat shells should integrate through `POST /v1/chat/completions`.
+This OpenAI-compatible facade derives access scope from the authenticated bearer token,
+so replacement UIs do not send raw ACL principals from the browser. Cortex returns the
+assistant message in the standard `choices` envelope and adds `x_cortex` metadata with:
+
+- `traceId`
+- `route`
+- `correctedQuery`
+- `evidenceStatus`
+- `abstained`
+- validated `claims`
+- exact `citations`
+- stage summaries
+
+See [external-query-contract.md](docs/external-query-contract.md) for the stable wire contract.
+
 ## Development
 
 ```bash
@@ -63,6 +81,16 @@ and launches the API, worker, console, and app surfaces as local background proc
 Nginx routing. `infra/k8s/cortex-package.yaml` provides a generic ingress-based layout
 for Kubernetes platforms such as EKS, AKS, GKE, OpenShift, and RKE2.
 
+The package now includes:
+
+- `GET /health/live` for liveness
+- `GET /health/startup` for static deployment validation
+- `GET /health/ready` for database, pgvector, model, storage, and accelerator readiness
+- container and ingress examples with readiness/liveness probes
+- explicit host/public URL configuration for both browser surfaces
+- an offline-capable model-endpoint policy check that flags unexpected remote model hosts
+
 See [context.md](context.md), [architecture.md](docs/architecture.md),
+[external-query-contract.md](docs/external-query-contract.md),
 [split-frontend-packaging.md](docs/split-frontend-packaging.md), and
 [threat-model.md](docs/threat-model.md).

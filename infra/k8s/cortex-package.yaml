@@ -20,6 +20,24 @@ spec:
                 name: cortex-secrets
           ports:
             - containerPort: 8000
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            periodSeconds: 15
+            failureThreshold: 4
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -61,6 +79,18 @@ spec:
           image: cortex/console-web:local
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 15
+            failureThreshold: 4
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -81,6 +111,18 @@ spec:
           image: cortex/query-web:local
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 15
+            failureThreshold: 4
 ---
 apiVersion: v1
 kind: Service

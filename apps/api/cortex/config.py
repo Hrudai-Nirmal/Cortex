@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,9 +31,14 @@ class Settings(BaseSettings):
     oidcIssuerUrl: str = "https://cortex.local/oidc"
     oidcAudience: str = "cortex"
     ollamaBaseUrl: str = "http://127.0.0.1:11434"
+    allowRemoteModelEndpoint: bool = False
     generatorModel: str = "qwen3:14b"
     embeddingModel: str = "qwen3-embedding:0.6b"
     objectStorageRoot: str = ".cortex-data/object-storage"
+    consoleHost: str = "127.0.0.1"
+    queryHost: str = "127.0.0.1"
+    consolePublicUrl: str = "http://127.0.0.1:5173"
+    queryPublicUrl: str = "http://127.0.0.1:5174"
     pipelineVersion: int = Field(default=3, ge=1)
     retrievalCandidateLimit: int = Field(default=120, ge=20, le=500)
     rerankTopK: int = Field(default=40, ge=30, le=50)
@@ -61,6 +68,8 @@ class Settings(BaseSettings):
         "generatorModel",
         "embeddingModel",
         "objectStorageRoot",
+        "consolePublicUrl",
+        "queryPublicUrl",
     )
     @classmethod
     def validateNonEmptyValue(cls, value: str) -> str:
@@ -85,6 +94,69 @@ class Settings(BaseSettings):
         if not normalizedValues:
             raise ValueError("allowedUploadMimeTypes cannot be empty")
         return normalizedValues
+
+    @field_validator("consoleHost", "queryHost")
+    @classmethod
+    def validateHostName(cls, value: str) -> str:
+        """Keep host-only settings free of schemes, ports, and paths."""
+        normalizedValue = value.strip().lower()
+        if not normalizedValue:
+            raise ValueError("host cannot be empty")
+        if "://" in normalizedValue or "/" in normalizedValue or "?" in normalizedValue:
+            raise ValueError("host must not include a scheme, path, or query string")
+        if ":" in normalizedValue and not normalizedValue.startswith("["):
+            raise ValueError("host must not include a port")
+        return normalizedValue
+
+    @model_validator(mode="after")
+    def validateDeploymentProfile(self) -> Settings:
+        """Enforce deployment-critical domain and storage invariants before startup."""
+        consolePublicHost = self._parseUrlHost(self.consolePublicUrl, "consolePublicUrl")
+        queryPublicHost = self._parseUrlHost(self.queryPublicUrl, "queryPublicUrl")
+        if consolePublicHost != self.consoleHost:
+            raise ValueError("consolePublicUrl host must match consoleHost")
+        if queryPublicHost != self.queryHost:
+            raise ValueError("queryPublicUrl host must match queryHost")
+        if self.environment == "production":
+            if self.consoleHost == self.queryHost:
+                raise ValueError("production requires distinct consoleHost and queryHost values")
+            if consolePublicHost in {"127.0.0.1", "localhost"} or queryPublicHost in {
+                "127.0.0.1",
+                "localhost",
+            }:
+                raise ValueError("production public URLs must not use localhost origins")
+            if not Path(self.objectStorageRoot).is_absolute():
+                raise ValueError("production objectStorageRoot must be an absolute path")
+        return self
+
+    def getCorsOrigins(self) -> tuple[str, ...]:
+        """Return browser origins allowed to call the API from split Cortex surfaces."""
+        origins = [self._normalizeOrigin(self.consolePublicUrl), self._normalizeOrigin(self.queryPublicUrl)]
+        if self.environment != "production":
+            origins.extend(
+                [
+                    "http://127.0.0.1:5173",
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5174",
+                    "http://localhost:5174",
+                ]
+            )
+        return tuple(dict.fromkeys(origins))
+
+    @staticmethod
+    def _parseUrlHost(urlValue: str, fieldName: str) -> str:
+        """Extract a host from one public URL and reject unusable values early."""
+        parsedUrl = urlparse(urlValue)
+        if parsedUrl.scheme not in {"http", "https"} or not parsedUrl.hostname:
+            raise ValueError(f"{fieldName} must be an absolute http(s) URL")
+        return parsedUrl.hostname.lower()
+
+    @staticmethod
+    def _normalizeOrigin(urlValue: str) -> str:
+        """Convert a configured public URL into the browser origin used for CORS."""
+        parsedUrl = urlparse(urlValue)
+        portSegment = f":{parsedUrl.port}" if parsedUrl.port is not None else ""
+        return f"{parsedUrl.scheme}://{parsedUrl.hostname}{portSegment}"
 
 
 @lru_cache(maxsize=1)

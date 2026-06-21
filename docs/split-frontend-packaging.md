@@ -41,10 +41,32 @@ Domain values are deployment-critical and must be supplied by the operator:
 
 - `CORTEX_CONSOLE_HOST`
 - `CORTEX_QUERY_HOST`
+- `CORTEX_CONSOLE_PUBLIC_URL`
+- `CORTEX_QUERY_PUBLIC_URL`
 - `VITE_CORTEX_CONSOLE_PUBLIC_URL`
 - `VITE_CORTEX_QUERY_PUBLIC_URL`
 
 Do not hardcode the development domains in client builds.
+
+## Health checks
+
+The package exposes:
+
+- `GET /health/live`
+- `GET /health/startup`
+- `GET /health/ready`
+
+`startup` validates static deployment configuration such as host/public URL alignment,
+object-storage access, parser availability, accelerator expectations, and the local-model
+network policy without waiting for PostgreSQL or Ollama round trips.
+
+`ready` adds live dependency checks for:
+
+- PostgreSQL connectivity
+- pgvector extension presence
+- model endpoint reachability and pinned model availability
+- object-storage access
+- website-ingestion allowlist visibility
 
 ## Development Defaults
 

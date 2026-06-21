@@ -18,32 +18,48 @@ const sessionResponse = {
 };
 
 const queryResponse = {
-  traceId: "4576b626-c27a-4409-9a51-600cf115ff4a",
-  route: "rag",
-  correctedQuery: null,
-  answer: "Raw query content is retained for 30 days.",
-  evidenceStatus: "sufficient",
-  claims: [
+  id: "cortex-4576b626-c27a-4409-9a51-600cf115ff4a",
+  object: "chat.completion",
+  created: 1718928000,
+  model: "cortex-bounded-rag",
+  choices: [
     {
-      claimId: "claim-1",
-      text: "Raw query content is retained for 30 days.",
-      confidence: 0.99,
-      citationIds: ["C1"],
-      supportStatus: "supported",
+      index: 0,
+      message: {
+        role: "assistant",
+        content: "Raw query content is retained for 30 days.",
+      },
+      finish_reason: "stop",
     },
   ],
-  citations: [
-    {
-      citationId: "C1",
-      documentTitle: "Cortex Retention Standard",
-      documentVersion: "1.4",
-      chunkId: "chunk-1",
-      structuralLocator: "section:retention",
-      exactSpan: "Raw query content is retained for 30 days.",
-      supportScore: 0.99,
-    },
-  ],
-  stages: [],
+  x_cortex: {
+    traceId: "4576b626-c27a-4409-9a51-600cf115ff4a",
+    route: "rag",
+    correctedQuery: null,
+    evidenceStatus: "sufficient",
+    abstained: false,
+    claims: [
+      {
+        claimId: "claim-1",
+        text: "Raw query content is retained for 30 days.",
+        confidence: 0.99,
+        citationIds: ["C1"],
+        supportStatus: "supported",
+      },
+    ],
+    citations: [
+      {
+        citationId: "C1",
+        documentTitle: "Cortex Retention Standard",
+        documentVersion: "1.4",
+        chunkId: "chunk-1",
+        structuralLocator: "section:retention",
+        exactSpan: "Raw query content is retained for 30 days.",
+        supportScore: 0.99,
+      },
+    ],
+    stages: [],
+  },
 };
 
 function mockSuccessfulQuery(): void {
@@ -94,7 +110,7 @@ describe("EndUserQuery", () => {
     expect(screen.queryByText("Pipeline")).not.toBeInTheDocument();
   });
 
-  it("submits a scoped query and displays validated citations", async () => {
+  it("submits an authenticated query and displays validated citations", async () => {
     mockSuccessfulQuery();
     render(<EndUserQuery />);
     expect(

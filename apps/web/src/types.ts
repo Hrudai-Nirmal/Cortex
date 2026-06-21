@@ -23,3 +23,28 @@ export type CreateWebsiteSourceResponse = components["schemas"]["CreateWebsiteSo
 export type CreateUploadSourceResponse = components["schemas"]["CreateUploadSourceResponse"];
 export type JobStatus = components["schemas"]["JobStatusResponse"];
 export type JobSummary = components["schemas"]["JobSummaryResponse"];
+
+export interface ExternalChatCompletionResponse {
+  id: string;
+  object: "chat.completion";
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: "assistant";
+      content: string;
+    };
+    finish_reason: "stop";
+  }>;
+  x_cortex: {
+    traceId: string;
+    route: QueryResponse["route"];
+    correctedQuery: QueryResponse["correctedQuery"];
+    evidenceStatus: QueryResponse["evidenceStatus"];
+    abstained: boolean;
+    claims: QueryResponse["claims"];
+    citations: QueryResponse["citations"];
+    stages: QueryResponse["stages"];
+  };
+}

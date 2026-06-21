@@ -11,11 +11,10 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "@phosphor-icons/react";
-import { getSession, submitQuery } from "../lib/api-client";
+import { getSession, submitChatQuery } from "../lib/api-client";
 import type { QueryResponse, Session } from "../types";
 import { CitationPanel } from "./citation-panel";
 
-const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
 const suggestions = [
   "What are our data retention rules?",
   "How is document access enforced?",
@@ -69,16 +68,9 @@ export function EndUserQuery() {
     setErrorMessage(null);
     setFeedback(null);
     try {
-      const queryResponse = await submitQuery(
-        {
-          query: normalizedQuery,
-          accessScope: {
-            enterpriseId: session.enterpriseId,
-            actorId: session.actorId,
-            principalIds: session.principalIds,
-          },
-          showCitations,
-        },
+      const queryResponse = await submitChatQuery(
+        normalizedQuery,
+        showCitations,
         abortController.signal,
       );
       setResponse(queryResponse);

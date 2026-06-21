@@ -46,6 +46,24 @@ describe("DeveloperConsole", () => {
       )
       .mockResolvedValueOnce(
         new Response(
+          JSON.stringify([
+            {
+              pipelineVersionId: "e5165ff1-a5ee-48dd-a8b2-c955153bd837",
+              enterpriseId: "00000000-0000-0000-0000-000000000001",
+              version: 3,
+              status: "active",
+              createdBy: "alex.rivera@example.com",
+              createdAt: "2026-06-21T00:00:00+00:00",
+              activatedAt: "2026-06-21T00:00:00+00:00",
+              rerankTopK: 40,
+              definitionHash: "7d24df0a6d7e39c0ec9f6a2f7c1b66f0",
+            },
+          ]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
           JSON.stringify({
             status: "ready",
             environment: "development",
@@ -109,6 +127,6 @@ describe("DeveloperConsole", () => {
 
     expect(await screen.findByRole("heading", { name: "Enterprise evidence pipeline" })).toBeVisible();
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });
 });

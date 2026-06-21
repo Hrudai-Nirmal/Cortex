@@ -14,6 +14,7 @@ import {
   activatePipeline,
   getActivePipeline,
   getLatestTrace,
+  getPipelineVersions,
   getRuntimeHealth,
   getSession,
   subscribeToTraceEvents,
@@ -21,6 +22,7 @@ import {
 } from "../lib/api-client";
 import type {
   PipelineGraph,
+  PipelineVersionSummary,
   QueryStageEvent,
   RuntimeHealth,
   Session,
@@ -52,6 +54,7 @@ export function DeveloperConsole() {
   const [activeTab, setActiveTab] = useState("Graph");
   const [publishState, setPublishState] = useState<"saved" | "validating" | "publishing" | "published">("saved");
   const [pipeline, setPipeline] = useState<PipelineGraph | null>(null);
+  const [pipelineVersions, setPipelineVersions] = useState<PipelineVersionSummary[]>([]);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -73,8 +76,9 @@ export function DeveloperConsole() {
 
     async function loadConsole(): Promise<void> {
       try {
-        const [activePipeline, health, trace, resolvedSession] = await Promise.all([
+        const [activePipeline, liveVersions, health, trace, resolvedSession] = await Promise.all([
           getActivePipeline(ENTERPRISE_ID),
+          getPipelineVersions(ENTERPRISE_ID),
           getRuntimeHealth(),
           getLatestTrace(ENTERPRISE_ID),
           getSession(),
@@ -83,6 +87,7 @@ export function DeveloperConsole() {
           return;
         }
         setPipeline(activePipeline);
+        setPipelineVersions(liveVersions);
         setRuntimeHealth(health);
         setLatestTrace(trace);
         setSession(resolvedSession);
@@ -162,6 +167,7 @@ export function DeveloperConsole() {
   }
 
   const runtimeSummary = runtimeHealth?.components.map((component) => component.status).join(", ");
+  const latestVersion = pipelineVersions[0] ?? null;
 
   return (
     <main className="developer-console">
@@ -219,6 +225,87 @@ export function DeveloperConsole() {
           <div className="developer-secondary-workspace">
             <JobOperations enterpriseId={ENTERPRISE_ID} highlightedJobId={highlightedJobId} />
           </div>
+        ) : activeTab === "Versions" ? (
+          <div className="developer-secondary-workspace">
+            <section className="job-operations">
+              <div className="section-heading">
+                <CheckCircle aria-hidden size={18} />
+                <strong>Pipeline versions</strong>
+                <span>{pipelineVersions.length}</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Created by</th>
+                    <th>Activated</th>
+                    <th>Top-K</th>
+                    <th>Definition hash</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pipelineVersions.length > 0 ? (
+                    pipelineVersions.map((version) => (
+                      <tr key={version.pipelineVersionId}>
+                        <td>v{version.version}</td>
+                        <td>{version.status}</td>
+                        <td>{version.createdBy}</td>
+                        <td>{version.activatedAt ? new Date(version.activatedAt).toLocaleString() : "—"}</td>
+                        <td>{version.rerankTopK}</td>
+                        <td><code>{version.definitionHash.slice(0, 16)}</code></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={6}>No persisted pipeline versions yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </section>
+          </div>
+        ) : activeTab === "Settings" ? (
+          <div className="developer-secondary-workspace">
+            <section className="job-operations">
+              <div className="section-heading">
+                <ShieldCheck aria-hidden size={18} />
+                <strong>Deployment readiness</strong>
+                <span>{runtimeHealth?.status ?? "loading"}</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th>Status</th>
+                    <th>Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runtimeHealth?.components.length ? (
+                    runtimeHealth.components.map((component) => (
+                      <tr key={component.name}>
+                        <td>{component.name}</td>
+                        <td>{component.status}</td>
+                        <td>{component.detail}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={3}>Runtime readiness is still loading.</td></tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Clock aria-hidden size={18} />
+                  <strong>Active release summary</strong>
+                </div>
+                <p>
+                  Latest immutable version {latestVersion ? `v${latestVersion.version}` : "—"} with
+                  rerank top-K {pipeline?.rerankTopK ?? 40}. The fixed console remains first-party;
+                  client chat shells should integrate through the external query contract.
+                </p>
+              </div>
+            </section>
+          </div>
         ) : (
           <div className="developer-secondary-workspace">
             <div className="empty-tab"><CheckCircle size={36} weight="duotone" /><h2>{activeTab}</h2><p>This workspace is connected to the selected immutable pipeline version.</p></div>
@@ -229,8 +316,38 @@ export function DeveloperConsole() {
       <section className="execution-trace">
         <div className="trace-heading"><div><Play aria-hidden size={17} weight="fill" /><strong>Execution trace</strong><code>{latestTrace ? latestTrace.traceId.slice(0, 12) : "waiting"}</code></div><span>{latestTrace ? <><CheckCircle aria-hidden size={16} weight="fill" /> {latestTrace.outcome}</> : <>No trace yet</>}</span></div>
         <div className="trace-query"><Clock aria-hidden size={15} /> User query: <strong>{latestTrace?.rawQuery ?? "Seed the corpus or run a query to populate the trace timeline."}</strong></div>
+        {latestTrace ? (
+          <div className="metric-strip metric-strip--trace">
+            <span><small>Route</small><strong>{latestTrace.route}</strong></span>
+            <span><small>Evidence</small><strong>{latestTrace.evidenceStatus}</strong></span>
+            <span><small>Citations</small><strong>{latestTrace.citations.length}</strong></span>
+            <span><small>Pipeline</small><strong>v{latestTrace.pipelineVersion ?? 0}</strong></span>
+          </div>
+        ) : null}
         {errorMessage ? <div className="query-error" role="alert"><WarningCircle aria-hidden size={18} /><div><strong>Console warning</strong><span>{errorMessage}</span></div></div> : null}
         <table><thead><tr><th>Stage</th><th>Status</th><th>Duration</th><th>Detail</th><th>Evidence</th></tr></thead><tbody>{displayedEvents.length > 0 ? displayedEvents.map((row) => <tr key={`${row.position}-${row.stage}`}><td>{row.stage}</td><td><span className="table-success"><CheckCircle aria-hidden weight="fill" /> {row.status}</span></td><td>{row.durationMs}ms</td><td>{row.detail}</td><td>{latestTrace?.citations.length ?? 0} citations</td></tr>) : <tr><td colSpan={5}>No persisted execution trace yet.</td></tr>}</tbody></table>
+        {latestTrace?.citations.length ? (
+          <table style={{ marginTop: 12 }}>
+            <thead>
+              <tr>
+                <th>Citation</th>
+                <th>Document</th>
+                <th>Locator</th>
+                <th>Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latestTrace.citations.map((citation) => (
+                <tr key={citation.citationId}>
+                  <td>{citation.citationId}</td>
+                  <td>{citation.documentTitle}</td>
+                  <td>{citation.structuralLocator}</td>
+                  <td>{citation.supportScore.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
       </section>
       {publishState === "published" ? <div className="toast"><CheckCircle weight="fill" /> Pipeline v{pipeline?.version ?? 0} published</div> : null}
       {publishState === "validating" ? <div className="toast toast--warning"><WarningCircle weight="fill" /> Running promotion gates</div> : null}

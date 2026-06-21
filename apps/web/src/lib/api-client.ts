@@ -5,6 +5,7 @@ import type {
   CreateWebsiteSourceRequest,
   CreateWebsiteSourceResponse,
   CreateUploadSourceResponse,
+  ExternalChatCompletionResponse,
   JobStatus,
   JobSummary,
   PipelineGraph,
@@ -74,6 +75,35 @@ export async function submitQuery(
     body: JSON.stringify(request),
     signal,
   });
+}
+
+/** Submit one authenticated chat turn through the replacement-query OpenAI facade. */
+export async function submitChatQuery(
+  query: string,
+  showCitations: boolean,
+  signal?: AbortSignal,
+): Promise<QueryResponse> {
+  const response = await fetchJson<ExternalChatCompletionResponse>("/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "cortex-bounded-rag",
+      messages: [{ role: "user", content: query }],
+      stream: false,
+      cortex: { showCitations },
+    }),
+    signal,
+  });
+  return {
+    traceId: response.x_cortex.traceId,
+    route: response.x_cortex.route,
+    correctedQuery: response.x_cortex.correctedQuery,
+    answer: response.choices[0]?.message.content ?? "",
+    evidenceStatus: response.x_cortex.evidenceStatus,
+    claims: response.x_cortex.claims,
+    citations: response.x_cortex.citations,
+    stages: response.x_cortex.stages,
+  };
 }
 
 /** Load the immutable active pipeline definition for the developer graph. */

@@ -21,8 +21,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query surface with citation display control, live pipeline/health fetches, and persisted trace playback.
 - Multi-image frontend packaging with separate console/query Vite builds, static frontend Docker images, edge Nginx host routing, and package/Kubernetes deployment manifests.
+- External query-surface contract through an OpenAI-compatible `/v1/chat/completions` facade that derives access scope from authenticated identity and returns `x_cortex` evidence metadata.
 - Source onboarding and source operations: multipart file uploads, allowlisted single-page website snapshots, blob deduplication by raw SHA-256, pending/failed/active source versions, durable source ingestion jobs, and developer-side source/job views.
 - Governance foundation: fixture-compatible bearer/OIDC identity resolution, `/v1/session`, developer-side builder/admin RBAC, audit-backed permission denials, persisted pipeline governance endpoints, and authenticated source/pipeline operations that derive actor identity server-side.
+- Deployment hardening: validated split-host/public-URL settings, startup/readiness health endpoints, model-endpoint offline policy checks, pgvector readiness checks, container health probes, and operator-facing package docs.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 
 ## Invariants

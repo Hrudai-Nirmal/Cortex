@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AccessScopeSchema(BaseModel):
@@ -149,6 +149,88 @@ class RuntimeHealthResponse(BaseModel):
     status: Literal["ready", "degraded"]
     environment: str
     components: list[RuntimeComponentSchema]
+
+
+class ChatMessageSchema(BaseModel):
+    """Carry one OpenAI-compatible chat message used by replacement query shells."""
+
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class ExternalQueryOptionsSchema(BaseModel):
+    """Expose Cortex-specific query controls without leaving the OpenAI chat envelope."""
+
+    showCitations: bool = True
+
+
+class ChatCompletionRequestSchema(BaseModel):
+    """Accept the minimal OpenAI-compatible request shape for client-owned chat shells."""
+
+    model: str = Field(default="cortex-bounded-rag", min_length=1, max_length=255)
+    messages: list[ChatMessageSchema] = Field(min_length=1, max_length=100)
+    stream: bool = False
+    cortex: ExternalQueryOptionsSchema = Field(default_factory=ExternalQueryOptionsSchema)
+
+    @field_validator("messages")
+    @classmethod
+    def validateUserMessagePresence(
+        cls, messages: list[ChatMessageSchema]
+    ) -> list[ChatMessageSchema]:
+        """Require at least one user message so deterministic routing has a clear query."""
+        if not any(message.role == "user" for message in messages):
+            raise ValueError("messages must include at least one user message")
+        return messages
+
+
+class ChatCompletionChoiceMessageSchema(BaseModel):
+    """Return the assistant message in the shape expected by OpenAI-style clients."""
+
+    role: Literal["assistant"]
+    content: str
+
+
+class ChatCompletionChoiceSchema(BaseModel):
+    """Return one non-streaming assistant choice for the bounded Cortex answer."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    index: int
+    message: ChatCompletionChoiceMessageSchema
+    finishReason: Literal["stop"] = Field(
+        default="stop",
+        alias="finish_reason",
+        serialization_alias="finish_reason",
+    )
+
+
+class ExternalQueryMetadataSchema(BaseModel):
+    """Expose evidence metadata replacement query shells need beside assistant text."""
+
+    traceId: UUID
+    route: Literal["rag", "compute", "retrieve-then-compute"]
+    correctedQuery: str | None
+    evidenceStatus: Literal["sufficient", "partial", "insufficient", "conflict"]
+    abstained: bool
+    claims: list[ClaimSchema]
+    citations: list[CitationSchema]
+    stages: list[StageSchema]
+
+
+class ChatCompletionResponseSchema(BaseModel):
+    """Return an OpenAI-style chat completion plus Cortex evidence extension fields."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    object: Literal["chat.completion"]
+    created: int = Field(ge=0)
+    model: str
+    choices: list[ChatCompletionChoiceSchema]
+    xCortex: ExternalQueryMetadataSchema = Field(
+        alias="x_cortex",
+        serialization_alias="x_cortex",
+    )
 
 
 class SeedFixturesResponse(BaseModel):

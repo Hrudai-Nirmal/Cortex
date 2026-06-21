@@ -708,6 +708,60 @@ async def testPipelineLifecyclePersistsAndAuditsLive(
 
 
 @pytest.mark.asyncio
+async def testOpenAiCompatibleChatFacadeUsesAuthenticatedScopeLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """Client-owned chat shells should integrate without sending raw access-scope payloads."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    await seedFixtures(
+        databaseSession,
+        settings,
+        OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    )
+    routeModule.settings = settings
+    application = createApp(settings)
+
+    async def overrideDatabaseSession():
+        yield databaseSession
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer fixture-employee"},
+            json={
+                "model": "cortex-bounded-rag",
+                "messages": [{"role": "user", "content": "What are our retentin rules?"}],
+                "stream": False,
+                "cortex": {"showCitations": True},
+            },
+        )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["object"] == "chat.completion"
+    assert payload["choices"][0]["message"]["content"]
+    assert payload["x_cortex"]["traceId"]
+    assert payload["x_cortex"]["evidenceStatus"] in {
+        "sufficient",
+        "partial",
+        "insufficient",
+        "conflict",
+    }
+    assert payload["x_cortex"]["citations"]
+
+
+@pytest.mark.asyncio
 async def testTraceRoutesRequireBuilderIdentityLive(
     databaseSession: AsyncSession,
     liveDatabaseUrl: str,
