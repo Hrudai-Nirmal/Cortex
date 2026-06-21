@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,8 +18,13 @@ from cortex.database import getDatabaseSession
 from cortex.domain.chunking import ChunkerConfig
 from cortex.errors import CortexError
 from cortex.schemas import (
+    CreateUploadSourceResponse,
+    CreateWebsiteSourceRequest,
+    CreateWebsiteSourceResponse,
     IngestTextRequest,
     IngestTextResponse,
+    JobStatusResponse,
+    JobSummaryResponse,
     PipelineGraphResponse,
     PipelineNodeSchema,
     QueryRequest,
@@ -26,14 +32,18 @@ from cortex.schemas import (
     QueuedJobResponse,
     RuntimeHealthResponse,
     SeedFixturesResponse,
+    SourceDetailResponse,
+    SourceSummaryResponse,
     TraceSummaryResponse,
 )
 from cortex.services.ingestion import IngestionService, PostgresIngestionRepository
 from cortex.services.jobs import DurableJobService
 from cortex.services.model_provider import OllamaModelProvider
+from cortex.services.object_storage import LocalObjectStorage
 from cortex.services.query import QueryService
 from cortex.services.runtime import RuntimeHealthService
 from cortex.services.seed import seedFixtures
+from cortex.services.sources import SourceService
 
 router = APIRouter()
 settings = getSettings()
@@ -46,6 +56,15 @@ def buildModelProvider(activeSettings: Settings) -> OllamaModelProvider:
         baseUrl=activeSettings.ollamaBaseUrl,
         generatorModel=activeSettings.generatorModel,
         embeddingModel=activeSettings.embeddingModel,
+    )
+
+
+def buildSourceService(session: AsyncSession) -> SourceService:
+    """Create the live source operations service backed by local object storage."""
+    return SourceService(
+        session=session,
+        settings=settings,
+        objectStorage=LocalObjectStorage(Path(settings.objectStorageRoot)),
     )
 
 
@@ -126,6 +145,123 @@ async def enqueueTextIngestionJob(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="job enqueue failed"
         ) from error
     return QueuedJobResponse(jobId=jobId, status="queued")
+
+
+@router.post("/v1/sources/uploads", response_model=CreateUploadSourceResponse)
+async def createUploadSource(
+    enterpriseId: Annotated[UUID, Form()],
+    actorId: Annotated[str, Form()],
+    displayName: Annotated[str, Form()],
+    versionLabel: Annotated[str, Form()],
+    principalIds: Annotated[str, Form()],
+    file: Annotated[UploadFile, File()],
+    session: DatabaseSession,
+    documentId: Annotated[UUID | None, Form()] = None,
+    sourceAuthority: Annotated[float, Form()] = 0.85,
+    extractionQuality: Annotated[float, Form()] = 0.9,
+    publishedAt: Annotated[str | None, Form()] = None,
+    metadata: Annotated[str | None, Form()] = None,
+) -> CreateUploadSourceResponse:
+    """Accept a file upload, store it once by hash, and queue deterministic ingestion."""
+    if file.content_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="uploaded file is missing its content type",
+        )
+    try:
+        rawContent = await file.read()
+        sourceService = buildSourceService(session)
+        return await sourceService.createUploadSource(
+            enterpriseId=enterpriseId,
+            actorId=actorId,
+            displayName=displayName,
+            versionLabel=versionLabel,
+            principalIds=parsePrincipalIds(principalIds),
+            fileName=file.filename or "upload.bin",
+            mimeType=file.content_type,
+            content=rawContent,
+            documentId=documentId,
+            sourceAuthority=sourceAuthority,
+            extractionQuality=extractionQuality,
+            publishedAt=parseOptionalTimestamp(publishedAt),
+            metadata=parseOptionalMetadata(metadata),
+        )
+    except CortexError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"source upload failed: {error}",
+        ) from error
+
+
+@router.post("/v1/sources/website", response_model=CreateWebsiteSourceResponse)
+async def createWebsiteSource(
+    request: CreateWebsiteSourceRequest,
+    session: DatabaseSession,
+) -> CreateWebsiteSourceResponse:
+    """Fetch one allowlisted page, persist its snapshot, and queue deterministic ingestion."""
+    try:
+        sourceService = buildSourceService(session)
+        return await sourceService.createWebsiteSource(request)
+    except CortexError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"website source failed: {error}",
+        ) from error
+
+
+@router.get("/v1/sources", response_model=list[SourceSummaryResponse])
+async def listSources(
+    enterpriseId: UUID,
+    session: DatabaseSession,
+) -> list[SourceSummaryResponse]:
+    """Return the developer source inventory with the latest version status for each source."""
+    sourceService = buildSourceService(session)
+    return await sourceService.listSources(enterpriseId)
+
+
+@router.get("/v1/sources/{documentId}", response_model=SourceDetailResponse)
+async def getSourceDetail(
+    documentId: UUID,
+    enterpriseId: UUID,
+    session: DatabaseSession,
+) -> SourceDetailResponse:
+    """Return one source record plus its ordered version history."""
+    sourceService = buildSourceService(session)
+    try:
+        return await sourceService.getSourceDetail(enterpriseId, documentId)
+    except CortexError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+
+@router.get("/v1/jobs", response_model=list[JobSummaryResponse])
+async def listJobs(
+    enterpriseId: UUID,
+    session: DatabaseSession,
+) -> list[JobSummaryResponse]:
+    """Return the newest durable jobs for the developer jobs panel."""
+    sourceService = buildSourceService(session)
+    return await sourceService.listJobs(enterpriseId)
+
+
+@router.get("/v1/jobs/{jobId}", response_model=JobStatusResponse)
+async def getJobStatus(
+    jobId: UUID,
+    session: DatabaseSession,
+) -> JobStatusResponse:
+    """Return one persisted durable job row for polling and failure inspection."""
+    sourceService = buildSourceService(session)
+    jobStatus = await sourceService.getJobStatus(jobId)
+    if jobStatus is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
+    return jobStatus
 
 
 @router.post("/v1/query", response_model=QueryResponse)
@@ -261,3 +397,30 @@ def parseOptionalTimestamp(timestampValue: str | None) -> datetime | None:
     if timestampValue is None:
         return None
     return datetime.fromisoformat(timestampValue.replace("Z", "+00:00")).astimezone(UTC)
+
+
+def parsePrincipalIds(rawPrincipalIds: str) -> list[str]:
+    """Parse principals supplied through multipart forms as JSON or comma-separated text."""
+    normalizedValue = rawPrincipalIds.strip()
+    if not normalizedValue:
+        raise ValueError("principalIds cannot be empty")
+    if normalizedValue.startswith("["):
+        parsedValue = json.loads(normalizedValue)
+        if not isinstance(parsedValue, list):
+            raise ValueError("principalIds JSON must be a list")
+        return [str(principalId) for principalId in parsedValue]
+    return [
+        principalId.strip()
+        for principalId in normalizedValue.split(",")
+        if principalId.strip()
+    ]
+
+
+def parseOptionalMetadata(rawMetadata: str | None) -> dict[str, object]:
+    """Parse optional metadata supplied through multipart forms as a JSON object."""
+    if rawMetadata is None or not rawMetadata.strip():
+        return {}
+    parsedMetadata = json.loads(rawMetadata)
+    if not isinstance(parsedMetadata, dict):
+        raise ValueError("metadata must be a JSON object")
+    return {str(key): value for key, value in parsedMetadata.items()}

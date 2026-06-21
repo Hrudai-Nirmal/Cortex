@@ -16,13 +16,21 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from cortex.config import Settings
-from cortex.schemas import AccessScopeSchema, IngestTextRequest, QueryRequest
+from cortex.errors import ProviderOperationError
+from cortex.schemas import (
+    AccessScopeSchema,
+    CreateWebsiteSourceRequest,
+    IngestTextRequest,
+    QueryRequest,
+)
 from cortex.services.jobs import DurableJobService
 from cortex.services.model_provider import OllamaModelProvider, buildDeterministicEmbedding
+from cortex.services.object_storage import LocalObjectStorage
 from cortex.services.query import QueryService
 from cortex.services.retention import purgeExpiredTraces
 from cortex.services.runtime import RuntimeHealthService
 from cortex.services.seed import seedFixtures
+from cortex.services.sources import SourceService
 from cortex.worker import processNextJob
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -108,6 +116,31 @@ class LocalModelHandler(BaseHTTPRequestHandler):
         self.wfile.write(responseBody)
 
 
+class WebsiteFixtureHandler(BaseHTTPRequestHandler):
+    """Serve one deterministic allowlisted HTML page for website-ingestion tests."""
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path != "/policy":
+            self.send_error(404)
+            return
+        responseBody = b"""
+        <html>
+          <body>
+            <h1>Support Policy</h1>
+            <p>Escalations must be acknowledged within 24 hours.</p>
+          </body>
+        </html>
+        """
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(responseBody)))
+        self.end_headers()
+        self.wfile.write(responseBody)
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
 @pytest.fixture(scope="session")
 def localModelServer() -> str:
     """Start a deterministic local model endpoint matching the Ollama-compatible contract."""
@@ -116,6 +149,19 @@ def localModelServer() -> str:
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_port}"
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+
+@pytest.fixture(scope="session")
+def localWebsiteServer() -> str:
+    """Start a deterministic local HTML server for allowlisted website ingestion tests."""
+    server = ThreadingHTTPServer(("127.0.0.1", 0), WebsiteFixtureHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}/policy"
     finally:
         server.shutdown()
         thread.join(timeout=5)
@@ -172,6 +218,7 @@ async def databaseSession(sessionFactory) -> AsyncSession:
                     chunk,
                     document_version,
                     document,
+                    source_blob,
                     enterprise
                 CASCADE
                 """
@@ -181,7 +228,11 @@ async def databaseSession(sessionFactory) -> AsyncSession:
         yield session
 
 
-def buildSettings(localModelBaseUrl: str, liveDatabaseUrl: str) -> Settings:
+def buildSettings(
+    localModelBaseUrl: str,
+    liveDatabaseUrl: str,
+    websiteAllowlist: tuple[str, ...] = ("127.0.0.1", "localhost"),
+) -> Settings:
     """Create test settings without reading from a developer's ambient environment."""
     return Settings(
         environment="test",
@@ -192,6 +243,7 @@ def buildSettings(localModelBaseUrl: str, liveDatabaseUrl: str) -> Settings:
         objectStorageRoot=".cortex-data/test-object-storage",
         generatorModel="qwen3:14b",
         embeddingModel="qwen3-embedding:0.6b",
+        websiteAllowlist=websiteAllowlist,
     )
 
 
@@ -328,3 +380,185 @@ async def testWorkerProcessesQueuedIngestionJobLive(
     assert jobStatus == "completed"
     assert int(chunkCount or 0) > 0
     assert runtimeHealth.status in {"ready", "degraded"}
+
+
+@pytest.mark.asyncio
+async def testUploadSourceQueuesAndProcessesLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """Uploaded sources should persist one blob, queue one deterministic job, and activate once."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    sourceService = SourceService(
+        session=databaseSession,
+        settings=settings,
+        objectStorage=LocalObjectStorage(Path(settings.objectStorageRoot)),
+    )
+
+    firstResponse = await sourceService.createUploadSource(
+        enterpriseId=settings.enterpriseId,
+        actorId="alex.rivera@example.com",
+        displayName="Operations Handbook",
+        versionLabel="1.0",
+        principalIds=["group:employees"],
+        fileName="operations-handbook.txt",
+        mimeType="text/plain",
+        content=b"Approved handbook evidence for employees only.",
+    )
+    secondResponse = await sourceService.createUploadSource(
+        enterpriseId=settings.enterpriseId,
+        actorId="alex.rivera@example.com",
+        displayName="Operations Handbook",
+        versionLabel="1.0",
+        principalIds=["group:employees"],
+        fileName="operations-handbook.txt",
+        mimeType="text/plain",
+        content=b"Approved handbook evidence for employees only.",
+        documentId=firstResponse.documentId,
+    )
+
+    await processNextJob(databaseSession, settings)
+
+    versionRow = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT status, ingestion_status
+                    FROM document_version
+                    WHERE id = :version_id
+                    """
+                ),
+                {"version_id": firstResponse.documentVersionId},
+            )
+        )
+        .mappings()
+        .one()
+    )
+    jobCount = await databaseSession.scalar(text("SELECT count(*) FROM durable_job"))
+    blobCount = await databaseSession.scalar(text("SELECT count(*) FROM source_blob"))
+    chunkCount = await databaseSession.scalar(text("SELECT count(*) FROM chunk"))
+
+    assert firstResponse.jobId == secondResponse.jobId
+    assert versionRow["status"] == "active"
+    assert versionRow["ingestion_status"] == "active"
+    assert int(jobCount or 0) == 1
+    assert int(blobCount or 0) == 1
+    assert int(chunkCount or 0) > 0
+
+
+@pytest.mark.asyncio
+async def testWebsiteSourcePersistsAllowlistedSnapshotLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+    localWebsiteServer: str,
+) -> None:
+    """Allowlisted single-page websites should persist a snapshot and activate as source content."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl, websiteAllowlist=("127.0.0.1",))
+    sourceService = SourceService(
+        session=databaseSession,
+        settings=settings,
+        objectStorage=LocalObjectStorage(Path(settings.objectStorageRoot)),
+    )
+
+    response = await sourceService.createWebsiteSource(
+        CreateWebsiteSourceRequest(
+            actorId="alex.rivera@example.com",
+            displayName="Support Policy",
+            enterpriseId=settings.enterpriseId,
+            principalIds=["group:employees"],
+            sourceUri=localWebsiteServer,
+            versionLabel="2026.06",
+            sourceAuthority=0.91,
+            extractionQuality=0.9,
+            metadata={},
+        )
+    )
+
+    await processNextJob(databaseSession, settings)
+
+    sourceRow = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT d.source_type, dv.mime_type, dv.status
+                    FROM document AS d
+                    JOIN document_version AS dv ON dv.document_id = d.id
+                    WHERE d.id = :document_id
+                    """
+                ),
+                {"document_id": response.documentId},
+            )
+        )
+        .mappings()
+        .one()
+    )
+
+    assert sourceRow["source_type"] == "website"
+    assert sourceRow["mime_type"] == "text/html"
+    assert sourceRow["status"] == "active"
+
+
+@pytest.mark.asyncio
+async def testFailedSourceStaysQuarantinedAndOutOfRetrievalLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """A parse failure must quarantine the version, fail the job, and leave retrieval empty."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    sourceService = SourceService(
+        session=databaseSession,
+        settings=settings,
+        objectStorage=LocalObjectStorage(Path(settings.objectStorageRoot)),
+    )
+
+    response = await sourceService.createUploadSource(
+        enterpriseId=settings.enterpriseId,
+        actorId="alex.rivera@example.com",
+        displayName="Broken CSV",
+        versionLabel="1.0",
+        principalIds=["group:employees"],
+        fileName="broken.csv",
+        mimeType="text/csv",
+        content=b"\xff\xfe\x00\x00",
+    )
+
+    with pytest.raises(ProviderOperationError):
+        await processNextJob(databaseSession, settings)
+
+    versionRow = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT status, ingestion_status, quarantine_status, failure_code
+                    FROM document_version
+                    WHERE id = :version_id
+                    """
+                ),
+                {"version_id": response.documentVersionId},
+            )
+        )
+        .mappings()
+        .one()
+    )
+    chunkCount = await databaseSession.scalar(
+        text(
+            """
+            SELECT count(*)
+            FROM chunk
+            WHERE document_version_id = :version_id
+            """
+        ),
+        {"version_id": response.documentVersionId},
+    )
+
+    assert versionRow["status"] == "failed"
+    assert versionRow["ingestion_status"] == "failed"
+    assert versionRow["quarantine_status"] == "quarantined"
+    assert versionRow["failure_code"] in {"SOURCE_PARSE_FAILED", "INGESTION_FAILED"}
+    assert int(chunkCount or 0) == 0

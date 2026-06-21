@@ -17,7 +17,9 @@ import {
   subscribeToTraceEvents,
 } from "../lib/api-client";
 import type { PipelineGraph, QueryStageEvent, RuntimeHealth, TraceSummary } from "../types";
+import { JobOperations } from "./job-operations";
 import { PipelineGraph as PipelineGraphCanvas } from "./pipeline-graph";
+import { SourceOperations } from "./source-operations";
 
 const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -45,6 +47,7 @@ export function DeveloperConsole() {
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
   const [tracePlayback, setTracePlayback] = useState<QueryStageEvent[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null);
   const validationTimerRef = useRef<number | null>(null);
   const traceSubscriptionRef = useRef<(() => void) | null>(null);
   const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
@@ -149,7 +152,7 @@ export function DeveloperConsole() {
       </header>
 
       <div className="developer-tabs" role="tablist" aria-label="Pipeline workspace">
-        {["Graph", "Configuration", "Evaluations", "Versions", "Settings"].map((tab) => (
+        {["Graph", "Sources", "Jobs", "Configuration", "Evaluations", "Versions", "Settings"].map((tab) => (
           <button className={activeTab === tab ? "is-active" : ""} type="button" key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>
         ))}
         <div className="metric-strip">
@@ -161,22 +164,36 @@ export function DeveloperConsole() {
       </div>
 
       <section className="developer-workspace">
-        <div className="graph-region">
-          <div className="graph-toolbar">
-            <button type="button">+ Node</button><button type="button">+ Subgraph</button>
-            <span className="graph-toolbar__notice"><ShieldCheck aria-hidden size={15} /> Mandatory controls locked</span>
+        {activeTab === "Graph" ? (
+          <>
+            <div className="graph-region">
+              <div className="graph-toolbar">
+                <button type="button">+ Node</button><button type="button">+ Subgraph</button>
+                <span className="graph-toolbar__notice"><ShieldCheck aria-hidden size={15} /> Mandatory controls locked</span>
+              </div>
+              <PipelineGraphCanvas selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            </div>
+            <aside className="node-inspector">
+              <div className="inspector-tabs"><button className="is-active" type="button">Node</button><button type="button">Pipeline</button></div>
+              <div className="inspector-heading"><span className="inspector-sequence">{Object.keys(inspectorContent).indexOf(selectedNodeId) + 1}</span><div><h2>{selectedInspector.title}</h2><span>Healthy · v1.0.0</span></div></div>
+              <dl className="inspector-summary"><div><dt>Node type</dt><dd>{selectedInspector.type}</dd></div><div><dt>Behavior</dt><dd>{selectedInspector.detail}</dd></div></dl>
+              <div className="inspector-section"><h3>Configuration</h3><label>Candidate limit<input value={selectedNodeId === "rerank" ? String(pipeline?.rerankTopK ?? 40) : "Required"} readOnly /></label><label>Execution profile<select defaultValue="balanced"><option value="balanced">Balanced</option><option value="fast">Speed</option><option value="accurate">Accuracy</option></select></label></div>
+              <div className="inspector-section"><h3>Guardrails</h3><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Authorization preserved</div><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Audit emission enabled</div></div>
+            </aside>
+          </>
+        ) : activeTab === "Sources" ? (
+          <div className="developer-secondary-workspace">
+            <SourceOperations enterpriseId={ENTERPRISE_ID} onJobQueued={(jobId) => setHighlightedJobId(jobId)} />
           </div>
-          {activeTab === "Graph" ? <PipelineGraphCanvas selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} /> : (
+        ) : activeTab === "Jobs" ? (
+          <div className="developer-secondary-workspace">
+            <JobOperations enterpriseId={ENTERPRISE_ID} highlightedJobId={highlightedJobId} />
+          </div>
+        ) : (
+          <div className="developer-secondary-workspace">
             <div className="empty-tab"><CheckCircle size={36} weight="duotone" /><h2>{activeTab}</h2><p>This workspace is connected to the selected immutable pipeline version.</p></div>
-          )}
-        </div>
-        <aside className="node-inspector">
-          <div className="inspector-tabs"><button className="is-active" type="button">Node</button><button type="button">Pipeline</button></div>
-          <div className="inspector-heading"><span className="inspector-sequence">{Object.keys(inspectorContent).indexOf(selectedNodeId) + 1}</span><div><h2>{selectedInspector.title}</h2><span>Healthy · v1.0.0</span></div></div>
-          <dl className="inspector-summary"><div><dt>Node type</dt><dd>{selectedInspector.type}</dd></div><div><dt>Behavior</dt><dd>{selectedInspector.detail}</dd></div></dl>
-          <div className="inspector-section"><h3>Configuration</h3><label>Candidate limit<input value={selectedNodeId === "rerank" ? String(pipeline?.rerankTopK ?? 40) : "Required"} readOnly /></label><label>Execution profile<select defaultValue="balanced"><option value="balanced">Balanced</option><option value="fast">Speed</option><option value="accurate">Accuracy</option></select></label></div>
-          <div className="inspector-section"><h3>Guardrails</h3><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Authorization preserved</div><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Audit emission enabled</div></div>
-        </aside>
+          </div>
+        )}
       </section>
 
       <section className="execution-trace">

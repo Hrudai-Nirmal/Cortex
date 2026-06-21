@@ -19,6 +19,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Durable PostgreSQL job queue with worker-side ingestion and retention handlers.
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query route with citation display control, live pipeline/health fetches, and persisted trace playback.
+- Source onboarding and source operations: multipart file uploads, allowlisted single-page website snapshots, blob deduplication by raw SHA-256, pending/failed/active source versions, durable source ingestion jobs, and developer-side source/job views.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 
 ## Invariants
@@ -29,6 +30,8 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Generated claims must be citation-validated before display.
 - Audit metadata outlives raw trace payloads and contains no raw query or answer text.
 - On macOS strict development mode, unintended CPU OCR/model execution halts ingestion.
+- Source versions are created with raw-hash-backed deterministic identities before parsing, then updated in place with canonical content and parser diagnostics after successful ingestion.
+- Quarantined or failed source versions never activate and never participate in retrieval.
 
 ## UI Decision
 The selected visual target is the first generated direction, “Signal Grid”: a light, dense, graph-first operations console. Employee querying is deliberately a separate, lower-density surface.
@@ -37,3 +40,4 @@ The selected visual target is the first generated direction, “Signal Grid”: 
 - Electron may wrap the compiled web application later, but the first release remains browser-first for OIDC and portable deployment.
 - Large-scale retrieval engines remain adapters; PostgreSQL/pgvector is the initial implementation.
 - Local live-integration verification beyond the unit/component suite still depends on an available PostgreSQL service and local Ollama-compatible model endpoint.
+- Malware scanning is still a required hook with a local no-op adapter; enterprise scanner integrations remain a deployment concern rather than a product concern.

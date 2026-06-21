@@ -166,6 +166,131 @@ class QueuedJobResponse(BaseModel):
     status: str
 
 
+class CreateUploadSourceResponse(BaseModel):
+    """Describe one queued file onboarding request and its deterministic source identifiers."""
+
+    jobId: UUID
+    documentId: UUID
+    documentVersionId: UUID
+    status: str
+
+
+class CreateWebsiteSourceRequest(BaseModel):
+    """Accept one allowlisted single-page website source for durable ingestion."""
+
+    enterpriseId: UUID
+    actorId: str = Field(min_length=1, max_length=255)
+    displayName: str = Field(min_length=1, max_length=255)
+    sourceUri: str = Field(min_length=1, max_length=2048)
+    versionLabel: str = Field(min_length=1, max_length=120)
+    principalIds: list[str] = Field(min_length=1)
+    documentId: UUID | None = None
+    sourceAuthority: float = Field(default=0.85, ge=0, le=1)
+    extractionQuality: float = Field(default=0.9, ge=0, le=1)
+    publishedAt: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("principalIds")
+    @classmethod
+    def validateWebsitePrincipals(cls, principalIds: list[str]) -> list[str]:
+        """Normalize ACL principals for website onboarding the same way query scope does."""
+        return AccessScopeSchema.validatePrincipals(principalIds)
+
+
+class CreateWebsiteSourceResponse(BaseModel):
+    """Describe one queued website onboarding request and its deterministic source identifiers."""
+
+    jobId: UUID
+    documentId: UUID
+    documentVersionId: UUID
+    status: str
+
+
+class SourceSummaryResponse(BaseModel):
+    """Summarize one source record for the developer operations list."""
+
+    documentId: UUID
+    displayName: str
+    sourceType: str
+    sourceUri: str
+    createdBy: str
+    updatedAt: str
+    latestVersionLabel: str | None
+    latestIngestionStatus: str | None
+    latestQuarantineStatus: str | None
+    latestMalwareStatus: str | None
+    latestPublishedAt: str | None
+    latestActivatedAt: str | None
+    principalIds: list[str]
+
+
+class SourceVersionResponse(BaseModel):
+    """Describe one document version and its ingestion diagnostics."""
+
+    documentVersionId: UUID
+    versionLabel: str
+    status: str
+    ingestionStatus: str
+    quarantineStatus: str
+    malwareStatus: str
+    mimeType: str | None
+    parserName: str
+    parserVersion: str
+    objectKey: str | None
+    rawSha256: str
+    canonicalContentSha256: str
+    sourceAuthority: float = Field(ge=0, le=1)
+    publishedAt: str | None
+    createdAt: str
+    activatedAt: str | None
+    failureCode: str | None
+    failureDetail: str | None
+    extractionDiagnostics: dict[str, Any]
+    acceleratorReports: list[dict[str, Any]]
+    principalIds: list[str]
+
+
+class SourceDetailResponse(BaseModel):
+    """Expose one source record plus its ordered version history."""
+
+    documentId: UUID
+    displayName: str
+    sourceType: str
+    sourceUri: str
+    createdBy: str
+    updatedAt: str
+    versions: list[SourceVersionResponse]
+
+
+class JobStatusResponse(BaseModel):
+    """Return persisted durable job status for developer operations and polling."""
+
+    jobId: UUID
+    enterpriseId: UUID
+    jobType: str
+    status: str
+    attempts: int = Field(ge=0)
+    availableAt: str
+    lockedAt: str | None
+    lastError: str | None
+    documentId: UUID | None
+    documentVersionId: UUID | None
+    sourceDisplayName: str | None
+
+
+class JobSummaryResponse(BaseModel):
+    """Summarize one durable job row for the developer jobs panel."""
+
+    jobId: UUID
+    jobType: str
+    status: str
+    attempts: int = Field(ge=0)
+    updatedAt: str
+    lastError: str | None
+    documentId: UUID | None
+    sourceDisplayName: str | None
+
+
 class PipelineNodeSchema(BaseModel):
     """Expose graph data required by the developer console."""
 

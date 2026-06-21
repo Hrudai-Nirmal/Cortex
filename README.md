@@ -8,7 +8,7 @@ Cortex is an offline-capable, evidence-bounded RAG pipeline builder for dedicate
 cp .env.example .env
 python -m venv .venv
 source .venv/bin/activate
-pip install -e '.[dev]'
+pip install -e '.[dev,ingestion]'
 pnpm --dir apps/web install
 pnpm dev:up
 pnpm dev:seed
@@ -17,6 +17,14 @@ pnpm dev:seed
 The web console runs at `http://127.0.0.1:5173`; the API runs at `http://127.0.0.1:8000`.
 
 `pnpm dev:up` starts PostgreSQL and Ollama through Docker Compose, applies migrations, and launches the API, worker, and web surfaces as local background processes. `pnpm dev:seed` loads the deterministic integration fixture set.
+
+## Source onboarding
+
+- Developer source operations live under `/developer` in the `Sources` and `Jobs` tabs.
+- Supported source formats: PDF, DOCX, HTML, TXT/Markdown, and CSV.
+- Uploads are stored once by raw SHA-256 beneath `CORTEX_OBJECT_STORAGE_ROOT`, then ingested through durable jobs.
+- Single-page website ingestion is restricted to `CORTEX_WEBSITE_ALLOWLIST`.
+- macOS development profiles still fail closed if Docling OCR falls back from MPS to CPU.
 
 ## Profiles
 

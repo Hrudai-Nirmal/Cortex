@@ -84,6 +84,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Createuploadsource
+         * @description Accept a file upload, store it once by hash, and queue deterministic ingestion.
+         */
+        post: operations["createUploadSource_v1_sources_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/website": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Createwebsitesource
+         * @description Fetch one allowlisted page, persist its snapshot, and queue deterministic ingestion.
+         */
+        post: operations["createWebsiteSource_v1_sources_website_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listsources
+         * @description Return the developer source inventory with the latest version status for each source.
+         */
+        get: operations["listSources_v1_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getsourcedetail
+         * @description Return one source record plus its ordered version history.
+         */
+        get: operations["getSourceDetail_v1_sources__documentId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listjobs
+         * @description Return the newest durable jobs for the developer jobs panel.
+         */
+        get: operations["listJobs_v1_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getjobstatus
+         * @description Return one persisted durable job row for polling and failure inspection.
+         */
+        get: operations["getJobStatus_v1_jobs__jobId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/query": {
         parameters: {
             query?: never;
@@ -223,6 +343,40 @@ export interface components {
             /** Principalids */
             principalIds: string[];
         };
+        /** Body_createUploadSource_v1_sources_uploads_post */
+        Body_createUploadSource_v1_sources_uploads_post: {
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Actorid */
+            actorId: string;
+            /** Displayname */
+            displayName: string;
+            /** Versionlabel */
+            versionLabel: string;
+            /** Principalids */
+            principalIds: string;
+            /** File */
+            file: string;
+            /** Documentid */
+            documentId?: string | null;
+            /**
+             * Sourceauthority
+             * @default 0.85
+             */
+            sourceAuthority: number;
+            /**
+             * Extractionquality
+             * @default 0.9
+             */
+            extractionQuality: number;
+            /** Publishedat */
+            publishedAt?: string | null;
+            /** Metadata */
+            metadata?: string | null;
+        };
         /**
          * CitationSchema
          * @description Map an answer claim to an exact versioned source span.
@@ -261,6 +415,91 @@ export interface components {
              * @enum {string}
              */
             supportStatus: "supported" | "conflict" | "insufficient";
+        };
+        /**
+         * CreateUploadSourceResponse
+         * @description Describe one queued file onboarding request and its deterministic source identifiers.
+         */
+        CreateUploadSourceResponse: {
+            /**
+             * Jobid
+             * Format: uuid
+             */
+            jobId: string;
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /**
+             * Documentversionid
+             * Format: uuid
+             */
+            documentVersionId: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * CreateWebsiteSourceRequest
+         * @description Accept one allowlisted single-page website source for durable ingestion.
+         */
+        CreateWebsiteSourceRequest: {
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Actorid */
+            actorId: string;
+            /** Displayname */
+            displayName: string;
+            /** Sourceuri */
+            sourceUri: string;
+            /** Versionlabel */
+            versionLabel: string;
+            /** Principalids */
+            principalIds: string[];
+            /** Documentid */
+            documentId?: string | null;
+            /**
+             * Sourceauthority
+             * @default 0.85
+             */
+            sourceAuthority: number;
+            /**
+             * Extractionquality
+             * @default 0.9
+             */
+            extractionQuality: number;
+            /** Publishedat */
+            publishedAt?: string | null;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * CreateWebsiteSourceResponse
+         * @description Describe one queued website onboarding request and its deterministic source identifiers.
+         */
+        CreateWebsiteSourceResponse: {
+            /**
+             * Jobid
+             * Format: uuid
+             */
+            jobId: string;
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /**
+             * Documentversionid
+             * Format: uuid
+             */
+            documentVersionId: string;
+            /** Status */
+            status: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -337,6 +576,65 @@ export interface components {
             chunkIds: string[];
             /** Status */
             status: string;
+        };
+        /**
+         * JobStatusResponse
+         * @description Return persisted durable job status for developer operations and polling.
+         */
+        JobStatusResponse: {
+            /**
+             * Jobid
+             * Format: uuid
+             */
+            jobId: string;
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Jobtype */
+            jobType: string;
+            /** Status */
+            status: string;
+            /** Attempts */
+            attempts: number;
+            /** Availableat */
+            availableAt: string;
+            /** Lockedat */
+            lockedAt: string | null;
+            /** Lasterror */
+            lastError: string | null;
+            /** Documentid */
+            documentId: string | null;
+            /** Documentversionid */
+            documentVersionId: string | null;
+            /** Sourcedisplayname */
+            sourceDisplayName: string | null;
+        };
+        /**
+         * JobSummaryResponse
+         * @description Summarize one durable job row for the developer jobs panel.
+         */
+        JobSummaryResponse: {
+            /**
+             * Jobid
+             * Format: uuid
+             */
+            jobId: string;
+            /** Jobtype */
+            jobType: string;
+            /** Status */
+            status: string;
+            /** Attempts */
+            attempts: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Lasterror */
+            lastError: string | null;
+            /** Documentid */
+            documentId: string | null;
+            /** Sourcedisplayname */
+            sourceDisplayName: string | null;
         };
         /**
          * PipelineGraphResponse
@@ -501,6 +799,119 @@ export interface components {
             enterprises: string[];
             /** Tracecount */
             traceCount: number;
+        };
+        /**
+         * SourceDetailResponse
+         * @description Expose one source record plus its ordered version history.
+         */
+        SourceDetailResponse: {
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /** Displayname */
+            displayName: string;
+            /** Sourcetype */
+            sourceType: string;
+            /** Sourceuri */
+            sourceUri: string;
+            /** Createdby */
+            createdBy: string;
+            /** Updatedat */
+            updatedAt: string;
+            /** Versions */
+            versions: components["schemas"]["SourceVersionResponse"][];
+        };
+        /**
+         * SourceSummaryResponse
+         * @description Summarize one source record for the developer operations list.
+         */
+        SourceSummaryResponse: {
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /** Displayname */
+            displayName: string;
+            /** Sourcetype */
+            sourceType: string;
+            /** Sourceuri */
+            sourceUri: string;
+            /** Createdby */
+            createdBy: string;
+            /** Updatedat */
+            updatedAt: string;
+            /** Latestversionlabel */
+            latestVersionLabel: string | null;
+            /** Latestingestionstatus */
+            latestIngestionStatus: string | null;
+            /** Latestquarantinestatus */
+            latestQuarantineStatus: string | null;
+            /** Latestmalwarestatus */
+            latestMalwareStatus: string | null;
+            /** Latestpublishedat */
+            latestPublishedAt: string | null;
+            /** Latestactivatedat */
+            latestActivatedAt: string | null;
+            /** Principalids */
+            principalIds: string[];
+        };
+        /**
+         * SourceVersionResponse
+         * @description Describe one document version and its ingestion diagnostics.
+         */
+        SourceVersionResponse: {
+            /**
+             * Documentversionid
+             * Format: uuid
+             */
+            documentVersionId: string;
+            /** Versionlabel */
+            versionLabel: string;
+            /** Status */
+            status: string;
+            /** Ingestionstatus */
+            ingestionStatus: string;
+            /** Quarantinestatus */
+            quarantineStatus: string;
+            /** Malwarestatus */
+            malwareStatus: string;
+            /** Mimetype */
+            mimeType: string | null;
+            /** Parsername */
+            parserName: string;
+            /** Parserversion */
+            parserVersion: string;
+            /** Objectkey */
+            objectKey: string | null;
+            /** Rawsha256 */
+            rawSha256: string;
+            /** Canonicalcontentsha256 */
+            canonicalContentSha256: string;
+            /** Sourceauthority */
+            sourceAuthority: number;
+            /** Publishedat */
+            publishedAt: string | null;
+            /** Createdat */
+            createdAt: string;
+            /** Activatedat */
+            activatedAt: string | null;
+            /** Failurecode */
+            failureCode: string | null;
+            /** Failuredetail */
+            failureDetail: string | null;
+            /** Extractiondiagnostics */
+            extractionDiagnostics: {
+                [key: string]: unknown;
+            };
+            /** Acceleratorreports */
+            acceleratorReports: {
+                [key: string]: unknown;
+            }[];
+            /** Principalids */
+            principalIds: string[];
         };
         /**
          * StageSchema
@@ -682,6 +1093,198 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QueuedJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createUploadSource_v1_sources_uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_createUploadSource_v1_sources_uploads_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateUploadSourceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createWebsiteSource_v1_sources_website_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWebsiteSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateWebsiteSourceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listSources_v1_sources_get: {
+        parameters: {
+            query: {
+                enterpriseId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummaryResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSourceDetail_v1_sources__documentId__get: {
+        parameters: {
+            query: {
+                enterpriseId: string;
+            };
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listJobs_v1_jobs_get: {
+        parameters: {
+            query: {
+                enterpriseId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSummaryResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getJobStatus_v1_jobs__jobId__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusResponse"];
                 };
             };
             /** @description Validation Error */

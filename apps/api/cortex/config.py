@@ -37,8 +37,18 @@ class Settings(BaseSettings):
     traceRetentionDays: int = Field(default=90, ge=1)
     auditRetentionDays: int = Field(default=365, ge=1)
     maxUploadBytes: int = Field(default=50 * 1024 * 1024, ge=1024)
+    sourceFetchTimeoutSeconds: float = Field(default=10.0, ge=1.0, le=60.0)
     workerPollIntervalSeconds: float = Field(default=1.0, ge=0.1, le=30.0)
     seedPrincipalIds: tuple[str, ...] = ("group:employees", "role:builder", "role:auditor")
+    websiteAllowlist: tuple[str, ...] = ("127.0.0.1", "localhost")
+    allowedUploadMimeTypes: tuple[str, ...] = (
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/html",
+        "text/plain",
+        "text/markdown",
+        "text/csv",
+    )
 
     @field_validator(
         "databaseUrl",
@@ -54,6 +64,22 @@ class Settings(BaseSettings):
         if not normalizedValue:
             raise ValueError("configuration value cannot be empty")
         return normalizedValue
+
+    @field_validator("websiteAllowlist")
+    @classmethod
+    def validateNormalizedSequence(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        """Normalize configured string tuples so runtime checks stay deterministic."""
+        normalizedValues = tuple(value.strip().lower() for value in values if value.strip())
+        return normalizedValues
+
+    @field_validator("allowedUploadMimeTypes")
+    @classmethod
+    def validateAllowedMimeTypes(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        """Require at least one accepted MIME type for upload onboarding."""
+        normalizedValues = cls.validateNormalizedSequence(values)
+        if not normalizedValues:
+            raise ValueError("allowedUploadMimeTypes cannot be empty")
+        return normalizedValues
 
 
 @lru_cache(maxsize=1)

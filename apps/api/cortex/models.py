@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import BIGINT, DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -96,12 +96,16 @@ class Document(Base):
         "enterprise_id", PostgresUUID(as_uuid=True), nullable=False
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    displayName: Mapped[str] = mapped_column("display_name", Text, nullable=False)
+    sourceType: Mapped[str] = mapped_column("source_type", String(30), nullable=False)
     sourceUri: Mapped[str] = mapped_column("source_uri", Text, nullable=False)
     sourceFingerprint: Mapped[bytes] = mapped_column(
         "source_fingerprint",
         LargeBinary,
         nullable=False,
     )
+    createdBy: Mapped[str] = mapped_column("created_by", Text, nullable=False)
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True))
 
 
 class DocumentVersion(Base):
@@ -118,11 +122,41 @@ class DocumentVersion(Base):
         PostgresUUID(as_uuid=True),
         nullable=False,
     )
+    aclPrincipals: Mapped[list[str]] = mapped_column("acl_principals", JSONB, nullable=False)
     versionHash: Mapped[bytes] = mapped_column("version_hash", LargeBinary(32), nullable=False)
     versionLabel: Mapped[str] = mapped_column("version_label", Text, nullable=False)
+    rawHash: Mapped[bytes] = mapped_column("raw_hash", LargeBinary(32), nullable=False)
+    canonicalHash: Mapped[bytes] = mapped_column("canonical_hash", LargeBinary(32), nullable=False)
+    mimeType: Mapped[str | None] = mapped_column("mime_type", Text)
+    objectKey: Mapped[str | None] = mapped_column("object_key", Text)
+    parserName: Mapped[str] = mapped_column("parser_name", Text, nullable=False)
     parserVersion: Mapped[str] = mapped_column("parser_version", Text, nullable=False)
     sourceAuthority: Mapped[float] = mapped_column("source_authority", Float, nullable=False)
     publishedAt: Mapped[datetime | None] = mapped_column("published_at", DateTime(timezone=True))
+    ingestionStatus: Mapped[str] = mapped_column("ingestion_status", Text, nullable=False)
+    quarantineStatus: Mapped[str] = mapped_column("quarantine_status", Text, nullable=False)
+    malwareStatus: Mapped[str] = mapped_column("malware_status", Text, nullable=False)
+    failureCode: Mapped[str | None] = mapped_column("failure_code", Text)
+    failureDetail: Mapped[str | None] = mapped_column("failure_detail", Text)
+    extractionDiagnostics: Mapped[dict[str, Any]] = mapped_column(
+        "extraction_diagnostics", JSONB, nullable=False
+    )
+    acceleratorReports: Mapped[list[dict[str, Any]]] = mapped_column(
+        "accelerator_reports", JSONB, nullable=False
+    )
+    activatedAt: Mapped[datetime | None] = mapped_column("activated_at", DateTime(timezone=True))
+
+
+class SourceBlob(Base):
+    """Deduplicate immutable uploaded or fetched source bytes by raw content hash."""
+
+    __tablename__ = "source_blob"
+
+    rawHash: Mapped[bytes] = mapped_column("raw_hash", LargeBinary(32), primary_key=True)
+    objectKey: Mapped[str] = mapped_column("object_key", Text, nullable=False)
+    mimeType: Mapped[str] = mapped_column("mime_type", Text, nullable=False)
+    sizeBytes: Mapped[int] = mapped_column("size_bytes", BIGINT, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True))
 
 
 class DurableJob(Base):

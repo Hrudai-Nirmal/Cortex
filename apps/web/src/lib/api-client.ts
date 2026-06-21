@@ -1,11 +1,18 @@
 /** Centralizes typed API operations so transport failures remain visible to users. */
 
 import type {
+  CreateWebsiteSourceRequest,
+  CreateWebsiteSourceResponse,
+  CreateUploadSourceResponse,
+  JobStatus,
+  JobSummary,
   PipelineGraph,
   QueryRequest,
   QueryResponse,
   QueryStageEvent,
   RuntimeHealth,
+  SourceDetail,
+  SourceSummary,
   TraceSummary,
 } from "../types";
 
@@ -59,6 +66,82 @@ export async function getLatestTrace(enterpriseId: string): Promise<TraceSummary
 /** Check the live runtime dependencies backing the current environment. */
 export async function getRuntimeHealth(): Promise<RuntimeHealth> {
   return fetchJson<RuntimeHealth>("/health/ready");
+}
+
+/** Load the current source inventory shown in the developer operations surface. */
+export async function getSources(enterpriseId: string): Promise<SourceSummary[]> {
+  return fetchJson<SourceSummary[]>(`/v1/sources?enterpriseId=${enterpriseId}`);
+}
+
+/** Load one source and its full version history for the developer detail pane. */
+export async function getSourceDetail(
+  enterpriseId: string,
+  documentId: string,
+): Promise<SourceDetail> {
+  return fetchJson<SourceDetail>(`/v1/sources/${documentId}?enterpriseId=${enterpriseId}`);
+}
+
+/** Load the newest durable jobs for the developer jobs panel. */
+export async function getJobs(enterpriseId: string): Promise<JobSummary[]> {
+  return fetchJson<JobSummary[]>(`/v1/jobs?enterpriseId=${enterpriseId}`);
+}
+
+/** Load one durable job for focused polling or failure inspection. */
+export async function getJobStatus(jobId: string): Promise<JobStatus> {
+  return fetchJson<JobStatus>(`/v1/jobs/${jobId}`);
+}
+
+/** Submit one file upload source and return the queued deterministic identifiers. */
+export async function createUploadSource(request: {
+  actorId: string;
+  displayName: string;
+  documentId?: string;
+  enterpriseId: string;
+  extractionQuality?: number;
+  file: File;
+  metadata?: Record<string, unknown>;
+  principalIds: string[];
+  publishedAt?: string;
+  sourceAuthority?: number;
+  versionLabel: string;
+}): Promise<CreateUploadSourceResponse> {
+  const formData = new FormData();
+  formData.set("enterpriseId", request.enterpriseId);
+  formData.set("actorId", request.actorId);
+  formData.set("displayName", request.displayName);
+  formData.set("versionLabel", request.versionLabel);
+  formData.set("principalIds", JSON.stringify(request.principalIds));
+  formData.set("file", request.file);
+  if (request.documentId) {
+    formData.set("documentId", request.documentId);
+  }
+  if (request.sourceAuthority !== undefined) {
+    formData.set("sourceAuthority", String(request.sourceAuthority));
+  }
+  if (request.extractionQuality !== undefined) {
+    formData.set("extractionQuality", String(request.extractionQuality));
+  }
+  if (request.publishedAt) {
+    formData.set("publishedAt", request.publishedAt);
+  }
+  if (request.metadata) {
+    formData.set("metadata", JSON.stringify(request.metadata));
+  }
+  return fetchJson<CreateUploadSourceResponse>("/v1/sources/uploads", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+/** Submit one allowlisted website source and return the queued deterministic identifiers. */
+export async function createWebsiteSource(
+  request: CreateWebsiteSourceRequest,
+): Promise<CreateWebsiteSourceResponse> {
+  return fetchJson<CreateWebsiteSourceResponse>("/v1/sources/website", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
 }
 
 /** Subscribe to persisted stage events for developer-side trace playback. */
