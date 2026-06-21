@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ArrowsLeftRight, Clock, WarningCircle } from "@phosphor-icons/react";
-import { getJobs } from "../lib/api-client";
-import type { JobSummary } from "../types";
+import { getJobs, getJobStatus } from "../lib/api-client";
+import type { JobStatus, JobSummary } from "../types";
 
 interface JobOperationsProps {
   enterpriseId: string;
@@ -13,7 +13,13 @@ interface JobOperationsProps {
 /** Render the newest persisted worker jobs with their status and failure detail. */
 export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(highlightedJobId);
+  const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const queuedCount = jobs.filter((job) => job.status === "queued").length;
+  const runningCount = jobs.filter((job) => job.status === "running").length;
+  const failedCount = jobs.filter((job) => job.status === "failed").length;
 
   useEffect(() => {
     let isMounted = true;
@@ -23,6 +29,15 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
         const liveJobs = await getJobs(enterpriseId);
         if (isMounted) {
           setJobs(liveJobs);
+          setSelectedJobId((currentSelectedJobId) => {
+            if (highlightedJobId && liveJobs.some((job) => job.jobId === highlightedJobId)) {
+              return highlightedJobId;
+            }
+            if (currentSelectedJobId && liveJobs.some((job) => job.jobId === currentSelectedJobId)) {
+              return currentSelectedJobId;
+            }
+            return liveJobs[0]?.jobId ?? null;
+          });
         }
       } catch (error) {
         if (isMounted) {
@@ -41,12 +56,44 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
     };
   }, [enterpriseId, highlightedJobId]);
 
+  useEffect(() => {
+    let isMounted = true;
+    if (!selectedJobId) {
+      setSelectedJob(null);
+      return;
+    }
+    const jobId = selectedJobId;
+
+    async function loadJobDetail(): Promise<void> {
+      try {
+        const jobDetail = await getJobStatus(jobId);
+        if (isMounted) {
+          setSelectedJob(jobDetail);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setErrorMessage(error instanceof Error ? error.message : "Failed to load job detail");
+        }
+      }
+    }
+
+    void loadJobDetail();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedJobId]);
+
   return (
     <section className="job-operations">
       <div className="section-heading">
         <ArrowsLeftRight aria-hidden size={18} />
         <strong>Durable jobs</strong>
         <span>{jobs.length}</span>
+      </div>
+      <div className="metric-strip" style={{ marginBottom: 16 }}>
+        <span><small>Queued</small><strong>{queuedCount}</strong></span>
+        <span><small>Running</small><strong>{runningCount}</strong></span>
+        <span><small>Failed</small><strong>{failedCount}</strong></span>
       </div>
       {errorMessage ? (
         <div className="query-error" role="alert">
@@ -74,7 +121,8 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
             jobs.map((job) => (
               <tr
                 key={job.jobId}
-                className={highlightedJobId === job.jobId ? "job-row job-row--highlighted" : "job-row"}
+                className={selectedJobId === job.jobId ? "job-row job-row--highlighted" : "job-row"}
+                onClick={() => setSelectedJobId(job.jobId)}
               >
                 <td><code>{job.jobId.slice(0, 8)}</code></td>
                 <td>{job.status}</td>
@@ -97,6 +145,32 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
           )}
         </tbody>
       </table>
+      <div className="source-form-card" style={{ marginTop: 16 }}>
+        <div className="source-form-card__heading">
+          <Clock aria-hidden size={18} />
+          <strong>{selectedJob ? "Selected job detail" : "Job detail"}</strong>
+        </div>
+        {selectedJob ? (
+          <>
+            <p>
+              <strong>{selectedJob.jobType}</strong> · {selectedJob.status} · attempts {selectedJob.attempts}
+            </p>
+            <dl className="source-detail__facts">
+              <div><dt>Available</dt><dd>{new Date(selectedJob.availableAt).toLocaleString()}</dd></div>
+              <div><dt>Locked</dt><dd>{selectedJob.lockedAt ? new Date(selectedJob.lockedAt).toLocaleString() : "not locked"}</dd></div>
+              <div><dt>Document</dt><dd>{selectedJob.documentId ?? "—"}</dd></div>
+              <div><dt>Version</dt><dd>{selectedJob.documentVersionId ?? "—"}</dd></div>
+              <div><dt>Source</dt><dd>{selectedJob.sourceDisplayName ?? "—"}</dd></div>
+              <div><dt>Last error</dt><dd>{selectedJob.lastError ?? "none"}</dd></div>
+            </dl>
+          </>
+        ) : (
+          <div className="empty-tab">
+            <Clock aria-hidden size={24} />
+            <p>Select a job to inspect its latest persisted state.</p>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

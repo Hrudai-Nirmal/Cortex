@@ -360,13 +360,45 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                   <p>{selectedSource.sourceUri}</p>
                 </div>
                 <dl className="source-detail__facts">
+                  <div><dt>Owner</dt><dd>{selectedSource.createdBy}</dd></div>
+                  <div><dt>Updated</dt><dd>{new Date(selectedSource.updatedAt).toLocaleString()}</dd></div>
                   <div><dt>ACLs</dt><dd>{latestVersion.principalIds.join(", ")}</dd></div>
                   <div><dt>Activation</dt><dd>{latestVersion.activatedAt ? new Date(latestVersion.activatedAt).toLocaleString() : "inactive"}</dd></div>
                   <div><dt>Malware</dt><dd>{latestVersion.malwareStatus}</dd></div>
                   <div><dt>Quarantine</dt><dd>{latestVersion.quarantineStatus}</dd></div>
                   <div><dt>Parser</dt><dd>{latestVersion.parserName} · {latestVersion.parserVersion}</dd></div>
+                  <div><dt>Published</dt><dd>{latestVersion.publishedAt ? new Date(latestVersion.publishedAt).toLocaleString() : "—"}</dd></div>
+                  <div><dt>Authority</dt><dd>{latestVersion.sourceAuthority.toFixed(2)}</dd></div>
                   <div><dt>Accelerators</dt><dd>{latestVersion.acceleratorReports.length || 0}</dd></div>
                 </dl>
+              </div>
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <Database aria-hidden size={18} />
+                  <strong>Latest version diagnostics</strong>
+                </div>
+                <dl className="source-detail__facts">
+                  <div><dt>Object key</dt><dd><code>{latestVersion.objectKey ?? "—"}</code></dd></div>
+                  <div><dt>Raw SHA-256</dt><dd><code>{latestVersion.rawSha256}</code></dd></div>
+                  <div><dt>Canonical SHA-256</dt><dd><code>{latestVersion.canonicalContentSha256}</code></dd></div>
+                  <div><dt>Created</dt><dd>{new Date(latestVersion.createdAt).toLocaleString()}</dd></div>
+                </dl>
+                <div style={{ marginTop: 12 }}>
+                  <strong>Extraction diagnostics</strong>
+                  <pre style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>
+                    {JSON.stringify(latestVersion.extractionDiagnostics, null, 2)}
+                  </pre>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <strong>Accelerator reports</strong>
+                  {latestVersion.acceleratorReports.length > 0 ? (
+                    <pre style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>
+                      {JSON.stringify(latestVersion.acceleratorReports, null, 2)}
+                    </pre>
+                  ) : (
+                    <p style={{ marginTop: 8 }}>No accelerator reports recorded for this version.</p>
+                  )}
+                </div>
               </div>
               <div className="source-detail__versions">
                 <h3>Version history</h3>
@@ -386,6 +418,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                       <th>Status</th>
                       <th>MIME</th>
                       <th>Raw SHA-256</th>
+                      <th>Activated</th>
                       <th>Failure</th>
                     </tr>
                   </thead>
@@ -396,6 +429,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                         <td>{version.ingestionStatus}</td>
                         <td>{version.mimeType ?? "unknown"}</td>
                         <td><code>{version.rawSha256.slice(0, 16)}</code></td>
+                        <td>{version.activatedAt ? new Date(version.activatedAt).toLocaleDateString() : "—"}</td>
                         <td>{version.failureCode ?? "—"}</td>
                       </tr>
                     ))}
