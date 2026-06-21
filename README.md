@@ -98,7 +98,7 @@ The package now includes:
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
 - package verification that checks split-surface identity headers and query-contract identity headers
-- OpenShift Route and ECS task-family examples for client-owned split-host deployments
+- OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:
   - `pnpm package:up`
   - `pnpm package:status`

@@ -179,7 +179,8 @@ derives scope from the authenticated user token.
 - map the same split hosts through Routes or an ingress controller
 - preserve the same host-based routing behavior
 - `infra/openshift/cortex-package-routes.yaml` provides a ready-to-edit Route example
-  that sends both client-owned hosts to the packaged `edge` service
+  that maps `/v1` and `/health` to `cortex-api` while routing `/` to the correct
+  console or query frontend service for each host
 - ensure any SecurityContext constraints still allow the object-storage mount path and
   nginx/http serving model you choose
 - treat schema migration as a Job or pre-deploy hook rather than an ad hoc shell step
@@ -193,6 +194,8 @@ derives scope from the authenticated user token.
 - back the object-storage root with durable shared storage or a compatible mounted filesystem volume for `api` and `worker`
 - `infra/ecs/cortex-task-family.json` shows an edit-in-place task-family baseline with
   separate packaged services, EFS-backed object storage, and the split-host environment contract
+- `infra/ecs/cortex-migrate-task.json` provides the matching one-shot migration task so
+  schema rollout stays explicit instead of being hidden inside service startup
 
 ## Failure hints
 

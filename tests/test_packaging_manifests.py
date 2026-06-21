@@ -61,7 +61,13 @@ def testOpenShiftRoutesPreserveSplitHostsThroughEdgeService() -> None:
     assert "kind: Route" in routeManifestText
     assert "host: cortex-console.example.com" in routeManifestText
     assert "host: cortex-app.example.com" in routeManifestText
-    assert "name: cortex-edge" in routeManifestText
+    assert "name: cortex-api" in routeManifestText
+    assert "name: cortex-console-web" in routeManifestText
+    assert "name: cortex-query-web" in routeManifestText
+    routePathMatches = re.findall(r"(?m)^  path: (/.*)$", routeManifestText)
+    assert routePathMatches.count("/v1") == 2
+    assert routePathMatches.count("/health") == 2
+    assert routePathMatches.count("/") == 2
 
 
 def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
@@ -75,3 +81,15 @@ def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
     assert '"containerPath": "/var/lib/cortex/object-storage"' in taskDefinitionText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in taskDefinitionText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText
+
+
+def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:
+    """The ECS migration task should reuse the same split-host and storage contract as runtime tasks."""
+    migrationTaskText = (
+        Path(__file__).resolve().parents[1] / "infra" / "ecs" / "cortex-migrate-task.json"
+    ).read_text(encoding="utf-8")
+    assert '"name": "migrate"' in migrationTaskText
+    assert '"command": ["alembic", "upgrade", "head"]' in migrationTaskText
+    assert '"containerPath": "/var/lib/cortex/object-storage"' in migrationTaskText
+    assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in migrationTaskText
+    assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in migrationTaskText

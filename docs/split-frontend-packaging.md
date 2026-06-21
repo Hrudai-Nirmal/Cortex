@@ -37,8 +37,9 @@ split is expressed through ingress rules in `infra/k8s/cortex-package.yaml`.
 
 Adjacent platform examples now ship as well:
 
-- `infra/openshift/cortex-package-routes.yaml` routes both client-owned hosts through the packaged `edge` service
+- `infra/openshift/cortex-package-routes.yaml` maps `/v1` and `/health` to `cortex-api` and `/` to the correct frontend service per host
 - `infra/ecs/cortex-task-family.json` shows an ECS task-family baseline with split-host environment variables and shared object storage
+- `infra/ecs/cortex-migrate-task.json` keeps ECS schema rollout as a separate one-shot task
 
 The Kubernetes package example now separates non-secret runtime settings into a
 `cortex-config` ConfigMap, expects client-specific secrets through `cortex-secrets`,

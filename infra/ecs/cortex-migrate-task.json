@@ -1,0 +1,50 @@
+{
+  "family": "cortex-migrate",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/cortexTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/cortexTaskRole",
+  "volumes": [
+    {
+      "name": "cortex-object-storage",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-12345678",
+        "rootDirectory": "/cortex/object-storage",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "migrate",
+      "image": "cortex/api:local",
+      "essential": true,
+      "command": ["alembic", "upgrade", "head"],
+      "environment": [
+        { "name": "CORTEX_AUTH_MODE", "value": "fixture" },
+        { "name": "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT", "value": "false" },
+        { "name": "CORTEX_REQUIRED_ACCELERATOR", "value": "cpu" },
+        { "name": "CORTEX_OBJECT_STORAGE_ROOT", "value": "/var/lib/cortex/object-storage" },
+        { "name": "CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_HOST", "value": "cortex-app.example.com" },
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" },
+        { "name": "CORTEX_GENERATOR_MODEL", "value": "qwen3:14b" },
+        { "name": "CORTEX_EMBEDDING_MODEL", "value": "qwen3-embedding:0.6b" }
+      ],
+      "secrets": [
+        { "name": "CORTEX_DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/database-url" },
+        { "name": "CORTEX_OLLAMA_BASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/ollama-base-url" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "cortex-object-storage",
+          "containerPath": "/var/lib/cortex/object-storage",
+          "readOnly": false
+        }
+      ]
+    }
+  ]
+}
