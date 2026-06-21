@@ -91,6 +91,8 @@ The package now includes:
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
 - operator scripts:
   - `pnpm package:up`
+  - `pnpm package:status`
+  - `pnpm package:logs`
   - `pnpm package:pull-models`
   - `pnpm package:verify`
   - `pnpm package:down`

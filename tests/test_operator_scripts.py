@@ -12,6 +12,8 @@ def testPackageScriptsPassBashSyntaxCheck() -> None:
     scriptPaths = [
         rootDirectory / "scripts" / "package-up.sh",
         rootDirectory / "scripts" / "package-down.sh",
+        rootDirectory / "scripts" / "package-status.sh",
+        rootDirectory / "scripts" / "package-logs.sh",
         rootDirectory / "scripts" / "package-pull-models.sh",
         rootDirectory / "scripts" / "package-verify.sh",
     ]

@@ -54,7 +54,15 @@ and its local model/runtime dependencies into the API and worker images.
 pnpm package:verify
 ```
 
-6. Stop it when needed:
+6. Inspect status or logs when needed:
+
+```bash
+pnpm package:status
+pnpm package:logs
+pnpm package:logs .env.package api
+```
+
+7. Stop it when needed:
 
 ```bash
 pnpm package:down
@@ -100,6 +108,11 @@ The package also runs database migrations before `api` and `worker` proceed.
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract
+
+## What `package:status` and `package:logs` do
+
+- `package:status` prints the current `startup` and `ready` component states for the console host
+- `package:logs` tails compose logs for the whole package or one named service
 
 ## Health endpoints
 

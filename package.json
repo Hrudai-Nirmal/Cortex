@@ -10,6 +10,8 @@
     "dev:reset": "./scripts/dev-reset.sh",
     "package:up": "./scripts/package-up.sh",
     "package:down": "./scripts/package-down.sh",
+    "package:status": "./scripts/package-status.sh",
+    "package:logs": "./scripts/package-logs.sh",
     "package:pull-models": "./scripts/package-pull-models.sh",
     "package:verify": "./scripts/package-verify.sh",
     "web:dev:console": "pnpm --dir apps/web dev:console",

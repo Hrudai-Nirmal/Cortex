@@ -26,6 +26,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Governance foundation: fixture-compatible bearer/OIDC identity resolution, `/v1/session`, developer-side builder/admin RBAC, audit-backed permission denials, persisted pipeline governance endpoints, and authenticated source/pipeline operations that derive actor identity server-side.
 - Deployment hardening: validated split-host/public-URL settings, startup/readiness health endpoints, model-endpoint offline policy checks, pgvector readiness checks, container health probes, and operator-facing package docs.
 - Operator bootstrap tooling: `.env.package.example`, package up/verify/down scripts, and a deployment runbook for Docker, Kubernetes, OpenShift, and ECS-style host routing.
+- Operator inspection tooling: package status/log-tail scripts and clearer runtime alert surfacing inside the fixed developer console.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 

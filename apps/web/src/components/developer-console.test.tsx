@@ -65,11 +65,16 @@ describe("DeveloperConsole", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            status: "ready",
+            status: "degraded",
             environment: "development",
             components: [
               { name: "postgresql", status: "ready", detail: "database ready" },
               { name: "ollama", status: "ready", detail: "ollama models ready" },
+              {
+                name: "model-endpoint-policy",
+                status: "degraded",
+                detail: "model endpoint host example.com is not local or private",
+              },
             ],
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -83,7 +88,7 @@ describe("DeveloperConsole", () => {
             actorId: "maya.chen@example.com",
             route: "rag",
             rawQuery: "What are our retention rules?",
-            correctedQuery: null,
+            correctedQuery: "What are our retention rules?",
             answer: "Raw query and response content is retained for 30 days.",
             evidenceStatus: "sufficient",
             createdAt: "2026-06-21T00:00:00+00:00",
@@ -127,6 +132,7 @@ describe("DeveloperConsole", () => {
 
     expect(await screen.findByRole("heading", { name: "Enterprise evidence pipeline" })).toBeVisible();
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
+    expect(screen.getByText("degraded")).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });
 });

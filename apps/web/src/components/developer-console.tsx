@@ -64,6 +64,9 @@ export function DeveloperConsole() {
   const traceSubscriptionRef = useRef<(() => void) | null>(null);
   const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
   const displayedEvents = tracePlayback.length > 0 ? tracePlayback : latestTrace?.stageEvents ?? [];
+  const runtimeAlerts = runtimeHealth?.components.filter(
+    (component) => component.status !== "ready",
+  ) ?? [];
 
   useEffect(() => {
     return () => {
@@ -194,6 +197,7 @@ export function DeveloperConsole() {
         <div className="metric-strip">
           <span><small>Runtime</small><strong>{runtimeHealth?.status ?? "loading"}</strong></span>
           <span><small>Components</small><strong>{runtimeSummary ?? "checking"}</strong></span>
+          <span><small>Alerts</small><strong>{runtimeAlerts.length}</strong></span>
           <span><small>Top-K</small><strong>{pipeline?.rerankTopK ?? 40}</strong></span>
           <span><small>Evidence</small><strong>{latestTrace?.evidenceStatus ?? "none"}</strong></span>
         </div>
@@ -293,6 +297,21 @@ export function DeveloperConsole() {
                   )}
                 </tbody>
               </table>
+              {runtimeAlerts.length > 0 ? (
+                <div className="query-error" role="alert" style={{ marginTop: 16 }}>
+                  <WarningCircle aria-hidden size={18} />
+                  <div>
+                    <strong>Runtime alerts</strong>
+                    <span>
+                      {runtimeAlerts.map((component) => `${component.name}: ${component.detail}`).join(" | ")}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="toast" style={{ position: "static", marginTop: 16 }}>
+                  <CheckCircle weight="fill" /> No runtime alerts detected.
+                </div>
+              )}
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">
                   <Clock aria-hidden size={18} />
@@ -316,6 +335,9 @@ export function DeveloperConsole() {
       <section className="execution-trace">
         <div className="trace-heading"><div><Play aria-hidden size={17} weight="fill" /><strong>Execution trace</strong><code>{latestTrace ? latestTrace.traceId.slice(0, 12) : "waiting"}</code></div><span>{latestTrace ? <><CheckCircle aria-hidden size={16} weight="fill" /> {latestTrace.outcome}</> : <>No trace yet</>}</span></div>
         <div className="trace-query"><Clock aria-hidden size={15} /> User query: <strong>{latestTrace?.rawQuery ?? "Seed the corpus or run a query to populate the trace timeline."}</strong></div>
+        {latestTrace?.correctedQuery && latestTrace.correctedQuery !== latestTrace.rawQuery ? (
+          <div className="trace-query"><CheckCircle aria-hidden size={15} /> Corrected query: <strong>{latestTrace.correctedQuery}</strong></div>
+        ) : null}
         {latestTrace ? (
           <div className="metric-strip metric-strip--trace">
             <span><small>Route</small><strong>{latestTrace.route}</strong></span>
