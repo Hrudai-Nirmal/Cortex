@@ -1,6 +1,6 @@
 /** Focused employee query surface intentionally hides developer pipeline internals. */
 
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
   BookOpenText,
@@ -11,8 +11,8 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "@phosphor-icons/react";
-import { submitQuery } from "../lib/api-client";
-import type { QueryResponse } from "../types";
+import { getSession, submitQuery } from "../lib/api-client";
+import type { QueryResponse, Session } from "../types";
 import { CitationPanel } from "./citation-panel";
 
 const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
@@ -26,6 +26,7 @@ const suggestions = [
 export function EndUserQuery() {
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState<QueryResponse | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showCitations, setShowCitations] = useState(true);
@@ -33,10 +34,32 @@ export function EndUserQuery() {
   const [isCopied, setIsCopied] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSession(): Promise<void> {
+      try {
+        const resolvedSession = await getSession();
+        if (isMounted) {
+          setSession(resolvedSession);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setErrorMessage(error instanceof Error ? error.message : "Cortex could not load your session");
+        }
+      }
+    }
+
+    void loadSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const normalizedQuery = query.trim();
-    if (normalizedQuery.length < 2 || isLoading) {
+    if (normalizedQuery.length < 2 || isLoading || !session) {
       return;
     }
     abortControllerRef.current?.abort();
@@ -50,9 +73,9 @@ export function EndUserQuery() {
         {
           query: normalizedQuery,
           accessScope: {
-            enterpriseId: ENTERPRISE_ID,
-            actorId: "maya.chen@example.com",
-            principalIds: ["group:employees"],
+            enterpriseId: session.enterpriseId,
+            actorId: session.actorId,
+            principalIds: session.principalIds,
           },
           showCitations,
         },
@@ -127,7 +150,7 @@ export function EndUserQuery() {
       </section>
       <form className="query-composer" onSubmit={handleSubmit}>
         <textarea aria-label="Ask a question" placeholder="Ask about company knowledge…" value={query} onChange={(event) => setQuery(event.target.value)} rows={2} />
-        <div className="query-composer__footer"><span>Your access permissions are applied automatically.</span><button type="submit" disabled={query.trim().length < 2 || isLoading} aria-label="Submit question"><ArrowUp aria-hidden size={19} weight="bold" /></button></div>
+        <div className="query-composer__footer"><span>{session ? "Your access permissions are applied automatically." : "Loading your access scope…"}</span><button type="submit" disabled={query.trim().length < 2 || isLoading || !session} aria-label="Submit question"><ArrowUp aria-hidden size={19} weight="bold" /></button></div>
       </form>
     </main>
   );

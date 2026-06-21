@@ -130,9 +130,11 @@ class SourceService:
     async def createWebsiteSource(
         self,
         request: CreateWebsiteSourceRequest,
+        *,
+        actorId: str,
     ) -> CreateWebsiteSourceResponse:
         """Fetch one allowlisted page, persist the snapshot, and queue deterministic ingestion."""
-        self._validateActor(request.actorId)
+        self._validateActor(actorId)
         normalizedDisplayName = self._validateDisplayName(request.displayName)
         normalizedPrincipalIds = self._normalizePrincipalIds(request.principalIds)
         normalizedSourceUri = request.sourceUri.strip()
@@ -150,7 +152,7 @@ class SourceService:
         await self._upsertBlob(rawHash, objectKey, resolvedMimeType, len(htmlBytes))
         await self._upsertPendingSource(
             enterpriseId=request.enterpriseId,
-            actorId=request.actorId,
+            actorId=actorId,
             documentId=resolvedDocumentId,
             displayName=normalizedDisplayName,
             documentTitle=normalizedDisplayName,
@@ -170,7 +172,7 @@ class SourceService:
         )
         jobId = await self.jobService.enqueueSourceIngestionJob(
             {
-                "actorId": request.actorId,
+                "actorId": actorId,
                 "displayName": normalizedDisplayName,
                 "documentId": str(resolvedDocumentId),
                 "enterpriseId": str(request.enterpriseId),

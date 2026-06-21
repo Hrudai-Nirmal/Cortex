@@ -1,5 +1,6 @@
 /** Shared navigation keeps surface switching explicit without exposing operator tools to employees. */
 
+import { useEffect, useState } from "react";
 import {
   ArrowsLeftRight,
   BookOpenText,
@@ -16,7 +17,9 @@ import {
   UserCircle,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
+import { getSession } from "../lib/api-client";
 import type { Surface } from "../types";
+import type { Session } from "../types";
 
 interface AppNavigationProps {
   activeSurface: Surface;
@@ -61,6 +64,30 @@ function renderNavItem(item: NavItem) {
 
 /** Render navigation appropriate to the currently selected product surface. */
 export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationProps) {
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSession(): Promise<void> {
+      try {
+        const resolvedSession = await getSession();
+        if (isMounted) {
+          setSession(resolvedSession);
+        }
+      } catch {
+        if (isMounted) {
+          setSession(null);
+        }
+      }
+    }
+
+    void loadSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeSurface]);
+
   if (activeSurface === "query") {
     return (
       <aside className="query-navigation">
@@ -81,7 +108,10 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
           </button>
           <div className="identity-row">
             <UserCircle aria-hidden size={30} weight="duotone" />
-            <div><strong>Maya Chen</strong><span>Employee</span></div>
+            <div>
+              <strong>{session?.displayName ?? "Loading identity"}</strong>
+              <span>{session?.roles[0] ?? "Employee"}</span>
+            </div>
           </div>
         </div>
       </aside>
@@ -101,7 +131,10 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
         </button>
         <div className="identity-row">
           <UserCircle aria-hidden size={30} weight="duotone" />
-          <div><strong>Alex Rivera</strong><span>Platform admin</span></div>
+          <div>
+            <strong>{session?.displayName ?? "Loading identity"}</strong>
+            <span>{session?.roles.join(", ") ?? "Platform admin"}</span>
+          </div>
         </div>
       </div>
     </aside>

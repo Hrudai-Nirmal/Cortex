@@ -21,10 +21,13 @@ class Settings(BaseSettings):
     )
 
     environment: Literal["development", "test", "production"] = "development"
+    authMode: Literal["fixture"] = "fixture"
     databaseUrl: str = "postgresql+asyncpg://cortex:cortex@127.0.0.1:5432/cortex"
     enterpriseId: UUID = UUID("00000000-0000-0000-0000-000000000001")
     devMode: bool = True
     requiredAccelerator: Literal["auto", "cpu", "mps", "cuda"] = "mps"
+    oidcIssuerUrl: str = "https://cortex.local/oidc"
+    oidcAudience: str = "cortex"
     ollamaBaseUrl: str = "http://127.0.0.1:11434"
     generatorModel: str = "qwen3:14b"
     embeddingModel: str = "qwen3-embedding:0.6b"
@@ -52,6 +55,8 @@ class Settings(BaseSettings):
 
     @field_validator(
         "databaseUrl",
+        "oidcIssuerUrl",
+        "oidcAudience",
         "ollamaBaseUrl",
         "generatorModel",
         "embeddingModel",

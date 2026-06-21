@@ -7,9 +7,21 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import BIGINT, DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy.dialects.postgresql import ENUM as PostgresEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+PIPELINE_STATUS_ENUM = PostgresEnum(
+    "draft",
+    "validated",
+    "evaluated",
+    "approved",
+    "active",
+    "retired",
+    name="pipeline_status",
+    create_type=False,
+)
 
 
 class Base(DeclarativeBase):
@@ -144,6 +156,28 @@ class DocumentVersion(Base):
     acceleratorReports: Mapped[list[dict[str, Any]]] = mapped_column(
         "accelerator_reports", JSONB, nullable=False
     )
+    activatedAt: Mapped[datetime | None] = mapped_column("activated_at", DateTime(timezone=True))
+
+
+class PipelineVersion(Base):
+    """Persist one immutable pipeline definition and its promotion lifecycle state."""
+
+    __tablename__ = "pipeline_version"
+
+    id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True)
+    enterpriseId: Mapped[UUID] = mapped_column(
+        "enterprise_id", PostgresUUID(as_uuid=True), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(PIPELINE_STATUS_ENUM, nullable=False)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    definitionHash: Mapped[bytes] = mapped_column(
+        "definition_hash",
+        LargeBinary(32),
+        nullable=False,
+    )
+    createdBy: Mapped[str] = mapped_column("created_by", Text, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True))
     activatedAt: Mapped[datetime | None] = mapped_column("activated_at", DateTime(timezone=True))
 
 

@@ -20,6 +20,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query route with citation display control, live pipeline/health fetches, and persisted trace playback.
 - Source onboarding and source operations: multipart file uploads, allowlisted single-page website snapshots, blob deduplication by raw SHA-256, pending/failed/active source versions, durable source ingestion jobs, and developer-side source/job views.
+- Governance foundation: fixture-compatible bearer/OIDC identity resolution, `/v1/session`, developer-side builder/admin RBAC, audit-backed permission denials, persisted pipeline governance endpoints, and authenticated source/pipeline operations that derive actor identity server-side.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 
 ## Invariants
@@ -41,3 +42,4 @@ The selected visual target is the first generated direction, “Signal Grid”: 
 - Large-scale retrieval engines remain adapters; PostgreSQL/pgvector is the initial implementation.
 - Local live-integration verification beyond the unit/component suite still depends on an available PostgreSQL service and local Ollama-compatible model endpoint.
 - Malware scanning is still a required hook with a local no-op adapter; enterprise scanner integrations remain a deployment concern rather than a product concern.
+- Pipeline validation currently audits and re-validates the active immutable definition when no edited draft exists; draft authoring remains tied to future pipeline-edit persistence work.

@@ -86,12 +86,29 @@ describe("DeveloperConsole", () => {
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            enterpriseId: "00000000-0000-0000-0000-000000000001",
+            actorId: "alex.rivera@example.com",
+            subject: "alex.rivera@example.com",
+            email: "alex.rivera@example.com",
+            displayName: "Alex Rivera",
+            groups: ["group:employees", "group:platform-admins"],
+            roles: ["admin", "builder"],
+            principalIds: ["group:employees", "group:platform-admins", "role:admin", "role:builder"],
+            isAdmin: true,
+            isBuilder: true,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
       );
 
     render(<DeveloperConsole />);
 
     expect(await screen.findByRole("heading", { name: "Enterprise evidence pipeline" })).toBeVisible();
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
   });
 });

@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getsession
+         * @description Resolve the authenticated fixture or OIDC identity for the current browser surface.
+         */
+        get: operations["getSession_v1_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ingestion/text": {
         parameters: {
             query?: never;
@@ -313,11 +333,71 @@ export interface paths {
         };
         /**
          * Getactivepipeline
-         * @description Return the immutable graph rendered by the developer console.
+         * @description Return the active persisted pipeline graph rendered by the developer console.
          */
         get: operations["getActivePipeline_v1_pipelines_active_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pipelines/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listpipelineversions
+         * @description List immutable persisted pipeline versions for governance review and rollback.
+         */
+        get: operations["listPipelineVersions_v1_pipelines_versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pipelines/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validatepipeline
+         * @description Validate the next persisted pipeline draft and record the audited promotion event.
+         */
+        post: operations["validatePipeline_v1_pipelines_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pipelines/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activatepipeline
+         * @description Activate a validated pipeline version or roll back to a previously approved version.
+         */
+        post: operations["activatePipeline_v1_pipelines_activate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -343,6 +423,19 @@ export interface components {
             /** Principalids */
             principalIds: string[];
         };
+        /**
+         * ActivatePipelineRequest
+         * @description Request activation of a validated pipeline version or rollback to an earlier one.
+         */
+        ActivatePipelineRequest: {
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Version */
+            version?: number | null;
+        };
         /** Body_createUploadSource_v1_sources_uploads_post */
         Body_createUploadSource_v1_sources_uploads_post: {
             /**
@@ -350,8 +443,6 @@ export interface components {
              * Format: uuid
              */
             enterpriseId: string;
-            /** Actorid */
-            actorId: string;
             /** Displayname */
             displayName: string;
             /** Versionlabel */
@@ -449,8 +540,6 @@ export interface components {
              * Format: uuid
              */
             enterpriseId: string;
-            /** Actorid */
-            actorId: string;
             /** Displayname */
             displayName: string;
             /** Sourceuri */
@@ -677,6 +766,36 @@ export interface components {
             };
         };
         /**
+         * PipelineVersionSummaryResponse
+         * @description Summarize one immutable pipeline version for developer governance views.
+         */
+        PipelineVersionSummaryResponse: {
+            /**
+             * Pipelineversionid
+             * Format: uuid
+             */
+            pipelineVersionId: string;
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Version */
+            version: number;
+            /** Status */
+            status: string;
+            /** Createdby */
+            createdBy: string;
+            /** Createdat */
+            createdAt: string;
+            /** Activatedat */
+            activatedAt: string | null;
+            /** Reranktopk */
+            rerankTopK: number;
+            /** Definitionhash */
+            definitionHash: string;
+        };
+        /**
          * QueryRequest
          * @description Submit an evidence-bounded user query with a mandatory access scope.
          */
@@ -799,6 +918,35 @@ export interface components {
             enterprises: string[];
             /** Tracecount */
             traceCount: number;
+        };
+        /**
+         * SessionResponse
+         * @description Expose the authenticated identity that the UI should render and honor.
+         */
+        SessionResponse: {
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+            /** Actorid */
+            actorId: string;
+            /** Subject */
+            subject: string;
+            /** Email */
+            email: string;
+            /** Displayname */
+            displayName: string;
+            /** Groups */
+            groups: string[];
+            /** Roles */
+            roles: string[];
+            /** Principalids */
+            principalIds: string[];
+            /** Isadmin */
+            isAdmin: boolean;
+            /** Isbuilder */
+            isBuilder: boolean;
         };
         /**
          * SourceDetailResponse
@@ -976,6 +1124,17 @@ export interface components {
             /** Outcome */
             outcome: string;
         };
+        /**
+         * ValidatePipelineRequest
+         * @description Request validation of the next persisted pipeline draft for one enterprise.
+         */
+        ValidatePipelineRequest: {
+            /**
+             * Enterpriseid
+             * Format: uuid
+             */
+            enterpriseId: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1036,6 +1195,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuntimeHealthResponse"];
+                };
+            };
+        };
+    };
+    getSession_v1_session_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
                 };
             };
         };
@@ -1446,7 +1625,9 @@ export interface operations {
     };
     getActivePipeline_v1_pipelines_active_get: {
         parameters: {
-            query?: never;
+            query: {
+                enterpriseId: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1460,6 +1641,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineGraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listPipelineVersions_v1_pipelines_versions_get: {
+        parameters: {
+            query: {
+                enterpriseId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineVersionSummaryResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validatePipeline_v1_pipelines_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidatePipelineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineGraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activatePipeline_v1_pipelines_activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivatePipelineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineGraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -18,6 +18,7 @@ from cortex.database import getDatabaseSession
 from cortex.domain.chunking import ChunkerConfig
 from cortex.errors import CortexError
 from cortex.schemas import (
+    ActivatePipelineRequest,
     CreateUploadSourceResponse,
     CreateWebsiteSourceRequest,
     CreateWebsiteSourceResponse,
@@ -26,20 +27,25 @@ from cortex.schemas import (
     JobStatusResponse,
     JobSummaryResponse,
     PipelineGraphResponse,
-    PipelineNodeSchema,
+    PipelineVersionSummaryResponse,
     QueryRequest,
     QueryResponse,
     QueuedJobResponse,
     RuntimeHealthResponse,
     SeedFixturesResponse,
+    SessionResponse,
     SourceDetailResponse,
     SourceSummaryResponse,
     TraceSummaryResponse,
+    ValidatePipelineRequest,
 )
+from cortex.services.audit import persistControlPlaneAudit
+from cortex.services.auth import requireAdminIdentity, requireBuilderIdentity, resolveIdentity
 from cortex.services.ingestion import IngestionService, PostgresIngestionRepository
 from cortex.services.jobs import DurableJobService
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.object_storage import LocalObjectStorage
+from cortex.services.pipelines import PipelineService
 from cortex.services.query import QueryService
 from cortex.services.runtime import RuntimeHealthService
 from cortex.services.seed import seedFixtures
@@ -68,6 +74,11 @@ def buildSourceService(session: AsyncSession) -> SourceService:
     )
 
 
+def buildPipelineService(session: AsyncSession) -> PipelineService:
+    """Create the persisted pipeline governance service for the active enterprise."""
+    return PipelineService(session=session, settings=settings)
+
+
 @router.get("/health/live")
 async def getLiveness() -> dict[str, str]:
     """Report process liveness without touching external dependencies."""
@@ -83,6 +94,24 @@ async def getReadiness(session: DatabaseSession) -> RuntimeHealthResponse:
         modelProvider=buildModelProvider(settings),
     )
     return await runtimeHealthService.getReadiness()
+
+
+@router.get("/v1/session", response_model=SessionResponse)
+async def getSession(request: Request) -> SessionResponse:
+    """Resolve the authenticated fixture or OIDC identity for the current browser surface."""
+    identity = await resolveIdentity(request, settings)
+    return SessionResponse(
+        enterpriseId=identity.enterpriseId,
+        actorId=identity.actorId,
+        subject=identity.subject,
+        email=identity.email,
+        displayName=identity.displayName,
+        groups=list(identity.groups),
+        roles=list(identity.roles),
+        principalIds=list(identity.principalIds),
+        isAdmin=identity.isAdmin,
+        isBuilder=identity.isBuilder,
+    )
 
 
 @router.post("/v1/ingestion/text", response_model=IngestTextResponse)
@@ -149,8 +178,8 @@ async def enqueueTextIngestionJob(
 
 @router.post("/v1/sources/uploads", response_model=CreateUploadSourceResponse)
 async def createUploadSource(
+    request: Request,
     enterpriseId: Annotated[UUID, Form()],
-    actorId: Annotated[str, Form()],
     displayName: Annotated[str, Form()],
     versionLabel: Annotated[str, Form()],
     principalIds: Annotated[str, Form()],
@@ -163,6 +192,13 @@ async def createUploadSource(
     metadata: Annotated[str | None, Form()] = None,
 ) -> CreateUploadSourceResponse:
     """Accept a file upload, store it once by hash, and queue deterministic ingestion."""
+    identity = await requireAdminIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="source.upload.create",
+        enterpriseId=enterpriseId,
+    )
     if file.content_type is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -171,9 +207,9 @@ async def createUploadSource(
     try:
         rawContent = await file.read()
         sourceService = buildSourceService(session)
-        return await sourceService.createUploadSource(
+        response = await sourceService.createUploadSource(
             enterpriseId=enterpriseId,
-            actorId=actorId,
+            actorId=identity.actorId,
             displayName=displayName,
             versionLabel=versionLabel,
             principalIds=parsePrincipalIds(principalIds),
@@ -186,6 +222,27 @@ async def createUploadSource(
             publishedAt=parseOptionalTimestamp(publishedAt),
             metadata=parseOptionalMetadata(metadata),
         )
+        await persistControlPlaneAudit(
+            session=session,
+            settings=settings,
+            enterpriseId=enterpriseId,
+            actorId=identity.actorId,
+            action="source.upload.create",
+            scope={
+                "enterpriseId": str(enterpriseId),
+                "documentId": str(response.documentId),
+                "documentVersionId": str(response.documentVersionId),
+            },
+            outcome="queued",
+            eventPayload={
+                "displayName": displayName.strip(),
+                "fileName": file.filename or "upload.bin",
+                "mimeType": file.content_type,
+                "jobId": str(response.jobId),
+            },
+        )
+        await session.commit()
+        return response
     except CortexError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
@@ -199,13 +256,41 @@ async def createUploadSource(
 
 @router.post("/v1/sources/website", response_model=CreateWebsiteSourceResponse)
 async def createWebsiteSource(
+    httpRequest: Request,
     request: CreateWebsiteSourceRequest,
     session: DatabaseSession,
 ) -> CreateWebsiteSourceResponse:
     """Fetch one allowlisted page, persist its snapshot, and queue deterministic ingestion."""
+    identity = await requireAdminIdentity(
+        request=httpRequest,
+        session=session,
+        settings=settings,
+        action="source.website.create",
+        enterpriseId=request.enterpriseId,
+    )
     try:
         sourceService = buildSourceService(session)
-        return await sourceService.createWebsiteSource(request)
+        response = await sourceService.createWebsiteSource(request, actorId=identity.actorId)
+        await persistControlPlaneAudit(
+            session=session,
+            settings=settings,
+            enterpriseId=request.enterpriseId,
+            actorId=identity.actorId,
+            action="source.website.create",
+            scope={
+                "enterpriseId": str(request.enterpriseId),
+                "documentId": str(response.documentId),
+                "documentVersionId": str(response.documentVersionId),
+            },
+            outcome="queued",
+            eventPayload={
+                "displayName": request.displayName.strip(),
+                "jobId": str(response.jobId),
+                "sourceUri": request.sourceUri,
+            },
+        )
+        await session.commit()
+        return response
     except CortexError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
@@ -219,21 +304,37 @@ async def createWebsiteSource(
 
 @router.get("/v1/sources", response_model=list[SourceSummaryResponse])
 async def listSources(
+    request: Request,
     enterpriseId: UUID,
     session: DatabaseSession,
 ) -> list[SourceSummaryResponse]:
     """Return the developer source inventory with the latest version status for each source."""
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="source.list",
+        enterpriseId=enterpriseId,
+    )
     sourceService = buildSourceService(session)
     return await sourceService.listSources(enterpriseId)
 
 
 @router.get("/v1/sources/{documentId}", response_model=SourceDetailResponse)
 async def getSourceDetail(
+    request: Request,
     documentId: UUID,
     enterpriseId: UUID,
     session: DatabaseSession,
 ) -> SourceDetailResponse:
     """Return one source record plus its ordered version history."""
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="source.detail",
+        enterpriseId=enterpriseId,
+    )
     sourceService = buildSourceService(session)
     try:
         return await sourceService.getSourceDetail(enterpriseId, documentId)
@@ -243,16 +344,25 @@ async def getSourceDetail(
 
 @router.get("/v1/jobs", response_model=list[JobSummaryResponse])
 async def listJobs(
+    request: Request,
     enterpriseId: UUID,
     session: DatabaseSession,
 ) -> list[JobSummaryResponse]:
     """Return the newest durable jobs for the developer jobs panel."""
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="job.list",
+        enterpriseId=enterpriseId,
+    )
     sourceService = buildSourceService(session)
     return await sourceService.listJobs(enterpriseId)
 
 
 @router.get("/v1/jobs/{jobId}", response_model=JobStatusResponse)
 async def getJobStatus(
+    request: Request,
     jobId: UUID,
     session: DatabaseSession,
 ) -> JobStatusResponse:
@@ -261,6 +371,13 @@ async def getJobStatus(
     jobStatus = await sourceService.getJobStatus(jobId)
     if jobStatus is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="job.detail",
+        enterpriseId=jobStatus.enterpriseId,
+    )
     return jobStatus
 
 
@@ -300,6 +417,13 @@ async def streamQueryEvents(
     traceSummary = await queryService.getTrace(traceId)
     if traceSummary is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="trace not found")
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="trace.events.read",
+        enterpriseId=traceSummary.enterpriseId,
+    )
 
     async def generateEvents():
         try:
@@ -319,10 +443,18 @@ async def streamQueryEvents(
 
 @router.get("/v1/traces/latest", response_model=TraceSummaryResponse | None)
 async def getLatestTrace(
+    request: Request,
     enterpriseId: UUID,
     session: DatabaseSession,
 ) -> TraceSummaryResponse | None:
     """Return the latest trace for the developer console trace timeline."""
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="trace.latest.read",
+        enterpriseId=enterpriseId,
+    )
     queryService = QueryService(
         session=session,
         settings=settings,
@@ -332,7 +464,11 @@ async def getLatestTrace(
 
 
 @router.get("/v1/traces/{traceId}", response_model=TraceSummaryResponse)
-async def getTrace(traceId: UUID, session: DatabaseSession) -> TraceSummaryResponse:
+async def getTrace(
+    traceId: UUID,
+    request: Request,
+    session: DatabaseSession,
+) -> TraceSummaryResponse:
     """Return one persisted trace and its exact stage timeline."""
     queryService = QueryService(
         session=session,
@@ -342,14 +478,47 @@ async def getTrace(traceId: UUID, session: DatabaseSession) -> TraceSummaryRespo
     traceSummary = await queryService.getTrace(traceId)
     if traceSummary is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="trace not found")
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="trace.detail.read",
+        enterpriseId=traceSummary.enterpriseId,
+    )
     return traceSummary
 
 
 @router.post("/v1/dev/seed", response_model=SeedFixturesResponse)
-async def seedDevelopmentFixtures(session: DatabaseSession) -> SeedFixturesResponse:
+async def seedDevelopmentFixtures(
+    request: Request,
+    session: DatabaseSession,
+) -> SeedFixturesResponse:
     """Seed a deterministic fixture corpus for the live integration baseline."""
+    await requireAdminIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="fixtures.seed",
+        enterpriseId=settings.enterpriseId,
+    )
+    identity = await resolveIdentity(request, settings)
     try:
-        return await seedFixtures(session, settings, buildModelProvider(settings))
+        response = await seedFixtures(session, settings, buildModelProvider(settings))
+        await persistControlPlaneAudit(
+            session=session,
+            settings=settings,
+            enterpriseId=settings.enterpriseId,
+            actorId=identity.actorId,
+            action="fixtures.seed",
+            scope={"enterpriseId": str(settings.enterpriseId)},
+            outcome="seeded",
+            eventPayload={
+                "seededDocuments": response.seededDocuments,
+                "traceCount": response.traceCount,
+            },
+        )
+        await session.commit()
+        return response
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -358,37 +527,73 @@ async def seedDevelopmentFixtures(session: DatabaseSession) -> SeedFixturesRespo
 
 
 @router.get("/v1/pipelines/active", response_model=PipelineGraphResponse)
-async def getActivePipeline() -> PipelineGraphResponse:
-    """Return the immutable graph rendered by the developer console."""
-    nodes = [
-        ("ingest", "Ingest & Normalize", "ingestion", "1.1.0"),
-        ("authorize", "Access Scope", "security", "1.0.0"),
-        ("retrieve", "Hybrid Retrieval", "retrieval", "1.3.0"),
-        ("rerank", "Cross-Encoder", "reranking", "1.1.0"),
-        ("score", "Source Confidence", "scoring", "1.1.0"),
-        ("generate", "Bounded Generation", "generation", "1.1.0"),
-        ("validate", "Claims & Citations", "validation", "1.1.0"),
-    ]
-    return PipelineGraphResponse(
-        name="Enterprise evidence pipeline",
-        version=settings.pipelineVersion,
-        status="active",
-        rerankTopK=settings.rerankTopK,
-        nodes=[
-            PipelineNodeSchema(
-                id=nodeId,
-                label=label,
-                category=category,
-                status="healthy",
-                version=version,
-                config={"required": True},
-            )
-            for nodeId, label, category, version in nodes
-        ],
-        edges=[
-            {"source": nodes[index][0], "target": nodes[index + 1][0]}
-            for index in range(len(nodes) - 1)
-        ],
+async def getActivePipeline(
+    request: Request,
+    enterpriseId: UUID,
+    session: DatabaseSession,
+) -> PipelineGraphResponse:
+    """Return the active persisted pipeline graph rendered by the developer console."""
+    identity = await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="pipeline.active.read",
+        enterpriseId=enterpriseId,
+    )
+    return await buildPipelineService(session).getOrCreateActivePipeline(identity)
+
+
+@router.get("/v1/pipelines/versions", response_model=list[PipelineVersionSummaryResponse])
+async def listPipelineVersions(
+    request: Request,
+    enterpriseId: UUID,
+    session: DatabaseSession,
+) -> list[PipelineVersionSummaryResponse]:
+    """List immutable persisted pipeline versions for governance review and rollback."""
+    await requireBuilderIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="pipeline.versions.list",
+        enterpriseId=enterpriseId,
+    )
+    return await buildPipelineService(session).listPipelineVersions(enterpriseId)
+
+
+@router.post("/v1/pipelines/validate", response_model=PipelineGraphResponse)
+async def validatePipeline(
+    request: Request,
+    payload: ValidatePipelineRequest,
+    session: DatabaseSession,
+) -> PipelineGraphResponse:
+    """Validate the next persisted pipeline draft and record the audited promotion event."""
+    identity = await requireAdminIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="pipeline.validate",
+        enterpriseId=payload.enterpriseId,
+    )
+    return await buildPipelineService(session).validateNextPipeline(identity)
+
+
+@router.post("/v1/pipelines/activate", response_model=PipelineGraphResponse)
+async def activatePipeline(
+    request: Request,
+    payload: ActivatePipelineRequest,
+    session: DatabaseSession,
+) -> PipelineGraphResponse:
+    """Activate a validated pipeline version or roll back to a previously approved version."""
+    identity = await requireAdminIdentity(
+        request=request,
+        session=session,
+        settings=settings,
+        action="pipeline.activate",
+        enterpriseId=payload.enterpriseId,
+    )
+    return await buildPipelineService(session).activatePipeline(
+        identity=identity,
+        version=payload.version,
     )
 
 

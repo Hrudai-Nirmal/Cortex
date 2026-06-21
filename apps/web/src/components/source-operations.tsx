@@ -17,8 +17,6 @@ import {
 } from "../lib/api-client";
 import type { SourceDetail, SourceSummary } from "../types";
 
-const ACTOR_ID = "alex.rivera@example.com";
-
 interface SourceOperationsProps {
   enterpriseId: string;
   onJobQueued: (jobId: string) => void;
@@ -121,7 +119,6 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
     setSuccessMessage(null);
     try {
       const response = await createUploadSource({
-        actorId: ACTOR_ID,
         displayName: uploadForm.displayName || uploadFile.name,
         enterpriseId,
         file: uploadFile,
@@ -151,7 +148,6 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
     setSuccessMessage(null);
     try {
       const response = await createWebsiteSource({
-        actorId: ACTOR_ID,
         displayName: websiteForm.displayName,
         enterpriseId,
         extractionQuality: 0.9,

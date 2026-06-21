@@ -11,12 +11,21 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import {
+  activatePipeline,
   getActivePipeline,
   getLatestTrace,
   getRuntimeHealth,
+  getSession,
   subscribeToTraceEvents,
+  validatePipeline,
 } from "../lib/api-client";
-import type { PipelineGraph, QueryStageEvent, RuntimeHealth, TraceSummary } from "../types";
+import type {
+  PipelineGraph,
+  QueryStageEvent,
+  RuntimeHealth,
+  Session,
+  TraceSummary,
+} from "../types";
 import { JobOperations } from "./job-operations";
 import { PipelineGraph as PipelineGraphCanvas } from "./pipeline-graph";
 import { SourceOperations } from "./source-operations";
@@ -41,23 +50,20 @@ const inspectorContent: Record<string, { title: string; type: string; detail: st
 export function DeveloperConsole() {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
   const [activeTab, setActiveTab] = useState("Graph");
-  const [publishState, setPublishState] = useState<"saved" | "validating" | "published">("saved");
+  const [publishState, setPublishState] = useState<"saved" | "validating" | "publishing" | "published">("saved");
   const [pipeline, setPipeline] = useState<PipelineGraph | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [tracePlayback, setTracePlayback] = useState<QueryStageEvent[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null);
-  const validationTimerRef = useRef<number | null>(null);
   const traceSubscriptionRef = useRef<(() => void) | null>(null);
   const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
   const displayedEvents = tracePlayback.length > 0 ? tracePlayback : latestTrace?.stageEvents ?? [];
 
   useEffect(() => {
     return () => {
-      if (validationTimerRef.current !== null) {
-        window.clearTimeout(validationTimerRef.current);
-      }
       traceSubscriptionRef.current?.();
     };
   }, []);
@@ -67,10 +73,11 @@ export function DeveloperConsole() {
 
     async function loadConsole(): Promise<void> {
       try {
-        const [activePipeline, health, trace] = await Promise.all([
-          getActivePipeline(),
+        const [activePipeline, health, trace, resolvedSession] = await Promise.all([
+          getActivePipeline(ENTERPRISE_ID),
           getRuntimeHealth(),
           getLatestTrace(ENTERPRISE_ID),
+          getSession(),
         ]);
         if (!isMounted) {
           return;
@@ -78,6 +85,7 @@ export function DeveloperConsole() {
         setPipeline(activePipeline);
         setRuntimeHealth(health);
         setLatestTrace(trace);
+        setSession(resolvedSession);
         setTracePlayback([]);
       } catch (error) {
         if (isMounted) {
@@ -119,16 +127,38 @@ export function DeveloperConsole() {
     };
   }, [latestTrace?.traceId]);
 
-  function handleValidate(): void {
-    setPublishState("validating");
-    if (validationTimerRef.current !== null) {
-      window.clearTimeout(validationTimerRef.current);
+  async function handleValidate(): Promise<void> {
+    if (!session?.isAdmin) {
+      setErrorMessage("Only administrators can validate pipeline changes.");
+      return;
     }
-    validationTimerRef.current = window.setTimeout(() => setPublishState("saved"), 900);
+    setPublishState("validating");
+    setErrorMessage(null);
+    try {
+      const validatedPipeline = await validatePipeline(ENTERPRISE_ID);
+      setPipeline(validatedPipeline);
+      setPublishState("saved");
+    } catch (error) {
+      setPublishState("saved");
+      setErrorMessage(error instanceof Error ? error.message : "Pipeline validation failed");
+    }
   }
 
-  function handlePublish(): void {
-    setPublishState("published");
+  async function handlePublish(): Promise<void> {
+    if (!session?.isAdmin) {
+      setErrorMessage("Only administrators can publish pipeline changes.");
+      return;
+    }
+    setPublishState("publishing");
+    setErrorMessage(null);
+    try {
+      const activatedPipeline = await activatePipeline(ENTERPRISE_ID);
+      setPipeline(activatedPipeline);
+      setPublishState("published");
+    } catch (error) {
+      setPublishState("saved");
+      setErrorMessage(error instanceof Error ? error.message : "Pipeline publish failed");
+    }
   }
 
   const runtimeSummary = runtimeHealth?.components.map((component) => component.status).join(", ");
@@ -145,9 +175,9 @@ export function DeveloperConsole() {
           </div>
         </div>
         <div className="header-actions">
-          <span className="save-state"><FloppyDisk aria-hidden size={15} />{publishState === "published" ? "Published" : publishState === "validating" ? "Validating…" : "All changes saved"}</span>
-          <button className="button button--secondary" type="button" onClick={handleValidate}>Validate</button>
-          <button className="button button--primary" type="button" onClick={handlePublish}>Publish</button>
+          <span className="save-state"><FloppyDisk aria-hidden size={15} />{publishState === "published" ? "Published" : publishState === "publishing" ? "Publishing…" : publishState === "validating" ? "Validating…" : "All changes saved"}</span>
+          <button className="button button--secondary" type="button" onClick={() => void handleValidate()} disabled={!session?.isAdmin || publishState !== "saved"}>Validate</button>
+          <button className="button button--primary" type="button" onClick={() => void handlePublish()} disabled={!session?.isAdmin || publishState !== "saved"}>Publish</button>
         </div>
       </header>
 
@@ -204,6 +234,7 @@ export function DeveloperConsole() {
       </section>
       {publishState === "published" ? <div className="toast"><CheckCircle weight="fill" /> Pipeline v{pipeline?.version ?? 0} published</div> : null}
       {publishState === "validating" ? <div className="toast toast--warning"><WarningCircle weight="fill" /> Running promotion gates</div> : null}
+      {publishState === "publishing" ? <div className="toast toast--warning"><WarningCircle weight="fill" /> Activating immutable pipeline version</div> : null}
     </main>
   );
 }

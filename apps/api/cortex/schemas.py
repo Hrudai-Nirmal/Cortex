@@ -179,7 +179,6 @@ class CreateWebsiteSourceRequest(BaseModel):
     """Accept one allowlisted single-page website source for durable ingestion."""
 
     enterpriseId: UUID
-    actorId: str = Field(min_length=1, max_length=255)
     displayName: str = Field(min_length=1, max_length=255)
     sourceUri: str = Field(min_length=1, max_length=2048)
     versionLabel: str = Field(min_length=1, max_length=120)
@@ -311,3 +310,45 @@ class PipelineGraphResponse(BaseModel):
     rerankTopK: int
     nodes: list[PipelineNodeSchema]
     edges: list[dict[str, str]]
+
+
+class PipelineVersionSummaryResponse(BaseModel):
+    """Summarize one immutable pipeline version for developer governance views."""
+
+    pipelineVersionId: UUID
+    enterpriseId: UUID
+    version: int
+    status: str
+    createdBy: str
+    createdAt: str
+    activatedAt: str | None
+    rerankTopK: int
+    definitionHash: str
+
+
+class ValidatePipelineRequest(BaseModel):
+    """Request validation of the next persisted pipeline draft for one enterprise."""
+
+    enterpriseId: UUID
+
+
+class ActivatePipelineRequest(BaseModel):
+    """Request activation of a validated pipeline version or rollback to an earlier one."""
+
+    enterpriseId: UUID
+    version: int | None = Field(default=None, ge=1)
+
+
+class SessionResponse(BaseModel):
+    """Expose the authenticated identity that the UI should render and honor."""
+
+    enterpriseId: UUID
+    actorId: str
+    subject: str
+    email: str
+    displayName: str
+    groups: list[str]
+    roles: list[str]
+    principalIds: list[str]
+    isAdmin: bool
+    isBuilder: bool

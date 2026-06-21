@@ -7,14 +7,28 @@ import type {
   JobStatus,
   JobSummary,
   PipelineGraph,
+  PipelineVersionSummary,
   QueryRequest,
   QueryResponse,
   QueryStageEvent,
   RuntimeHealth,
+  Session,
   SourceDetail,
   SourceSummary,
   TraceSummary,
 } from "../types";
+
+function getDefaultFixtureToken(): string {
+  return window.location.pathname.startsWith("/ask") ? "fixture-employee" : "fixture-admin";
+}
+
+function buildHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init);
+  if (!headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${getDefaultFixtureToken()}`);
+  }
+  return headers;
+}
 
 async function parseFailure(response: Response): Promise<string> {
   try {
@@ -27,7 +41,10 @@ async function parseFailure(response: Response): Promise<string> {
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   try {
-    const response = await fetch(path, init);
+    const response = await fetch(path, {
+      ...init,
+      headers: buildHeaders(init?.headers),
+    });
     if (!response.ok) {
       throw new Error(await parseFailure(response));
     }
@@ -38,6 +55,11 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(error instanceof Error ? error.message : `Cortex request failed for ${path}`);
   }
+}
+
+/** Resolve the current authenticated browser identity for the active surface. */
+export async function getSession(): Promise<Session> {
+  return fetchJson<Session>("/v1/session");
 }
 
 /** Submit a query and return only the API's validated answer contract. */
@@ -54,8 +76,34 @@ export async function submitQuery(
 }
 
 /** Load the immutable active pipeline definition for the developer graph. */
-export async function getActivePipeline(): Promise<PipelineGraph> {
-  return fetchJson<PipelineGraph>("/v1/pipelines/active");
+export async function getActivePipeline(enterpriseId: string): Promise<PipelineGraph> {
+  return fetchJson<PipelineGraph>(`/v1/pipelines/active?enterpriseId=${enterpriseId}`);
+}
+
+/** Validate the next persisted pipeline draft for the selected enterprise. */
+export async function validatePipeline(enterpriseId: string): Promise<PipelineGraph> {
+  return fetchJson<PipelineGraph>("/v1/pipelines/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enterpriseId }),
+  });
+}
+
+/** Activate the newest validated pipeline or a specific rollback target. */
+export async function activatePipeline(
+  enterpriseId: string,
+  version?: number,
+): Promise<PipelineGraph> {
+  return fetchJson<PipelineGraph>("/v1/pipelines/activate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enterpriseId, version: version ?? null }),
+  });
+}
+
+/** List immutable pipeline versions for governance views or rollback controls. */
+export async function getPipelineVersions(enterpriseId: string): Promise<PipelineVersionSummary[]> {
+  return fetchJson<PipelineVersionSummary[]>(`/v1/pipelines/versions?enterpriseId=${enterpriseId}`);
 }
 
 /** Load the latest persisted trace for the selected enterprise. */
@@ -93,7 +141,6 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
 
 /** Submit one file upload source and return the queued deterministic identifiers. */
 export async function createUploadSource(request: {
-  actorId: string;
   displayName: string;
   documentId?: string;
   enterpriseId: string;
@@ -107,7 +154,6 @@ export async function createUploadSource(request: {
 }): Promise<CreateUploadSourceResponse> {
   const formData = new FormData();
   formData.set("enterpriseId", request.enterpriseId);
-  formData.set("actorId", request.actorId);
   formData.set("displayName", request.displayName);
   formData.set("versionLabel", request.versionLabel);
   formData.set("principalIds", JSON.stringify(request.principalIds));

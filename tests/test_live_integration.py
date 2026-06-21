@@ -12,11 +12,14 @@ from typing import Any
 from urllib.parse import urlparse
 
 import asyncpg
+import cortex.api.routes as routeModule
 import pytest
 from alembic import command
 from alembic.config import Config
 from cortex.config import Settings
+from cortex.database import getDatabaseSession
 from cortex.errors import ProviderOperationError
+from cortex.main import createApp
 from cortex.schemas import (
     AccessScopeSchema,
     CreateWebsiteSourceRequest,
@@ -32,6 +35,7 @@ from cortex.services.runtime import RuntimeHealthService
 from cortex.services.seed import seedFixtures
 from cortex.services.sources import SourceService
 from cortex.worker import processNextJob
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -465,7 +469,6 @@ async def testWebsiteSourcePersistsAllowlistedSnapshotLive(
 
     response = await sourceService.createWebsiteSource(
         CreateWebsiteSourceRequest(
-            actorId="alex.rivera@example.com",
             displayName="Support Policy",
             enterpriseId=settings.enterpriseId,
             principalIds=["group:employees"],
@@ -474,7 +477,8 @@ async def testWebsiteSourcePersistsAllowlistedSnapshotLive(
             sourceAuthority=0.91,
             extractionQuality=0.9,
             metadata={},
-        )
+        ),
+        actorId="alex.rivera@example.com",
     )
 
     await processNextJob(databaseSession, settings)
@@ -562,3 +566,207 @@ async def testFailedSourceStaysQuarantinedAndOutOfRetrievalLive(
     assert versionRow["quarantine_status"] == "quarantined"
     assert versionRow["failure_code"] in {"SOURCE_PARSE_FAILED", "INGESTION_FAILED"}
     assert int(chunkCount or 0) == 0
+
+
+@pytest.mark.asyncio
+async def testDeveloperSourceMutationRequiresAdminAndAuditsDenialLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+    localWebsiteServer: str,
+) -> None:
+    """Builder identities must not be able to mutate source onboarding state."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl, websiteAllowlist=("127.0.0.1",))
+    routeModule.settings = settings
+    application = createApp()
+
+    async def overrideDatabaseSession():
+        yield databaseSession
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/sources/website",
+            headers={"Authorization": "Bearer fixture-builder"},
+            json={
+                "displayName": "Support Policy",
+                "enterpriseId": str(settings.enterpriseId),
+                "principalIds": ["group:employees"],
+                "sourceUri": localWebsiteServer,
+                "versionLabel": "2026.06",
+                "sourceAuthority": 0.91,
+                "extractionQuality": 0.9,
+                "metadata": {},
+            },
+        )
+
+    auditRow = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT actor_id, action, outcome, event_payload
+                    FROM audit_log
+                    WHERE action = 'source.website.create'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """
+                )
+            )
+        )
+        .mappings()
+        .one()
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin role required"
+    assert auditRow["actor_id"] == "riley.patel@example.com"
+    assert auditRow["outcome"] == "denied"
+    assert auditRow["event_payload"]["reason"] == "admin role required"
+
+
+@pytest.mark.asyncio
+async def testPipelineLifecyclePersistsAndAuditsLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """Active, validated, and activated pipeline versions should persist with audit evidence."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    routeModule.settings = settings
+    application = createApp()
+
+    async def overrideDatabaseSession():
+        yield databaseSession
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        sessionResponse = await client.get(
+            "/v1/session",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+        activeResponse = await client.get(
+            f"/v1/pipelines/active?enterpriseId={settings.enterpriseId}",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+        validateResponse = await client.post(
+            "/v1/pipelines/validate",
+            headers={"Authorization": "Bearer fixture-admin"},
+            json={"enterpriseId": str(settings.enterpriseId)},
+        )
+        activateResponse = await client.post(
+            "/v1/pipelines/activate",
+            headers={"Authorization": "Bearer fixture-admin"},
+            json={"enterpriseId": str(settings.enterpriseId)},
+        )
+        versionsResponse = await client.get(
+            f"/v1/pipelines/versions?enterpriseId={settings.enterpriseId}",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+
+    versionsPayload = versionsResponse.json()
+    auditActions = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT action, outcome
+                    FROM audit_log
+                    WHERE action LIKE 'pipeline.%'
+                    ORDER BY created_at ASC
+                    """
+                )
+            )
+        )
+        .mappings()
+        .all()
+    )
+
+    assert sessionResponse.status_code == 200
+    assert sessionResponse.json()["actorId"] == "alex.rivera@example.com"
+    assert activeResponse.status_code == 200
+    assert activeResponse.json()["status"] == "active"
+    assert validateResponse.status_code == 200
+    assert validateResponse.json()["status"] == "active"
+    assert activateResponse.status_code == 200
+    assert activateResponse.json()["status"] == "active"
+    assert versionsResponse.status_code == 200
+    assert [version["status"] for version in versionsPayload] == ["active"]
+    assert [(row["action"], row["outcome"]) for row in auditActions] == [
+        ("pipeline.bootstrap", "active"),
+        ("pipeline.validate", "active"),
+        ("pipeline.activate", "active"),
+    ]
+
+
+@pytest.mark.asyncio
+async def testTraceRoutesRequireBuilderIdentityLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """Employee identities must not be allowed to inspect developer trace surfaces."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    modelProvider = OllamaModelProvider(
+        baseUrl=settings.ollamaBaseUrl,
+        generatorModel=settings.generatorModel,
+        embeddingModel=settings.embeddingModel,
+    )
+    await seedFixtures(databaseSession, settings, modelProvider)
+    latestTraceId = await databaseSession.scalar(
+        text("SELECT id FROM trace_memory ORDER BY created_at DESC LIMIT 1")
+    )
+    assert latestTraceId is not None
+
+    routeModule.settings = settings
+    application = createApp()
+
+    async def overrideDatabaseSession():
+        yield databaseSession
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        latestResponse = await client.get(
+            f"/v1/traces/latest?enterpriseId={settings.enterpriseId}",
+            headers={"Authorization": "Bearer fixture-employee"},
+        )
+        traceResponse = await client.get(
+            f"/v1/traces/{latestTraceId}",
+            headers={"Authorization": "Bearer fixture-employee"},
+        )
+
+    deniedActions = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT action, outcome
+                    FROM audit_log
+                    WHERE outcome = 'denied'
+                    ORDER BY created_at ASC
+                    """
+                )
+            )
+        )
+        .mappings()
+        .all()
+    )
+
+    assert latestResponse.status_code == 403
+    assert traceResponse.status_code == 403
+    assert {(row["action"], row["outcome"]) for row in deniedActions} >= {
+        ("trace.latest.read", "denied"),
+        ("trace.detail.read", "denied"),
+    }
