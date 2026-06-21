@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -418,6 +418,7 @@ async def submitQuery(
 @router.post("/v1/chat/completions", response_model=ChatCompletionResponseSchema)
 async def submitChatCompletion(
     httpRequest: Request,
+    httpResponse: Response,
     request: ChatCompletionRequestSchema,
     session: DatabaseSession,
 ) -> ChatCompletionResponseSchema:
@@ -465,6 +466,9 @@ async def submitChatCompletion(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"chat completion failed: {error}",
         ) from error
+    httpResponse.headers["X-Cortex-Contract-Version"] = "v1"
+    httpResponse.headers["X-Cortex-Trace-Id"] = str(queryResponse.traceId)
+    httpResponse.headers["X-Cortex-Evidence-Status"] = queryResponse.evidenceStatus
     return ChatCompletionResponseSchema(
         id=f"cortex-{queryResponse.traceId}",
         object="chat.completion",
@@ -481,7 +485,9 @@ async def submitChatCompletion(
             }
         ],
         x_cortex={
+            "contractVersion": "v1",
             "traceId": queryResponse.traceId,
+            "traceEventsPath": f"/v1/query/{queryResponse.traceId}/events",
             "route": queryResponse.route,
             "correctedQuery": queryResponse.correctedQuery,
             "evidenceStatus": queryResponse.evidenceStatus,

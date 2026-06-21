@@ -38,7 +38,9 @@ export interface ExternalChatCompletionResponse {
     finish_reason: "stop";
   }>;
   x_cortex: {
+    contractVersion: "v1";
     traceId: string;
+    traceEventsPath: string;
     route: QueryResponse["route"];
     correctedQuery: QueryResponse["correctedQuery"];
     evidenceStatus: QueryResponse["evidenceStatus"];

@@ -39,6 +39,9 @@ The Kubernetes package example now separates non-secret runtime settings into a
 `cortex-config` ConfigMap, expects client-specific secrets through `cortex-secrets`,
 and mounts a shared persistent volume for `/var/lib/cortex/object-storage`.
 
+The edge Nginx router emits `X-Cortex-Surface: console|query` so operators can verify
+which host resolved to which packaged frontend without relying only on visual inspection.
+
 ## Domain Configuration
 
 Domain values are deployment-critical and must be supplied by the operator:

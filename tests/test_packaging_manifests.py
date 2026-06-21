@@ -33,3 +33,12 @@ def testKubernetesPackageManifestPreservesSplitHostRouting() -> None:
     assert "name: cortex-console-web" in manifestText
     assert "name: cortex-query-web" in manifestText
     assert "name: cortex-api" in manifestText
+
+
+def testEdgeRouterAdvertisesSplitSurfaceIdentity() -> None:
+    """The package router should expose which packaged surface each host resolved to."""
+    edgeTemplateText = (
+        Path(__file__).resolve().parents[1] / "infra" / "nginx" / "edge.conf.template"
+    ).read_text(encoding="utf-8")
+    assert "add_header X-Cortex-Surface console always;" in edgeTemplateText
+    assert "add_header X-Cortex-Surface query always;" in edgeTemplateText

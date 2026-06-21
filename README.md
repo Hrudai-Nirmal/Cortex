@@ -28,7 +28,9 @@ This OpenAI-compatible facade derives access scope from the authenticated bearer
 so replacement UIs do not send raw ACL principals from the browser. Cortex returns the
 assistant message in the standard `choices` envelope and adds `x_cortex` metadata with:
 
+- `contractVersion`
 - `traceId`
+- `traceEventsPath`
 - `route`
 - `correctedQuery`
 - `evidenceStatus`

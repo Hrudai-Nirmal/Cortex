@@ -209,7 +209,9 @@ class ChatCompletionChoiceSchema(BaseModel):
 class ExternalQueryMetadataSchema(BaseModel):
     """Expose evidence metadata replacement query shells need beside assistant text."""
 
+    contractVersion: Literal["v1"]
     traceId: UUID
+    traceEventsPath: str
     route: Literal["rag", "compute", "retrieve-then-compute"]
     correctedQuery: str | None
     evidenceStatus: Literal["sufficient", "partial", "insufficient", "conflict"]

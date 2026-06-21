@@ -33,9 +33,13 @@ set +a
 
 console_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
 query_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
+console_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
+query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
 
 printf "%s" "$console_html" | grep -qi "<!doctype html"
 printf "%s" "$query_html" | grep -qi "<!doctype html"
+printf "%s" "$console_headers" | grep -qi '^X-Cortex-Surface: console'
+printf "%s" "$query_headers" | grep -qi '^X-Cortex-Surface: query'
 
 read_json "$CORTEX_CONSOLE_HOST" "/health/live" | grep -q '"status"'
 read_json "$CORTEX_CONSOLE_HOST" "/health/startup" | grep -q '"components"'
@@ -55,14 +59,20 @@ if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
     --silent \
     --show-error \
     --fail \
+    -D - \
     -H "Host: ${CORTEX_QUERY_HOST}" \
     -H "Authorization: Bearer fixture-employee" \
     -H "Content-Type: application/json" \
     -X POST "http://127.0.0.1:${CORTEX_EDGE_PORT}/v1/chat/completions" \
     -d '{"model":"cortex-bounded-rag","messages":[{"role":"user","content":"What are our retentin rules?"}],"stream":false,"cortex":{"showCitations":true}}')"
+  printf "%s" "$chat_response" | grep -q 'X-Cortex-Contract-Version: v1'
+  printf "%s" "$chat_response" | grep -q 'X-Cortex-Trace-Id:'
+  printf "%s" "$chat_response" | grep -q 'X-Cortex-Evidence-Status:'
   printf "%s" "$chat_response" | grep -q '"object":"chat.completion"'
   printf "%s" "$chat_response" | grep -q '"x_cortex"'
+  printf "%s" "$chat_response" | grep -q '"contractVersion":"v1"'
   printf "%s" "$chat_response" | grep -q '"traceId"'
+  printf "%s" "$chat_response" | grep -q '"traceEventsPath"'
 fi
 
 echo "Package verification passed for ${CORTEX_CONSOLE_HOST} and ${CORTEX_QUERY_HOST}."

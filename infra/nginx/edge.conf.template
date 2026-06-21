@@ -15,6 +15,7 @@ upstream cortex_query {
 server {
   listen 8080;
   server_name ${CORTEX_CONSOLE_HOST};
+  add_header X-Cortex-Surface console always;
 
   location /v1/ {
     proxy_pass http://cortex_api;
@@ -41,6 +42,7 @@ server {
 server {
   listen 8080;
   server_name ${CORTEX_QUERY_HOST};
+  add_header X-Cortex-Surface query always;
 
   location /v1/ {
     proxy_pass http://cortex_api;

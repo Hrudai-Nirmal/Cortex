@@ -73,7 +73,9 @@ Example response:
     }
   ],
   "x_cortex": {
+    "contractVersion": "v1",
     "traceId": "4576b626-c27a-4409-9a51-600cf115ff4a",
+    "traceEventsPath": "/v1/query/4576b626-c27a-4409-9a51-600cf115ff4a/events",
     "route": "rag",
     "correctedQuery": "What are our retention rules?",
     "evidenceStatus": "sufficient",
@@ -85,9 +87,17 @@ Example response:
 }
 ```
 
+Response headers:
+
+- `X-Cortex-Contract-Version: v1`
+- `X-Cortex-Trace-Id: <trace UUID>`
+- `X-Cortex-Evidence-Status: sufficient|partial|insufficient|conflict`
+
 ## `x_cortex` fields
 
+- `contractVersion`: stable extension-contract version for replacement query shells
 - `traceId`: stable execution identifier for audit, feedback, and developer trace lookup
+- `traceEventsPath`: SSE path for persisted stage progress on the same Cortex host
 - `route`: `rag`, `compute`, or `retrieve-then-compute`
 - `correctedQuery`: spelling-corrected query when Cortex used one materially
 - `evidenceStatus`: `sufficient`, `partial`, `insufficient`, or `conflict`
@@ -102,6 +112,7 @@ Example response:
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.
 - Treat `x_cortex.evidenceStatus` and `x_cortex.abstained` as answer-governance signals.
 - Store `x_cortex.traceId` with user feedback so operators can reconcile query outcomes in the console.
+- Expect `x_cortex.contractVersion === "v1"` before relying on this extension shape.
 - Use the returned `traceId` to fetch persisted trace detail from the fixed developer console rather than recreating hidden pipeline state in the client UI.
 
 ## Replacement UI checklist

@@ -203,7 +203,15 @@ async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadat
     assert response.status_code == 200
     assert capturedRequestQuery["value"] == "What are our retentin rules?"
     assert payload["choices"][0]["message"]["content"] == "Raw query content is retained for 30 days."
+    assert response.headers["x-cortex-contract-version"] == "v1"
+    assert response.headers["x-cortex-trace-id"] == "4576b626-c27a-4409-9a51-600cf115ff4a"
+    assert response.headers["x-cortex-evidence-status"] == "sufficient"
+    assert payload["x_cortex"]["contractVersion"] == "v1"
     assert payload["x_cortex"]["traceId"] == "4576b626-c27a-4409-9a51-600cf115ff4a"
+    assert (
+        payload["x_cortex"]["traceEventsPath"]
+        == "/v1/query/4576b626-c27a-4409-9a51-600cf115ff4a/events"
+    )
     assert payload["x_cortex"]["correctedQuery"] == "What are our retention rules?"
     assert payload["x_cortex"]["evidenceStatus"] == "sufficient"
     assert payload["x_cortex"]["abstained"] is False
