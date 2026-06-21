@@ -64,6 +64,34 @@ const queryResponse = {
   },
 };
 
+const abstainedQueryResponse = {
+  ...queryResponse,
+  choices: [
+    {
+      index: 0,
+      message: {
+        role: "assistant",
+        content: "I do not have enough consistent evidence to answer that safely.",
+      },
+      finish_reason: "stop",
+    },
+  ],
+  x_cortex: {
+    ...queryResponse.x_cortex,
+    evidenceStatus: "conflict",
+    abstained: true,
+    claims: [
+      {
+        claimId: "claim-1",
+        text: "Retention differs between two policy sources.",
+        confidence: 0.41,
+        citationIds: ["C1"],
+        supportStatus: "conflict",
+      },
+    ],
+  },
+};
+
 function mockSuccessfulQuery(): void {
   vi.stubGlobal(
     "fetch",
@@ -93,6 +121,26 @@ function mockSessionOnly(): void {
         headers: { "Content-Type": "application/json" },
       }),
     ),
+  );
+}
+
+function mockAbstainedQuery(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(abstainedQueryResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
   );
 }
 
@@ -151,5 +199,27 @@ describe("EndUserQuery", () => {
 
     expect(await screen.findByRole("heading", { name: "Answer" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "Sources" })).not.toBeInTheDocument();
+  });
+
+  it("surfaces abstention and conflicting evidence honestly", async () => {
+    mockAbstainedQuery();
+    render(<EndUserQuery />);
+    expect(
+      await screen.findByText("Your access permissions are applied automatically."),
+    ).toBeVisible();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Ask a question" }), {
+      target: { value: "What is the retention period?" },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Submit question" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Submit question" }));
+
+    expect(await screen.findByRole("heading", { name: "Conflicting evidence" })).toBeVisible();
+    expect(screen.getByText("Conflicting authorized evidence detected")).toBeVisible();
+    expect(
+      screen.getByText(/withheld a fully supported answer/i),
+    ).toBeVisible();
   });
 });

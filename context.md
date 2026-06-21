@@ -10,6 +10,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Split frontend packaging: dedicated console build, dedicated query-app build, and Nginx host-based routing.
 - Developer surface: graph-first pipeline operations and trace inspection.
 - End-user surface: friendly query UI with optional citation display, but packaged as a replaceable app surface.
+- The bundled query surface now renders `sufficient`, `partial`, `insufficient`, and `conflict` evidence outcomes distinctly instead of treating every response as fully supported.
 - Provider interfaces isolate parsing, embedding, reranking, generation, storage, and identity.
 
 ## Implemented Vertical Slice

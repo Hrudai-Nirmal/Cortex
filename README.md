@@ -21,6 +21,10 @@ host, not by path, so client deployments can use domains such as:
 The built-in query UI remains optional and replaceable. The console is the default
 operator surface and is not intended to be swapped out.
 
+The bundled query UI now treats `sufficient`, `partial`, `insufficient`, and `conflict`
+evidence states differently so client-owned chat shells have a trustworthy reference
+consumer for the external contract.
+
 ## External query contract
 
 Client-owned chat shells should integrate through `POST /v1/chat/completions`.

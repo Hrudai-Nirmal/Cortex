@@ -21,6 +21,44 @@ const suggestions = [
   "What must pass before a pipeline is promoted?",
 ];
 
+function getEvidencePresentation(response: QueryResponse): {
+  icon: "supported" | "warning";
+  label: string;
+  title: string;
+  footnote: string;
+} {
+  if (response.evidenceStatus === "sufficient") {
+    return {
+      icon: "supported",
+      label: "Supported by authorized sources",
+      title: "Answer",
+      footnote: "Cortex only answered claims that passed evidence validation.",
+    };
+  }
+  if (response.evidenceStatus === "partial") {
+    return {
+      icon: "warning",
+      label: "Partially supported by authorized sources",
+      title: "Partial answer",
+      footnote: "Some requested points could not be fully supported by the retrieved evidence.",
+    };
+  }
+  if (response.evidenceStatus === "conflict") {
+    return {
+      icon: "warning",
+      label: "Conflicting authorized evidence detected",
+      title: "Conflicting evidence",
+      footnote: "Cortex found conflicting evidence and withheld a fully supported answer.",
+    };
+  }
+  return {
+    icon: "warning",
+    label: "Insufficient authorized evidence",
+    title: "No supported answer",
+    footnote: "Cortex did not find enough validated evidence to answer safely.",
+  };
+}
+
 /** Render a calm ask-answer-feedback experience for enterprise employees. */
 export function EndUserQuery() {
   const [query, setQuery] = useState("");
@@ -101,6 +139,8 @@ export function EndUserQuery() {
     }
   }
 
+  const evidencePresentation = response ? getEvidencePresentation(response) : null;
+
   return (
     <main className="query-surface">
       <header className="query-header">
@@ -123,8 +163,15 @@ export function EndUserQuery() {
         {response && !isLoading ? (
           <div className="answer-layout">
             <article className="answer-card">
-              <div className="answer-status"><CheckCircle aria-hidden size={18} weight="fill" /><span>Supported by authorized sources</span></div>
-              <h2>Answer</h2>
+              <div className="answer-status">
+                {evidencePresentation?.icon === "supported" ? (
+                  <CheckCircle aria-hidden size={18} weight="fill" />
+                ) : (
+                  <Info aria-hidden size={18} />
+                )}
+                <span>{evidencePresentation?.label}</span>
+              </div>
+              <h2>{evidencePresentation?.title ?? "Answer"}</h2>
               <div className="answer-copy">
                 {response.claims.length > 0 ? response.claims.map((claim) => <p key={claim.claimId}>{claim.text}{showCitations ? claim.citationIds.map((citationId) => <sup key={citationId}>{citationId.replace("C", "")}</sup>) : null}</p>) : <p>{response.answer}</p>}
               </div>
@@ -134,7 +181,7 @@ export function EndUserQuery() {
                 <button type="button" onClick={handleCopy}><Copy aria-hidden size={17} /> {isCopied ? "Copied" : "Copy"}</button>
                 {feedback ? <span className="feedback-thanks">Thanks for the feedback</span> : null}
               </div>
-              <div className="answer-footnote"><Info aria-hidden size={15} /> Cortex only answered claims that passed evidence validation. Trace {response.traceId.slice(0, 8)}.</div>
+              <div className="answer-footnote"><Info aria-hidden size={15} /> {evidencePresentation?.footnote ?? "Cortex only answered claims that passed evidence validation."} Trace {response.traceId.slice(0, 8)}.</div>
             </article>
             {showCitations ? <CitationPanel citations={response.citations} /> : null}
           </div>
