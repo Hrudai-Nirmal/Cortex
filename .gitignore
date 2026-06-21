@@ -1,5 +1,6 @@
 .DS_Store
 .env
+.env.package
 .venv/
 __pycache__/
 .pytest_cache/

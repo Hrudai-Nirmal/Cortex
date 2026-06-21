@@ -1,3 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cortex-migrate
+spec:
+  template:
+    metadata:
+      labels:
+        app: cortex-migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: cortex/api:local
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - secretRef:
+                name: cortex-secrets
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

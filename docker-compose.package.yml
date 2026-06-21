@@ -2,11 +2,15 @@ services:
   postgres:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_DB: cortex
-      POSTGRES_USER: cortex
-      POSTGRES_PASSWORD: cortex
+      POSTGRES_DB: ${CORTEX_POSTGRES_DB:-cortex}
+      POSTGRES_USER: ${CORTEX_POSTGRES_USER:-cortex}
+      POSTGRES_PASSWORD: ${CORTEX_POSTGRES_PASSWORD:-cortex}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cortex -d cortex"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${CORTEX_POSTGRES_USER:-cortex} -d ${CORTEX_POSTGRES_DB:-cortex}",
+        ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -16,7 +20,7 @@ services:
   ollama:
     image: ollama/ollama:0.9.6
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:11434/api/tags >/dev/null"]
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -24,24 +28,30 @@ services:
       - cortex-ollama:/root/.ollama
 
   api:
+    image: cortex-api:latest
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.api
     environment:
-      CORTEX_DATABASE_URL: postgresql+asyncpg://cortex:cortex@postgres:5432/cortex
-      CORTEX_OLLAMA_BASE_URL: http://ollama:11434
-      CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: "false"
-      CORTEX_OBJECT_STORAGE_ROOT: /var/lib/cortex/object-storage
-      CORTEX_AUTH_MODE: fixture
-      CORTEX_CONSOLE_HOST: cortex-console.hrudainirmal.in
-      CORTEX_QUERY_HOST: cortex-app.hrudainirmal.in
-      CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
-      CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+      CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
+      CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
+      CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}
+      CORTEX_OBJECT_STORAGE_ROOT: ${CORTEX_OBJECT_STORAGE_ROOT:-/var/lib/cortex/object-storage}
+      CORTEX_AUTH_MODE: ${CORTEX_AUTH_MODE:-fixture}
+      CORTEX_REQUIRED_ACCELERATOR: ${CORTEX_REQUIRED_ACCELERATOR:-cpu}
+      CORTEX_CONSOLE_HOST: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_HOST: ${CORTEX_QUERY_HOST:-cortex-app.hrudainirmal.in}
+      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
+      CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:14b}
+      CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
     depends_on:
       postgres:
         condition: service_healthy
       ollama:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -55,36 +65,43 @@ services:
       - cortex-object-storage:/var/lib/cortex/object-storage
 
   worker:
+    image: cortex-worker:latest
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.worker
     environment:
-      CORTEX_DATABASE_URL: postgresql+asyncpg://cortex:cortex@postgres:5432/cortex
-      CORTEX_OLLAMA_BASE_URL: http://ollama:11434
-      CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: "false"
-      CORTEX_OBJECT_STORAGE_ROOT: /var/lib/cortex/object-storage
-      CORTEX_AUTH_MODE: fixture
-      CORTEX_CONSOLE_HOST: cortex-console.hrudainirmal.in
-      CORTEX_QUERY_HOST: cortex-app.hrudainirmal.in
-      CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
-      CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+      CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
+      CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
+      CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}
+      CORTEX_OBJECT_STORAGE_ROOT: ${CORTEX_OBJECT_STORAGE_ROOT:-/var/lib/cortex/object-storage}
+      CORTEX_AUTH_MODE: ${CORTEX_AUTH_MODE:-fixture}
+      CORTEX_REQUIRED_ACCELERATOR: ${CORTEX_REQUIRED_ACCELERATOR:-cpu}
+      CORTEX_CONSOLE_HOST: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_HOST: ${CORTEX_QUERY_HOST:-cortex-app.hrudainirmal.in}
+      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
+      CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:14b}
+      CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
     depends_on:
       postgres:
         condition: service_healthy
       ollama:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       api:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - cortex-object-storage:/var/lib/cortex/object-storage
 
   console-web:
+    image: cortex-console-web:latest
     build:
       context: .
       dockerfile: apps/web/Dockerfile.console
       args:
-        VITE_CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
-        VITE_CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+        VITE_CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+        VITE_CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
       interval: 10s
@@ -92,12 +109,13 @@ services:
       retries: 20
 
   query-web:
+    image: cortex-query-web:latest
     build:
       context: .
       dockerfile: apps/web/Dockerfile.query
       args:
-        VITE_CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
-        VITE_CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+        VITE_CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+        VITE_CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
       interval: 10s
@@ -105,12 +123,13 @@ services:
       retries: 20
 
   edge:
+    image: cortex-edge:latest
     build:
       context: .
       dockerfile: infra/nginx/Dockerfile
     environment:
-      CORTEX_CONSOLE_HOST: cortex-console.hrudainirmal.in
-      CORTEX_QUERY_HOST: cortex-app.hrudainirmal.in
+      CORTEX_CONSOLE_HOST: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_HOST: ${CORTEX_QUERY_HOST:-cortex-app.hrudainirmal.in}
     depends_on:
       api:
         condition: service_healthy
@@ -124,7 +143,30 @@ services:
       timeout: 5s
       retries: 20
     ports:
-      - "80:8080"
+      - "${CORTEX_EDGE_PORT:-80}:8080"
+
+  migrate:
+    image: cortex-api:latest
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
+      CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
+      CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}
+      CORTEX_OBJECT_STORAGE_ROOT: ${CORTEX_OBJECT_STORAGE_ROOT:-/var/lib/cortex/object-storage}
+      CORTEX_AUTH_MODE: ${CORTEX_AUTH_MODE:-fixture}
+      CORTEX_REQUIRED_ACCELERATOR: ${CORTEX_REQUIRED_ACCELERATOR:-cpu}
+      CORTEX_CONSOLE_HOST: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_HOST: ${CORTEX_QUERY_HOST:-cortex-app.hrudainirmal.in}
+      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
+      CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:14b}
+      CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   cortex-postgres:

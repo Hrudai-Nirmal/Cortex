@@ -89,8 +89,14 @@ The package now includes:
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
+- operator scripts:
+  - `pnpm package:up`
+  - `pnpm package:pull-models`
+  - `pnpm package:verify`
+  - `pnpm package:down`
 
 See [context.md](context.md), [architecture.md](docs/architecture.md),
 [external-query-contract.md](docs/external-query-contract.md),
+[operator-runbook.md](docs/operator-runbook.md),
 [split-frontend-packaging.md](docs/split-frontend-packaging.md), and
 [threat-model.md](docs/threat-model.md).
