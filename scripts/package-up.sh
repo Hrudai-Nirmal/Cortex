@@ -52,6 +52,33 @@ get_json() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+wait_for_health_ready() {
+  local host="$1"
+  local path="$2"
+  local label="$3"
+  local max_attempts="${4:-30}"
+  local payload=""
+
+  for _ in $(seq 1 "$max_attempts"); do
+    payload="$(get_json "$host" "$path" || true)"
+    if printf "%s" "$payload" | grep -q '"status":"ready"'; then
+      return 0
+    fi
+    if printf "%s" "$payload" | grep -q '"status":"degraded"'; then
+      echo "Package ${label} failed." >&2
+      print_health_failures "$payload" >&2
+      exit 1
+    fi
+    sleep 2
+  done
+
+  echo "Timed out waiting for ${label} on ${host}${path}" >&2
+  if [ -n "$payload" ]; then
+    print_health_failures "$payload" >&2
+  fi
+  exit 1
+}
+
 print_health_failures() {
   local payload="$1"
   if command -v python3 >/dev/null 2>&1; then
@@ -114,23 +141,10 @@ fi
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
-wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/health/startup" "\"status\":\"ready\""
+wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"
 wait_for_endpoint "$CORTEX_QUERY_HOST" "/" "<!doctype html" 40
 
-for _ in $(seq 1 30); do
-  ready_payload="$(get_json "$CORTEX_CONSOLE_HOST" "/health/ready" || true)"
-  if printf "%s" "$ready_payload" | grep -q '"status":"ready"'; then
-    break
-  fi
-  sleep 2
-done
-
-if ! printf "%s" "$ready_payload" | grep -q '"status":"ready"'; then
-  echo "Package started, but runtime readiness is still degraded." >&2
-  print_health_failures "$ready_payload" >&2
-  echo "Run ./scripts/package-status.sh $ENV_FILE for the full startup and readiness report." >&2
-  exit 1
-fi
+wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"
 
 echo "Package is up."
 echo "Console URL: ${CORTEX_CONSOLE_PUBLIC_URL}"

@@ -127,6 +127,9 @@ The package also runs database migrations before `api` and `worker` proceed.
 host/domain configuration, invalid public URLs, storage issues, parser availability, or
 offline-policy violations.
 
+`package:up` now surfaces any degraded startup/readiness components immediately, including
+their severity and remediation guidance, instead of only reporting a timeout.
+
 `ready` adds live checks for:
 
 - PostgreSQL connectivity
@@ -175,6 +178,8 @@ derives scope from the authenticated user token.
 
 - map the same split hosts through Routes or an ingress controller
 - preserve the same host-based routing behavior
+- `infra/openshift/cortex-package-routes.yaml` provides a ready-to-edit Route example
+  that sends both client-owned hosts to the packaged `edge` service
 - ensure any SecurityContext constraints still allow the object-storage mount path and
   nginx/http serving model you choose
 - treat schema migration as a Job or pre-deploy hook rather than an ad hoc shell step
@@ -186,6 +191,8 @@ derives scope from the authenticated user token.
 - keep `edge` only if you want the Nginx host router inside the package rather than at the ALB layer
 - run the migration command as a one-shot task before the API service rolls forward
 - back the object-storage root with durable shared storage or a compatible mounted filesystem volume for `api` and `worker`
+- `infra/ecs/cortex-task-family.json` shows an edit-in-place task-family baseline with
+  separate packaged services, EFS-backed object storage, and the split-host environment contract
 
 ## Failure hints
 

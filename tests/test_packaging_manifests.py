@@ -51,3 +51,27 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     ).read_text(encoding="utf-8")
     assert "CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}" in composeText
     assert composeText.count("CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}") >= 3
+
+
+def testOpenShiftRoutesPreserveSplitHostsThroughEdgeService() -> None:
+    """OpenShift examples should keep the console/query host split intact."""
+    routeManifestText = (
+        Path(__file__).resolve().parents[1] / "infra" / "openshift" / "cortex-package-routes.yaml"
+    ).read_text(encoding="utf-8")
+    assert "kind: Route" in routeManifestText
+    assert "host: cortex-console.example.com" in routeManifestText
+    assert "host: cortex-app.example.com" in routeManifestText
+    assert "name: cortex-edge" in routeManifestText
+
+
+def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
+    """ECS examples should keep all packaged services and the shared storage mount explicit."""
+    taskDefinitionText = (
+        Path(__file__).resolve().parents[1] / "infra" / "ecs" / "cortex-task-family.json"
+    ).read_text(encoding="utf-8")
+    for containerName in ("api", "worker", "console-web", "query-web", "edge"):
+        assert f'"name": "{containerName}"' in taskDefinitionText
+    assert '"sourceVolume": "cortex-object-storage"' in taskDefinitionText
+    assert '"containerPath": "/var/lib/cortex/object-storage"' in taskDefinitionText
+    assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in taskDefinitionText
+    assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText

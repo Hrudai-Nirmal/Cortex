@@ -31,6 +31,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Operator inspection tooling: package status/log-tail scripts and clearer runtime alert surfacing inside the fixed developer console.
 - Package verification now asserts split-surface identity headers plus query-contract version and trace-events metadata, while the console trace panel exposes actor, start time, and stage count for the latest run.
 - The generated TypeScript API contract is now re-synced with the live FastAPI OpenAPI schema and guarded by tests so the external chat facade metadata cannot silently drift from the browser clients.
+- Package startup now reports degraded startup/readiness components with remediation instead of generic timeouts, and the package artifacts now include OpenShift Route and ECS task-family examples for split-host client deployments.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 

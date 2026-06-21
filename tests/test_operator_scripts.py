@@ -61,3 +61,13 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert "X-Cortex-Contract-Version: v1" in verifyText
     assert '"contractVersion":"v1"' in verifyText
     assert '"traceEventsPath"' in verifyText
+
+
+def testPackageUpPrintsStructuredStartupFailures() -> None:
+    """Package bootstrap should surface failing health components instead of a generic timeout."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
+    assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"' in scriptText
+    assert 'echo "Package ${label} failed."' in scriptText
+    assert 'print_health_failures "$payload"' in scriptText

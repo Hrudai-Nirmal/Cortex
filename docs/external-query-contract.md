@@ -111,6 +111,8 @@ Response headers:
 - Treat `choices[0].message.content` as display text.
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.
 - Treat `x_cortex.evidenceStatus` and `x_cortex.abstained` as answer-governance signals.
+- Treat `x_cortex.claims[*].supportStatus` as the atomic support verdict for each claim,
+  especially when Cortex returns `partial`, `insufficient`, or `conflict`.
 - Store `x_cortex.traceId` with user feedback so operators can reconcile query outcomes in the console.
 - Expect `x_cortex.contractVersion === "v1"` before relying on this extension shape.
 - Use the returned `traceId` to fetch persisted trace detail from the fixed developer console rather than recreating hidden pipeline state in the client UI.

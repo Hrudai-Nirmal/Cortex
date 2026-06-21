@@ -98,6 +98,7 @@ The package now includes:
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
 - package verification that checks split-surface identity headers and query-contract identity headers
+- OpenShift Route and ECS task-family examples for client-owned split-host deployments
 - operator scripts:
   - `pnpm package:up`
   - `pnpm package:status`
@@ -109,6 +110,10 @@ The package now includes:
 The worker now validates both startup-safe configuration and live dependency readiness
 before it enters its durable job loop, so broken package deployments fail fast instead
 of quietly polling forever.
+
+`pnpm package:up` now prints the exact degraded startup/readiness components and their
+remediation instead of failing with a generic timeout when package validation disagrees
+with the deployment profile.
 
 See [context.md](context.md), [architecture.md](docs/architecture.md),
 [external-query-contract.md](docs/external-query-contract.md),

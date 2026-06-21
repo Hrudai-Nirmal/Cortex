@@ -216,3 +216,84 @@ async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadat
     assert payload["x_cortex"]["evidenceStatus"] == "sufficient"
     assert payload["x_cortex"]["abstained"] is False
     assert payload["x_cortex"]["stages"][0]["name"] == "Scoped hybrid retrieval"
+
+
+@pytest.mark.asyncio
+async def testExternalChatContractPreservesAbstentionAndCitationMetadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Replacement chat shells should receive stable abstention, claim, and citation signals."""
+    application = createApp(buildPackageSettings())
+
+    async def overrideDatabaseSession():
+        yield object()
+
+    class StubQueryService:
+        """Return one deterministic abstention response without touching live dependencies."""
+
+        def __init__(self, session, settings, modelProvider) -> None:
+            self.session = session
+
+        async def answerQuery(self, request) -> QueryResponse:
+            return QueryResponse(
+                traceId="8b24db0b-bccd-4b45-9073-60c35fd8347b",
+                route="rag",
+                correctedQuery=request.query,
+                answer="I do not have enough consistent evidence to answer that safely.",
+                evidenceStatus="conflict",
+                claims=[
+                    {
+                        "claimId": "claim-1",
+                        "text": "Retention is 180 days.",
+                        "confidence": 0.42,
+                        "citationIds": ["citation-1"],
+                        "supportStatus": "conflict",
+                    }
+                ],
+                citations=[
+                    {
+                        "citationId": "citation-1",
+                        "documentTitle": "Security Handbook",
+                        "documentVersion": "v2",
+                        "chunkId": "abc123",
+                        "structuralLocator": "p.12",
+                        "exactSpan": "Retention differs between systems.",
+                        "supportScore": 0.41,
+                    }
+                ],
+                stages=[
+                    StageSchema(
+                        name="Claim validation",
+                        status="complete",
+                        durationMs=45,
+                        detail="conflicting evidence remained after validation",
+                    )
+                ],
+            )
+
+    monkeypatch.setattr(routeModule, "QueryService", StubQueryService)
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer fixture-employee"},
+            json={
+                "model": "cortex-bounded-rag",
+                "messages": [{"role": "user", "content": "What is the retention period?"}],
+                "stream": False,
+                "cortex": {"showCitations": True},
+            },
+        )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert response.headers["x-cortex-contract-version"] == "v1"
+    assert response.headers["x-cortex-evidence-status"] == "conflict"
+    assert payload["x_cortex"]["abstained"] is True
+    assert payload["x_cortex"]["claims"][0]["supportStatus"] == "conflict"
+    assert payload["x_cortex"]["citations"][0]["documentTitle"] == "Security Handbook"
+    assert payload["x_cortex"]["traceEventsPath"] == "/v1/query/8b24db0b-bccd-4b45-9073-60c35fd8347b/events"

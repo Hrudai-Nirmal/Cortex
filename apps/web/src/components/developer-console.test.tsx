@@ -1,6 +1,6 @@
 /** Developer console tests verify the live trace timeline wiring stays visible to builders. */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DeveloperConsole } from "./developer-console";
 
@@ -136,6 +136,9 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
     expect(screen.getByText("maya.chen@example.com")).toBeVisible();
     expect(screen.getByText("degraded")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Client query contract")).toBeVisible();
+    expect(screen.getByText("Surface routing")).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });
 });

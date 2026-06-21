@@ -20,6 +20,7 @@ import {
   subscribeToTraceEvents,
   validatePipeline,
 } from "../lib/api-client";
+import { getConsolePublicUrl, getQueryPublicUrl } from "../config";
 import type {
   PipelineGraph,
   PipelineVersionSummary,
@@ -33,6 +34,7 @@ import { PipelineGraph as PipelineGraphCanvas } from "./pipeline-graph";
 import { SourceOperations } from "./source-operations";
 
 const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
+const EXTERNAL_QUERY_CONTRACT_VERSION = "v1";
 
 const inspectorContent: Record<string, { title: string; type: string; detail: string }> = {
   ingest: { title: "Ingest & Normalize", type: "Ingestion", detail: "Docling parser, deterministic chunking, metadata, versions" },
@@ -171,6 +173,8 @@ export function DeveloperConsole() {
 
   const runtimeSummary = runtimeHealth?.components.map((component) => component.status).join(", ");
   const latestVersion = pipelineVersions[0] ?? null;
+  const consolePublicUrl = getConsolePublicUrl();
+  const queryPublicUrl = getQueryPublicUrl();
 
   return (
     <main className="developer-console">
@@ -331,6 +335,28 @@ export function DeveloperConsole() {
                   Latest immutable version {latestVersion ? `v${latestVersion.version}` : "—"} with
                   rerank top-K {pipeline?.rerankTopK ?? 40}. The fixed console remains first-party;
                   client chat shells should integrate through the external query contract.
+                </p>
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <ShieldCheck aria-hidden size={18} />
+                  <strong>Surface routing</strong>
+                </div>
+                <p>
+                  Console host: <code>{consolePublicUrl}</code><br />
+                  Query host: <code>{queryPublicUrl}</code><br />
+                  The console stays fixed; the bundled query UI is optional and may be replaced.
+                </p>
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Client query contract</strong>
+                </div>
+                <p>
+                  Contract {EXTERNAL_QUERY_CONTRACT_VERSION} lives at <code>POST /v1/chat/completions</code>.
+                  Replacement UIs should preserve <code>x_cortex.traceId</code>, <code>x_cortex.traceEventsPath</code>,
+                  evidence status, abstention state, and citations from the response payload.
                 </p>
               </div>
             </section>

@@ -1,0 +1,28 @@
+# Route the split Cortex package through OpenShift while preserving host isolation.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-console
+spec:
+  host: cortex-console.example.com
+  to:
+    kind: Service
+    name: cortex-edge
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-query
+spec:
+  host: cortex-app.example.com
+  to:
+    kind: Service
+    name: cortex-edge
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
