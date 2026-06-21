@@ -42,3 +42,22 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
         "CORTEX_EDGE_PORT",
     ):
         assert f"{requiredName}=" in exampleText
+
+
+def testPackageEnvExampleDefaultsToOfflineCapableModelPolicy() -> None:
+    """The package env example should default to a local model endpoint with remote access off."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    exampleText = (rootDirectory / ".env.package.example").read_text(encoding="utf-8")
+    assert "CORTEX_OLLAMA_BASE_URL=http://ollama:11434" in exampleText
+    assert "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false" in exampleText
+
+
+def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
+    """Operator verification should validate split-surface and chat-contract identity headers."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    verifyText = (rootDirectory / "scripts" / "package-verify.sh").read_text(encoding="utf-8")
+    assert "X-Cortex-Surface: console" in verifyText
+    assert "X-Cortex-Surface: query" in verifyText
+    assert "X-Cortex-Contract-Version: v1" in verifyText
+    assert '"contractVersion":"v1"' in verifyText
+    assert '"traceEventsPath"' in verifyText

@@ -42,3 +42,12 @@ def testEdgeRouterAdvertisesSplitSurfaceIdentity() -> None:
     ).read_text(encoding="utf-8")
     assert "add_header X-Cortex-Surface console always;" in edgeTemplateText
     assert "add_header X-Cortex-Surface query always;" in edgeTemplateText
+
+
+def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
+    """Compose defaults should keep Cortex pointed at the local model service by default."""
+    composeText = (
+        Path(__file__).resolve().parents[1] / "docker-compose.package.yml"
+    ).read_text(encoding="utf-8")
+    assert "CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}" in composeText
+    assert composeText.count("CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}") >= 3

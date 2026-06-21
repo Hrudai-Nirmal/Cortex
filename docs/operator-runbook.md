@@ -109,6 +109,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata
+  - contract identity includes `traceEventsPath` for persisted SSE progress handoff
 
 ## What `package:status` and `package:logs` do
 

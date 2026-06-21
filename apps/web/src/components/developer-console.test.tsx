@@ -134,6 +134,7 @@ describe("DeveloperConsole", () => {
 
     expect(await screen.findByRole("heading", { name: "Enterprise evidence pipeline" })).toBeVisible();
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
+    expect(screen.getByText("maya.chen@example.com")).toBeVisible();
     expect(screen.getByText("degraded")).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });

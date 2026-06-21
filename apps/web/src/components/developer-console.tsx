@@ -350,10 +350,25 @@ export function DeveloperConsole() {
         ) : null}
         {latestTrace ? (
           <div className="metric-strip metric-strip--trace">
+            <span><small>Actor</small><strong>{latestTrace.actorId}</strong></span>
+            <span><small>Started</small><strong>{new Date(latestTrace.createdAt).toLocaleTimeString()}</strong></span>
             <span><small>Route</small><strong>{latestTrace.route}</strong></span>
             <span><small>Evidence</small><strong>{latestTrace.evidenceStatus}</strong></span>
+            <span><small>Stages</small><strong>{displayedEvents.length}</strong></span>
             <span><small>Citations</small><strong>{latestTrace.citations.length}</strong></span>
             <span><small>Pipeline</small><strong>v{latestTrace.pipelineVersion ?? 0}</strong></span>
+          </div>
+        ) : null}
+        {latestTrace && latestTrace.outcome !== "sufficient" ? (
+          <div className="query-error" role="alert">
+            <WarningCircle aria-hidden size={18} />
+            <div>
+              <strong>Trace outcome requires operator review</strong>
+              <span>
+                Latest trace finished with outcome {latestTrace.outcome}. Review stage detail,
+                evidence status, and citations before promoting or troubleshooting this flow.
+              </span>
+            </div>
           </div>
         ) : null}
         {errorMessage ? <div className="query-error" role="alert"><WarningCircle aria-hidden size={18} /><div><strong>Console warning</strong><span>{errorMessage}</span></div></div> : null}

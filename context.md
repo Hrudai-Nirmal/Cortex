@@ -29,6 +29,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Runtime health now carries severity and remediation guidance across API responses, package scripts, and the fixed developer console; the worker refuses to enter its loop when startup or live readiness checks fail.
 - Operator bootstrap tooling: `.env.package.example`, package up/verify/down scripts, and a deployment runbook for Docker, Kubernetes, OpenShift, and ECS-style host routing.
 - Operator inspection tooling: package status/log-tail scripts and clearer runtime alert surfacing inside the fixed developer console.
+- Package verification now asserts split-surface identity headers plus query-contract version and trace-events metadata, while the console trace panel exposes actor, start time, and stage count for the latest run.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 

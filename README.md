@@ -97,6 +97,7 @@ The package now includes:
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
+- package verification that checks split-surface identity headers and query-contract identity headers
 - operator scripts:
   - `pnpm package:up`
   - `pnpm package:status`
