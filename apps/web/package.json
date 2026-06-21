@@ -4,11 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "dev:console": "vite --config vite.console.config.mjs",
+    "dev:query": "vite --config vite.query.config.mjs",
+    "build:console": "vite build --config vite.console.config.mjs",
+    "build:query": "vite build --config vite.query.config.mjs",
+    "build": "pnpm build:console && pnpm build:query",
     "generate:api": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/generated/cortex-api.ts",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview --host 127.0.0.1",
+    "preview:console": "vite preview --config vite.console.config.mjs --host 127.0.0.1",
+    "preview:query": "vite preview --config vite.query.config.mjs --host 127.0.0.1",
     "test": "vitest run"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot the local live-integration stack and start the API, worker, and web surfaces.
+# Boot the local live-integration stack and start the API, worker, console, and app surfaces.
 
 set -euo pipefail
 
@@ -52,7 +52,9 @@ done
 
 start_process api "$ROOT_DIR/.venv/bin/uvicorn" cortex.main:createApp --factory --app-dir apps/api --host 127.0.0.1 --port 8000
 start_process worker "$ROOT_DIR/.venv/bin/python" -m cortex.worker
-start_process web pnpm --dir apps/web dev
+start_process console-web pnpm --dir apps/web dev:console
+start_process query-web pnpm --dir apps/web dev:query
 
 echo "Cortex API: http://127.0.0.1:8000"
-echo "Cortex web: http://127.0.0.1:5173"
+echo "Cortex console: http://127.0.0.1:5173"
+echo "Cortex app: http://127.0.0.1:5174"

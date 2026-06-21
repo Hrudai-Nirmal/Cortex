@@ -8,7 +8,8 @@
     "dev:up": "./scripts/dev-up.sh",
     "dev:seed": "./scripts/dev-seed.sh",
     "dev:reset": "./scripts/dev-reset.sh",
-    "web:dev": "pnpm --dir apps/web dev",
+    "web:dev:console": "pnpm --dir apps/web dev:console",
+    "web:dev:query": "pnpm --dir apps/web dev:query",
     "web:build": "pnpm --dir apps/web build",
     "web:test": "pnpm --dir apps/web test"
   }

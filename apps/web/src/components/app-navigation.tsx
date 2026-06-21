@@ -17,13 +17,13 @@ import {
   UserCircle,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
+import { getQueryPublicUrl } from "../config";
 import { getSession } from "../lib/api-client";
-import type { Surface } from "../types";
-import type { Session } from "../types";
+import type { Session, Surface } from "../types";
 
 interface AppNavigationProps {
   activeSurface: Surface;
-  onSurfaceChange: (surface: Surface) => void;
+  onSurfaceChange?: (surface: Surface) => void;
 }
 
 interface NavItem {
@@ -65,6 +65,7 @@ function renderNavItem(item: NavItem) {
 /** Render navigation appropriate to the currently selected product surface. */
 export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationProps) {
   const [session, setSession] = useState<Session | null>(null);
+  const queryPublicUrl = getQueryPublicUrl();
 
   useEffect(() => {
     let isMounted = true;
@@ -91,7 +92,11 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
   if (activeSurface === "query") {
     return (
       <aside className="query-navigation">
-        <button className="brand brand--button" type="button" onClick={() => onSurfaceChange("query")}>
+        <button
+          className="brand brand--button"
+          type="button"
+          onClick={() => onSurfaceChange?.("query")}
+        >
           Cortex
         </button>
         <nav aria-label="Employee query navigation" className="query-navigation__links">
@@ -126,9 +131,9 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
       <div className="nav-section-label nav-section-label--spaced">Governance</div>
       <nav aria-label="Governance">{governanceItems.map(renderNavItem)}</nav>
       <div className="developer-navigation__footer">
-        <button className="surface-switch" type="button" onClick={() => onSurfaceChange("query")}>
+        <a className="surface-switch" href={queryPublicUrl}>
           <ChatCircleDots aria-hidden size={17} /> Open employee view
-        </button>
+        </a>
         <div className="identity-row">
           <UserCircle aria-hidden size={30} weight="duotone" />
           <div>

@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cortex-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cortex-api
+  template:
+    metadata:
+      labels:
+        app: cortex-api
+    spec:
+      containers:
+        - name: api
+          image: cortex/api:local
+          envFrom:
+            - secretRef:
+                name: cortex-secrets
+          ports:
+            - containerPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cortex-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cortex-worker
+  template:
+    metadata:
+      labels:
+        app: cortex-worker
+    spec:
+      containers:
+        - name: worker
+          image: cortex/worker:local
+          envFrom:
+            - secretRef:
+                name: cortex-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cortex-console-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cortex-console-web
+  template:
+    metadata:
+      labels:
+        app: cortex-console-web
+    spec:
+      containers:
+        - name: console-web
+          image: cortex/console-web:local
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cortex-query-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cortex-query-web
+  template:
+    metadata:
+      labels:
+        app: cortex-query-web
+    spec:
+      containers:
+        - name: query-web
+          image: cortex/query-web:local
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cortex-api
+spec:
+  selector:
+    app: cortex-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cortex-console-web
+spec:
+  selector:
+    app: cortex-console-web
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cortex-query-web
+spec:
+  selector:
+    app: cortex-query-web
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cortex-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-Proto $scheme;
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: cortex-console.hrudainirmal.in
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-api
+                port:
+                  number: 8000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-api
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-console-web
+                port:
+                  number: 80
+    - host: cortex-app.hrudainirmal.in
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-api
+                port:
+                  number: 8000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-api
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cortex-query-web
+                port:
+                  number: 80

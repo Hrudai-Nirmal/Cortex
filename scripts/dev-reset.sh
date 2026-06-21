@@ -22,7 +22,8 @@ stop_process() {
 cd "$ROOT_DIR"
 stop_process api
 stop_process worker
-stop_process web
+stop_process console-web
+stop_process query-web
 
 docker compose down -v || true
 rm -rf "$ROOT_DIR/.cortex-data/object-storage" "$RUN_DIR"

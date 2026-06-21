@@ -1,0 +1,71 @@
+# Route split Cortex surfaces by host while proxying API traffic on both domains.
+
+upstream cortex_api {
+  server api:8000;
+}
+
+upstream cortex_console {
+  server console-web:8080;
+}
+
+upstream cortex_query {
+  server query-web:8080;
+}
+
+server {
+  listen 8080;
+  server_name ${CORTEX_CONSOLE_HOST};
+
+  location /v1/ {
+    proxy_pass http://cortex_api;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /health/ {
+    proxy_pass http://cortex_api;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    proxy_pass http://cortex_console;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+
+server {
+  listen 8080;
+  server_name ${CORTEX_QUERY_HOST};
+
+  location /v1/ {
+    proxy_pass http://cortex_api;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /health/ {
+    proxy_pass http://cortex_api;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    proxy_pass http://cortex_query;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+
+server {
+  listen 8080 default_server;
+  server_name _;
+  return 404;
+}

@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: cortex
+      POSTGRES_USER: cortex
+      POSTGRES_PASSWORD: cortex
+    volumes:
+      - cortex-postgres:/var/lib/postgresql/data
+
+  ollama:
+    image: ollama/ollama:0.9.6
+    volumes:
+      - cortex-ollama:/root/.ollama
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    environment:
+      CORTEX_DATABASE_URL: postgresql+asyncpg://cortex:cortex@postgres:5432/cortex
+      CORTEX_OLLAMA_BASE_URL: http://ollama:11434
+      CORTEX_OBJECT_STORAGE_ROOT: /var/lib/cortex/object-storage
+      CORTEX_AUTH_MODE: fixture
+    depends_on:
+      - postgres
+      - ollama
+    volumes:
+      - cortex-object-storage:/var/lib/cortex/object-storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.worker
+    environment:
+      CORTEX_DATABASE_URL: postgresql+asyncpg://cortex:cortex@postgres:5432/cortex
+      CORTEX_OLLAMA_BASE_URL: http://ollama:11434
+      CORTEX_OBJECT_STORAGE_ROOT: /var/lib/cortex/object-storage
+      CORTEX_AUTH_MODE: fixture
+    depends_on:
+      - postgres
+      - ollama
+    volumes:
+      - cortex-object-storage:/var/lib/cortex/object-storage
+
+  console-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.console
+      args:
+        VITE_CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
+        VITE_CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+
+  query-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.query
+      args:
+        VITE_CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.hrudainirmal.in
+        VITE_CORTEX_QUERY_PUBLIC_URL: https://cortex-app.hrudainirmal.in
+
+  edge:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    environment:
+      CORTEX_CONSOLE_HOST: cortex-console.hrudainirmal.in
+      CORTEX_QUERY_HOST: cortex-app.hrudainirmal.in
+    depends_on:
+      - api
+      - console-web
+      - query-web
+    ports:
+      - "80:8080"
+
+volumes:
+  cortex-postgres:
+  cortex-ollama:
+  cortex-object-storage:

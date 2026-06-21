@@ -8,6 +8,8 @@ __pycache__/
 node_modules/
 .npm-cache/
 dist/
+apps/web/dist-console/
+apps/web/dist-query/
 coverage/
 .coverage
 data/

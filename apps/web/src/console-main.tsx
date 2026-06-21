@@ -1,22 +1,19 @@
-/** Bootstraps the browser-first Cortex application. */
+/** Bootstraps the dedicated Cortex console build. */
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import "@xyflow/react/dist/style.css";
-import { App } from "./app";
+import { ConsoleRoot } from "./console-root";
 import "./styles.css";
 
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error("Cortex root element was not found");
+  throw new Error("Cortex console root element was not found");
 }
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ConsoleRoot />
   </StrictMode>,
 );

@@ -1,0 +1,15 @@
+# Build the Cortex worker image for durable ingestion and retention jobs.
+
+FROM python:3.12-slim
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY pyproject.toml README.md alembic.ini ./
+COPY apps/api apps/api
+COPY migrations migrations
+
+RUN pip install --no-cache-dir -e '.[dev,ingestion]'
+
+CMD ["python", "-m", "cortex.worker"]

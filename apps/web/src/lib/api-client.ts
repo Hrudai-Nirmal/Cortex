@@ -1,5 +1,6 @@
 /** Centralizes typed API operations so transport failures remain visible to users. */
 
+import { getActiveSurface } from "../config";
 import type {
   CreateWebsiteSourceRequest,
   CreateWebsiteSourceResponse,
@@ -19,7 +20,7 @@ import type {
 } from "../types";
 
 function getDefaultFixtureToken(): string {
-  return window.location.pathname.startsWith("/ask") ? "fixture-employee" : "fixture-admin";
+  return getActiveSurface() === "query" ? "fixture-employee" : "fixture-admin";
 }
 
 function buildHeaders(init?: HeadersInit): Headers {
