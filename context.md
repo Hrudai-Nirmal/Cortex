@@ -1,0 +1,39 @@
+# Cortex Context
+
+## Product
+Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterprise, RBAC controls actions and document ACL principals are mandatory SQL predicates for retrieval. The first development profile targets at most 30,000 active chunks on a 64 GB Apple Silicon Mac.
+
+## Current Architecture
+- FastAPI/Python modular monolith with separate worker entry points.
+- PostgreSQL, pgvector, full-text search, and a PostgreSQL job table.
+- React/TypeScript/Vite web application with React Flow.
+- Developer surface: graph-first pipeline operations and trace inspection.
+- End-user surface: friendly query UI with optional citation display.
+- Provider interfaces isolate parsing, embedding, reranking, generation, storage, and identity.
+
+## Implemented Vertical Slice
+- Initial PostgreSQL/pgvector migration, including deterministic binary chunk keys, active-version indexes, typed memories, durable jobs, and trace/audit retention.
+- Retry-safe in-memory and PostgreSQL ingestion repositories with batch checkpoints and transactional activation.
+- Strict MPS accelerator guard and offline Docling adapter boundary.
+- Scoped lexical/vector SQL, RRF truncation, typed computation registry, persisted query service, SSE stage events replayed from trace storage, and generated OpenAPI browser contracts.
+- Durable PostgreSQL job queue with worker-side ingestion and retention handlers.
+- Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
+- React Flow developer console plus a separate friendly employee query route with citation display control, live pipeline/health fetches, and persisted trace playback.
+- Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
+
+## Invariants
+- Chunk IDs are deterministic SHA-256 digests over canonical, length-delimited inputs.
+- Incomplete document versions never participate in retrieval.
+- `AccessScope` is required by retrieval APIs and enforced inside SQL.
+- RRF output is truncated to a validated 30-50 candidates before reranking; default 40.
+- Generated claims must be citation-validated before display.
+- Audit metadata outlives raw trace payloads and contains no raw query or answer text.
+- On macOS strict development mode, unintended CPU OCR/model execution halts ingestion.
+
+## UI Decision
+The selected visual target is the first generated direction, “Signal Grid”: a light, dense, graph-first operations console. Employee querying is deliberately a separate, lower-density surface.
+
+## Deferred Boundaries
+- Electron may wrap the compiled web application later, but the first release remains browser-first for OIDC and portable deployment.
+- Large-scale retrieval engines remain adapters; PostgreSQL/pgvector is the initial implementation.
+- Local live-integration verification beyond the unit/component suite still depends on an available PostgreSQL service and local Ollama-compatible model endpoint.

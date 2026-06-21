@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cortex-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cortex-api
+  template:
+    metadata:
+      labels:
+        app: cortex-api
+    spec:
+      containers:
+        - name: api
+          image: cortex/api:local
+          envFrom:
+            - secretRef:
+                name: cortex-secrets
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cortex-api
+spec:
+  selector:
+    app: cortex-api
+  ports:
+    - port: 8000
+      targetPort: 8000

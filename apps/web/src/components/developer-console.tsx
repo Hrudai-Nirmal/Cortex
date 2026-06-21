@@ -1,0 +1,192 @@
+/** Graph-first developer console faithful to the selected Signal Grid mockup. */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CaretDown,
+  CheckCircle,
+  Clock,
+  FloppyDisk,
+  Play,
+  ShieldCheck,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import {
+  getActivePipeline,
+  getLatestTrace,
+  getRuntimeHealth,
+  subscribeToTraceEvents,
+} from "../lib/api-client";
+import type { PipelineGraph, QueryStageEvent, RuntimeHealth, TraceSummary } from "../types";
+import { PipelineGraph as PipelineGraphCanvas } from "./pipeline-graph";
+
+const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
+
+const inspectorContent: Record<string, { title: string; type: string; detail: string }> = {
+  ingest: { title: "Ingest & Normalize", type: "Ingestion", detail: "Docling parser, deterministic chunking, metadata, versions" },
+  scope: { title: "Access Scope", type: "Security invariant", detail: "Enterprise and ACL principals enforced inside retrieval SQL" },
+  retrieval: { title: "Hybrid Retrieval", type: "Retrieval", detail: "PostgreSQL full text + pgvector cosine search" },
+  rerank: { title: "Cross-Encoder", type: "Reranking", detail: "RRF candidates truncated before local cross-encoder scoring" },
+  confidence: { title: "Source Confidence", type: "Evidence scoring", detail: "Authority, freshness, extraction quality, corroboration" },
+  generation: { title: "Bounded Generation", type: "Generation", detail: "Schema-constrained atomic claims with no dynamic tools" },
+  citations: { title: "Claims & Citations", type: "Validation", detail: "Every supported claim maps to an exact versioned source span" },
+  bm25: { title: "BM25 Index", type: "Lexical index", detail: "PostgreSQL full-text ranking under the mandatory access predicate" },
+  vector: { title: "Vector Index", type: "Vector index", detail: "Filtered HNSW search with iterative-scan recall monitoring" },
+  "reranker-model": { title: "Reranker Model", type: "Model provider", detail: "Pinned local cross-encoder applied to no more than 40 candidates" },
+  abstain: { title: "Insufficient Evidence", type: "Answer policy", detail: "Return no answer when no independently supported claim passes its gate" },
+};
+
+/** Render pipeline editing, inspection, publishing, and trace controls for builders. */
+export function DeveloperConsole() {
+  const [selectedNodeId, setSelectedNodeId] = useState("rerank");
+  const [activeTab, setActiveTab] = useState("Graph");
+  const [publishState, setPublishState] = useState<"saved" | "validating" | "published">("saved");
+  const [pipeline, setPipeline] = useState<PipelineGraph | null>(null);
+  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
+  const [tracePlayback, setTracePlayback] = useState<QueryStageEvent[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const validationTimerRef = useRef<number | null>(null);
+  const traceSubscriptionRef = useRef<(() => void) | null>(null);
+  const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
+  const displayedEvents = tracePlayback.length > 0 ? tracePlayback : latestTrace?.stageEvents ?? [];
+
+  useEffect(() => {
+    return () => {
+      if (validationTimerRef.current !== null) {
+        window.clearTimeout(validationTimerRef.current);
+      }
+      traceSubscriptionRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadConsole(): Promise<void> {
+      try {
+        const [activePipeline, health, trace] = await Promise.all([
+          getActivePipeline(),
+          getRuntimeHealth(),
+          getLatestTrace(ENTERPRISE_ID),
+        ]);
+        if (!isMounted) {
+          return;
+        }
+        setPipeline(activePipeline);
+        setRuntimeHealth(health);
+        setLatestTrace(trace);
+        setTracePlayback([]);
+      } catch (error) {
+        if (isMounted) {
+          setErrorMessage(error instanceof Error ? error.message : "Developer console failed to load");
+        }
+      }
+    }
+
+    void loadConsole();
+    const pollTimer = window.setInterval(() => {
+      void loadConsole();
+    }, 5000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(pollTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    traceSubscriptionRef.current?.();
+    setTracePlayback([]);
+    if (!latestTrace) {
+      return;
+    }
+    traceSubscriptionRef.current = subscribeToTraceEvents(
+      latestTrace.traceId,
+      (event) => {
+        setTracePlayback((currentEvents) => {
+          const hasExistingEvent = currentEvents.some((currentEvent) => currentEvent.position === event.position);
+          return hasExistingEvent ? currentEvents : [...currentEvents, event];
+        });
+      },
+      () => undefined,
+      (message) => setErrorMessage(message),
+    );
+    return () => {
+      traceSubscriptionRef.current?.();
+      traceSubscriptionRef.current = null;
+    };
+  }, [latestTrace?.traceId]);
+
+  function handleValidate(): void {
+    setPublishState("validating");
+    if (validationTimerRef.current !== null) {
+      window.clearTimeout(validationTimerRef.current);
+    }
+    validationTimerRef.current = window.setTimeout(() => setPublishState("saved"), 900);
+  }
+
+  function handlePublish(): void {
+    setPublishState("published");
+  }
+
+  const runtimeSummary = runtimeHealth?.components.map((component) => component.status).join(", ");
+
+  return (
+    <main className="developer-console">
+      <header className="developer-header">
+        <div>
+          <div className="breadcrumb">Pipelines / <strong>{pipeline?.name ?? "Enterprise evidence pipeline"}</strong></div>
+          <div className="pipeline-title-row">
+            <h1>{pipeline?.name ?? "Enterprise evidence pipeline"}</h1>
+            <button className="version-button" type="button">v{pipeline?.version ?? 0} <CaretDown aria-hidden size={12} /></button>
+            <span className="status-badge"><span /> {pipeline?.status ?? "loading"}</span>
+          </div>
+        </div>
+        <div className="header-actions">
+          <span className="save-state"><FloppyDisk aria-hidden size={15} />{publishState === "published" ? "Published" : publishState === "validating" ? "Validating…" : "All changes saved"}</span>
+          <button className="button button--secondary" type="button" onClick={handleValidate}>Validate</button>
+          <button className="button button--primary" type="button" onClick={handlePublish}>Publish</button>
+        </div>
+      </header>
+
+      <div className="developer-tabs" role="tablist" aria-label="Pipeline workspace">
+        {["Graph", "Configuration", "Evaluations", "Versions", "Settings"].map((tab) => (
+          <button className={activeTab === tab ? "is-active" : ""} type="button" key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>
+        ))}
+        <div className="metric-strip">
+          <span><small>Runtime</small><strong>{runtimeHealth?.status ?? "loading"}</strong></span>
+          <span><small>Components</small><strong>{runtimeSummary ?? "checking"}</strong></span>
+          <span><small>Top-K</small><strong>{pipeline?.rerankTopK ?? 40}</strong></span>
+          <span><small>Evidence</small><strong>{latestTrace?.evidenceStatus ?? "none"}</strong></span>
+        </div>
+      </div>
+
+      <section className="developer-workspace">
+        <div className="graph-region">
+          <div className="graph-toolbar">
+            <button type="button">+ Node</button><button type="button">+ Subgraph</button>
+            <span className="graph-toolbar__notice"><ShieldCheck aria-hidden size={15} /> Mandatory controls locked</span>
+          </div>
+          {activeTab === "Graph" ? <PipelineGraphCanvas selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} /> : (
+            <div className="empty-tab"><CheckCircle size={36} weight="duotone" /><h2>{activeTab}</h2><p>This workspace is connected to the selected immutable pipeline version.</p></div>
+          )}
+        </div>
+        <aside className="node-inspector">
+          <div className="inspector-tabs"><button className="is-active" type="button">Node</button><button type="button">Pipeline</button></div>
+          <div className="inspector-heading"><span className="inspector-sequence">{Object.keys(inspectorContent).indexOf(selectedNodeId) + 1}</span><div><h2>{selectedInspector.title}</h2><span>Healthy · v1.0.0</span></div></div>
+          <dl className="inspector-summary"><div><dt>Node type</dt><dd>{selectedInspector.type}</dd></div><div><dt>Behavior</dt><dd>{selectedInspector.detail}</dd></div></dl>
+          <div className="inspector-section"><h3>Configuration</h3><label>Candidate limit<input value={selectedNodeId === "rerank" ? String(pipeline?.rerankTopK ?? 40) : "Required"} readOnly /></label><label>Execution profile<select defaultValue="balanced"><option value="balanced">Balanced</option><option value="fast">Speed</option><option value="accurate">Accuracy</option></select></label></div>
+          <div className="inspector-section"><h3>Guardrails</h3><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Authorization preserved</div><div className="guardrail-row"><CheckCircle aria-hidden weight="fill" />Audit emission enabled</div></div>
+        </aside>
+      </section>
+
+      <section className="execution-trace">
+        <div className="trace-heading"><div><Play aria-hidden size={17} weight="fill" /><strong>Execution trace</strong><code>{latestTrace ? latestTrace.traceId.slice(0, 12) : "waiting"}</code></div><span>{latestTrace ? <><CheckCircle aria-hidden size={16} weight="fill" /> {latestTrace.outcome}</> : <>No trace yet</>}</span></div>
+        <div className="trace-query"><Clock aria-hidden size={15} /> User query: <strong>{latestTrace?.rawQuery ?? "Seed the corpus or run a query to populate the trace timeline."}</strong></div>
+        {errorMessage ? <div className="query-error" role="alert"><WarningCircle aria-hidden size={18} /><div><strong>Console warning</strong><span>{errorMessage}</span></div></div> : null}
+        <table><thead><tr><th>Stage</th><th>Status</th><th>Duration</th><th>Detail</th><th>Evidence</th></tr></thead><tbody>{displayedEvents.length > 0 ? displayedEvents.map((row) => <tr key={`${row.position}-${row.stage}`}><td>{row.stage}</td><td><span className="table-success"><CheckCircle aria-hidden weight="fill" /> {row.status}</span></td><td>{row.durationMs}ms</td><td>{row.detail}</td><td>{latestTrace?.citations.length ?? 0} citations</td></tr>) : <tr><td colSpan={5}>No persisted execution trace yet.</td></tr>}</tbody></table>
+      </section>
+      {publishState === "published" ? <div className="toast"><CheckCircle weight="fill" /> Pipeline v{pipeline?.version ?? 0} published</div> : null}
+      {publishState === "validating" ? <div className="toast toast--warning"><WarningCircle weight="fill" /> Running promotion gates</div> : null}
+    </main>
+  );
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cortex",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "api:dev": ".venv/bin/uvicorn cortex.main:createApp --factory --app-dir apps/api --host 127.0.0.1 --port 8000",
+    "worker:dev": ".venv/bin/python -m cortex.worker",
+    "dev:up": "./scripts/dev-up.sh",
+    "dev:seed": "./scripts/dev-seed.sh",
+    "dev:reset": "./scripts/dev-reset.sh",
+    "web:dev": "pnpm --dir apps/web dev",
+    "web:build": "pnpm --dir apps/web build",
+    "web:test": "pnpm --dir apps/web test"
+  }
+}
