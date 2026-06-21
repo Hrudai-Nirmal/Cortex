@@ -889,8 +889,15 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "degraded" | "unavailable";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "info" | "warning" | "error";
             /** Detail */
             detail: string;
+            /** Remediation */
+            remediation: string | null;
         };
         /**
          * RuntimeHealthResponse

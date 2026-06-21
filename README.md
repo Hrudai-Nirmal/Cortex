@@ -86,6 +86,7 @@ The package now includes:
 - `GET /health/live` for liveness
 - `GET /health/startup` for static deployment validation
 - `GET /health/ready` for database, pgvector, model, storage, and accelerator readiness
+- runtime-health payloads with per-component severity and remediation guidance for operators
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
@@ -96,6 +97,10 @@ The package now includes:
   - `pnpm package:pull-models`
   - `pnpm package:verify`
   - `pnpm package:down`
+
+The worker now validates both startup-safe configuration and live dependency readiness
+before it enters its durable job loop, so broken package deployments fail fast instead
+of quietly polling forever.
 
 See [context.md](context.md), [architecture.md](docs/architecture.md),
 [external-query-contract.md](docs/external-query-contract.md),

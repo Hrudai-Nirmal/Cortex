@@ -68,12 +68,14 @@ describe("DeveloperConsole", () => {
             status: "degraded",
             environment: "development",
             components: [
-              { name: "postgresql", status: "ready", detail: "database ready" },
-              { name: "ollama", status: "ready", detail: "ollama models ready" },
+              { name: "postgresql", status: "ready", severity: "info", detail: "database ready", remediation: null },
+              { name: "ollama", status: "ready", severity: "info", detail: "ollama models ready", remediation: null },
               {
                 name: "model-endpoint-policy",
                 status: "degraded",
+                severity: "error",
                 detail: "model endpoint host example.com is not local or private",
+                remediation: "Point CORTEX_OLLAMA_BASE_URL at a local endpoint.",
               },
             ],
           }),

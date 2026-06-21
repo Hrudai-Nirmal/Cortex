@@ -52,6 +52,27 @@ get_json() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+print_health_failures() {
+  local payload="$1"
+  if command -v python3 >/dev/null 2>&1; then
+    HEALTH_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["HEALTH_PAYLOAD"])
+for component in payload.get("components", []):
+    if component.get("status") == "ready":
+        continue
+    print(f"- {component['name']}: {component['status']} [{component.get('severity', 'info')}] :: {component['detail']}")
+    remediation = component.get("remediation")
+    if remediation:
+        print(f"  remediation: {remediation}")
+PY
+  else
+    printf "%s\n" "$payload"
+  fi
+}
+
 require_command docker
 require_command curl
 
@@ -106,8 +127,8 @@ done
 
 if ! printf "%s" "$ready_payload" | grep -q '"status":"ready"'; then
   echo "Package started, but runtime readiness is still degraded." >&2
-  printf "%s\n" "$ready_payload" >&2
-  echo "If the degraded component is Ollama model availability, run ./scripts/package-pull-models.sh $ENV_FILE and then ./scripts/package-verify.sh $ENV_FILE." >&2
+  print_health_failures "$ready_payload" >&2
+  echo "Run ./scripts/package-status.sh $ENV_FILE for the full startup and readiness report." >&2
   exit 1
 fi
 

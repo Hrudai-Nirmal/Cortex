@@ -23,3 +23,7 @@ class PipelineValidationError(CortexError):
 
 class ProviderOperationError(CortexError):
     """Raised when an external model or parser provider fails."""
+
+
+class WorkerStartupError(CortexError):
+    """Raised when the worker runtime is not safe to enter its processing loop."""

@@ -140,7 +140,9 @@ class RuntimeComponentSchema(BaseModel):
 
     name: str
     status: Literal["ready", "degraded", "unavailable"]
+    severity: Literal["info", "warning", "error"]
     detail: str
+    remediation: str | None = None
 
 
 class RuntimeHealthResponse(BaseModel):

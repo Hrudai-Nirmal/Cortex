@@ -78,4 +78,30 @@ async def testStartupHealthFlagsUnexpectedRemoteModelEndpoints() -> None:
     )
     assert runtimeHealth.status == "degraded"
     assert policyComponent.status == "degraded"
+    assert policyComponent.severity == "error"
     assert "ALLOW_REMOTE_MODEL_ENDPOINT" in policyComponent.detail
+    assert policyComponent.remediation is not None
+    assert "CORTEX_OLLAMA_BASE_URL" in policyComponent.remediation
+
+
+@pytest.mark.asyncio
+async def testStartupHealthTreatsWebsiteAllowlistAsOptionalCapability() -> None:
+    """Uploads-only deployments should stay ready while still documenting website ingestion."""
+    settings = buildPackageSettings(websiteAllowlist=())
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    websiteComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "website-ingestion"
+    )
+    assert websiteComponent.status == "ready"
+    assert "uploads remain available" in websiteComponent.detail
+    assert websiteComponent.remediation is not None

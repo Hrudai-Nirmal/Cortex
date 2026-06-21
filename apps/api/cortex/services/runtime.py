@@ -70,10 +70,15 @@ class RuntimeHealthService:
 
     async def _checkDatabase(self) -> RuntimeComponentSchema:
         if self.session is None:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="postgresql",
                 status="unavailable",
+                severity="error",
                 detail="database session is unavailable for readiness checks",
+                remediation=(
+                    "Run live readiness checks with a real database session before promoting "
+                    "the package or starting the worker."
+                ),
             )
         try:
             await self.session.execute(text("SELECT 1"))
@@ -81,25 +86,49 @@ class RuntimeHealthService:
                 text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
             )
         except Exception as error:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="postgresql",
                 status="unavailable",
+                severity="error",
                 detail=str(error),
+                remediation=(
+                    "Confirm CORTEX_DATABASE_URL reaches PostgreSQL, the service is running, "
+                    "and the migration job completed successfully."
+                ),
             )
         if pgvectorInstalled != "vector":
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="postgresql",
                 status="degraded",
+                severity="error",
                 detail="database ready but pgvector extension is missing",
+                remediation=(
+                    "Install or enable the PostgreSQL vector extension, then rerun Cortex "
+                    "migrations before accepting retrieval traffic."
+                ),
             )
-        return RuntimeComponentSchema(name="postgresql", status="ready", detail="database ready")
+        return self._buildComponent(
+            name="postgresql",
+            status="ready",
+            severity="info",
+            detail="database ready",
+        )
 
     async def _checkOllama(self) -> RuntimeComponentSchema:
         isReady, detail = await self.modelProvider.checkHealth()
-        return RuntimeComponentSchema(
+        remediation = None
+        if not isReady:
+            remediation = (
+                "Start the configured model endpoint and verify CORTEX_OLLAMA_BASE_URL. "
+                "If the endpoint is reachable but models are missing, run "
+                "pnpm package:pull-models and then pnpm package:verify."
+            )
+        return self._buildComponent(
             name="ollama",
             status="ready" if isReady else "unavailable",
+            severity="info" if isReady else "error",
             detail=detail,
+            remediation=remediation,
         )
 
     def _checkObjectStorage(self) -> RuntimeComponentSchema:
@@ -107,14 +136,20 @@ class RuntimeHealthService:
         try:
             storageRoot.mkdir(parents=True, exist_ok=True)
         except OSError as error:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="object-storage",
                 status="unavailable",
+                severity="error",
                 detail=str(error),
+                remediation=(
+                    "Create the object-storage directory with write permissions for the "
+                    "api and worker containers, or mount the correct persistent volume."
+                ),
             )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="object-storage",
             status="ready",
+            severity="info",
             detail=str(storageRoot.resolve()),
         )
 
@@ -124,9 +159,10 @@ class RuntimeHealthService:
             f"console={self.settings.consolePublicUrl}, query={self.settings.queryPublicUrl}, "
             f"cors={', '.join(self.settings.getCorsOrigins())}"
         )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="deployment-config",
             status="ready",
+            severity="info",
             detail=detail,
         )
 
@@ -134,39 +170,58 @@ class RuntimeHealthService:
         """Guard the offline-capable default by flagging remote model endpoints explicitly."""
         modelHost = self.modelProvider.getBaseHost()
         if self.settings.allowRemoteModelEndpoint:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="model-endpoint-policy",
                 status="ready",
+                severity="info",
                 detail=f"remote model endpoints permitted ({modelHost})",
+                remediation=(
+                    "Keep this exception documented in the client deployment profile and "
+                    "confirm the remote dependency is intentional."
+                ),
             )
         if self._isInternalHost(modelHost):
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="model-endpoint-policy",
                 status="ready",
+                severity="info",
                 detail=f"offline-capable endpoint host {modelHost}",
             )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="model-endpoint-policy",
             status="degraded",
+            severity="error",
             detail=(
                 f"model endpoint host {modelHost} is not local or private; set "
                 "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=true only when this is intentional"
+            ),
+            remediation=(
+                "Point CORTEX_OLLAMA_BASE_URL at a local or private endpoint, or set "
+                "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=true only after explicitly approving "
+                "the outbound model dependency."
             ),
         )
 
     def _checkAccelerator(self) -> RuntimeComponentSchema:
         actualAccelerator = detectAvailableAccelerator()
         if self.settings.requiredAccelerator not in {"auto", actualAccelerator}:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="accelerator",
                 status="degraded",
+                severity="error",
                 detail=(
                     f"required {self.settings.requiredAccelerator}, detected {actualAccelerator}"
                 ),
+                remediation=(
+                    "Deploy on hardware that exposes the declared accelerator, or update "
+                    "CORTEX_REQUIRED_ACCELERATOR to the runtime that the client profile "
+                    "actually intends to support."
+                ),
             )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="accelerator",
             status="ready",
+            severity="info",
             detail=f"detected {actualAccelerator}",
         )
 
@@ -175,29 +230,70 @@ class RuntimeHealthService:
         try:
             import docling  # noqa: F401
         except ImportError as error:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="parser-dependencies",
                 status="degraded",
+                severity="error",
                 detail=f"Docling unavailable: {error}",
+                remediation=(
+                    "Use the packaged Cortex api/worker images or install the ingestion "
+                    "dependencies before enabling source onboarding."
+                ),
             )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="parser-dependencies",
             status="ready",
+            severity="info",
             detail="Docling and local parsers available",
         )
 
     def _checkWebsiteIngestion(self) -> RuntimeComponentSchema:
         """Expose the configured single-page website-ingestion boundary to operators."""
         if not self.settings.websiteAllowlist:
-            return RuntimeComponentSchema(
+            return self._buildComponent(
                 name="website-ingestion",
-                status="degraded",
-                detail="website allowlist is empty",
+                status="ready",
+                severity="info",
+                detail="single-page website ingestion disabled; uploads remain available",
+                remediation=(
+                    "Set CORTEX_WEBSITE_ALLOWLIST to enable allowlisted website ingestion "
+                    "for this client deployment."
+                ),
             )
-        return RuntimeComponentSchema(
+        return self._buildComponent(
             name="website-ingestion",
             status="ready",
+            severity="info",
             detail=", ".join(self.settings.websiteAllowlist),
+        )
+
+    @staticmethod
+    def getFailingComponents(
+        runtimeHealth: RuntimeHealthResponse,
+    ) -> list[RuntimeComponentSchema]:
+        """Return the non-ready runtime components that require operator attention."""
+        return [
+            component
+            for component in runtimeHealth.components
+            if component.status != "ready"
+        ]
+
+    @staticmethod
+    def _buildComponent(
+        *,
+        name: str,
+        status: str,
+        severity: str,
+        detail: str,
+        remediation: str | None = None,
+    ) -> RuntimeComponentSchema:
+        """Construct one consistent runtime-health component payload."""
+        return RuntimeComponentSchema(
+            name=name,
+            status=status,
+            severity=severity,
+            detail=detail,
+            remediation=remediation,
         )
 
     @staticmethod

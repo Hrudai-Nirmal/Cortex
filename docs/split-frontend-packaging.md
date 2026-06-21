@@ -68,6 +68,9 @@ network policy without waiting for PostgreSQL or Ollama round trips.
 - object-storage access
 - website-ingestion allowlist visibility
 
+Both health endpoints return per-component `severity`, `detail`, and `remediation`
+fields so operators and the fixed console show the same troubleshooting guidance.
+
 ## Development Defaults
 
 Local development keeps two independent frontend dev servers:

@@ -280,7 +280,9 @@ export function DeveloperConsole() {
                   <tr>
                     <th>Component</th>
                     <th>Status</th>
+                    <th>Severity</th>
                     <th>Detail</th>
+                    <th>Remediation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -289,11 +291,13 @@ export function DeveloperConsole() {
                       <tr key={component.name}>
                         <td>{component.name}</td>
                         <td>{component.status}</td>
+                        <td>{component.severity}</td>
                         <td>{component.detail}</td>
+                        <td>{component.remediation ?? "—"}</td>
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan={3}>Runtime readiness is still loading.</td></tr>
+                    <tr><td colSpan={5}>Runtime readiness is still loading.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -303,7 +307,13 @@ export function DeveloperConsole() {
                   <div>
                     <strong>Runtime alerts</strong>
                     <span>
-                      {runtimeAlerts.map((component) => `${component.name}: ${component.detail}`).join(" | ")}
+                      {runtimeAlerts
+                        .map((component) =>
+                          component.remediation
+                            ? `${component.name}: ${component.detail} Remediation: ${component.remediation}`
+                            : `${component.name}: ${component.detail}`,
+                        )
+                        .join(" | ")}
                     </span>
                   </div>
                 </div>

@@ -31,7 +31,11 @@ label = os.environ["HEALTH_LABEL"]
 payload = json.loads(os.environ["HEALTH_PAYLOAD"])
 print(f"{label}: {payload.get('status', 'unknown')} ({payload.get('environment', 'unknown')})")
 for component in payload.get("components", []):
-    print(f"  - {component['name']}: {component['status']} :: {component['detail']}")
+    severity = component.get("severity", "info")
+    remediation = component.get("remediation")
+    print(f"  - {component['name']}: {component['status']} [{severity}] :: {component['detail']}")
+    if remediation:
+        print(f"      remediation: {remediation}")
 PY
   else
     printf "%s: %s\n" "$label" "$payload"

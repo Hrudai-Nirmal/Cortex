@@ -111,7 +111,8 @@ The package also runs database migrations before `api` and `worker` proceed.
 
 ## What `package:status` and `package:logs` do
 
-- `package:status` prints the current `startup` and `ready` component states for the console host
+- `package:status` prints the current `startup` and `ready` component states for the console host,
+  including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 ## Health endpoints
@@ -131,7 +132,17 @@ offline-policy violations.
 - Ollama/model availability
 - object storage
 - accelerator expectations
-- website-ingestion configuration
+- website-ingestion configuration visibility
+
+Each runtime component now includes:
+
+- `status`: `ready`, `degraded`, or `unavailable`
+- `severity`: whether the signal is informational or an operator-blocking error
+- `detail`: the observed runtime state
+- `remediation`: the next concrete operator action
+
+An empty website allowlist no longer blocks package readiness. Cortex reports it as an
+uploads-only deployment and tells operators how to enable allowlisted website ingestion.
 
 ## Replaceable query UI guidance
 
@@ -180,3 +191,6 @@ derives scope from the authenticated user token.
   Ollama is reachable but the configured model names are not present
 - `model endpoint host ... is not local or private`:
   Cortex detected a public model endpoint while remote model usage is not explicitly allowed
+- `worker startup blocked by runtime health checks`:
+  the worker refused to enter its durable job loop because one or more startup or live
+  readiness checks failed; inspect `pnpm package:status` and `pnpm package:logs .env.package worker`

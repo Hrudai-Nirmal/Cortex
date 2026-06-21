@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cortex.config import getSettings
+from cortex.config import Settings, getSettings
 from cortex.database import sessionFactory
+from cortex.errors import WorkerStartupError
 from cortex.logging_config import configureLogging, getLogger
+from cortex.schemas import RuntimeComponentSchema, RuntimeHealthResponse
 from cortex.services.jobs import DurableJobService, processJob
 from cortex.services.model_provider import OllamaModelProvider
+from cortex.services.runtime import RuntimeHealthService
 
 logger = getLogger("worker")
 
@@ -19,6 +23,7 @@ async def runWorker() -> None:
     """Run the durable worker loop until cancelled by the process supervisor."""
     configureLogging()
     settings = getSettings()
+    await validateWorkerStartup(settings)
     logger.info("worker_started", queues=["ingestion", "evaluation", "retention"])
     try:
         while True:
@@ -26,6 +31,93 @@ async def runWorker() -> None:
             await asyncio.sleep(settings.workerPollIntervalSeconds)
     except asyncio.CancelledError:
         logger.info("worker_stopped")
+
+
+async def validateWorkerStartup(settings: Settings) -> None:
+    """Fail fast when the worker runtime is not safe to enter its polling loop."""
+    modelProvider = OllamaModelProvider(
+        baseUrl=settings.ollamaBaseUrl,
+        generatorModel=settings.generatorModel,
+        embeddingModel=settings.embeddingModel,
+    )
+    staticHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=modelProvider,
+    ).getStartupReadiness()
+    logRuntimeHealth("worker_startup_static_health", staticHealth)
+    staticFailures = RuntimeHealthService.getFailingComponents(staticHealth)
+    if staticFailures:
+        logger.error(
+            "worker_startup_blocked",
+            phase="startup",
+            components=serializeRuntimeComponents(staticFailures),
+        )
+        raise WorkerStartupError(buildStartupFailureMessage(staticFailures))
+
+    try:
+        async with sessionFactory() as session:
+            liveHealth = await RuntimeHealthService(
+                session=session,
+                settings=settings,
+                modelProvider=modelProvider,
+            ).getReadiness()
+    except Exception as error:
+        logger.error("worker_startup_health_error", error=str(error))
+        raise WorkerStartupError(
+            "worker startup could not verify database and model readiness"
+        ) from error
+
+    logRuntimeHealth("worker_startup_live_health", liveHealth)
+    liveFailures = RuntimeHealthService.getFailingComponents(liveHealth)
+    if liveFailures:
+        logger.error(
+            "worker_startup_blocked",
+            phase="live",
+            components=serializeRuntimeComponents(liveFailures),
+        )
+        raise WorkerStartupError(buildStartupFailureMessage(liveFailures))
+
+
+def logRuntimeHealth(eventName: str, runtimeHealth: RuntimeHealthResponse) -> None:
+    """Emit one structured health event without leaking trace or document content."""
+    logger.info(
+        eventName,
+        status=runtimeHealth.status,
+        environment=runtimeHealth.environment,
+        components=serializeRuntimeComponents(runtimeHealth.components),
+    )
+
+
+def serializeRuntimeComponents(
+    runtimeComponents: Sequence[RuntimeComponentSchema],
+) -> list[dict[str, str | None]]:
+    """Convert runtime-health components into stable structured-log dictionaries."""
+    return [
+        {
+            "name": component.name,
+            "status": component.status,
+            "severity": component.severity,
+            "detail": component.detail,
+            "remediation": component.remediation,
+        }
+        for component in runtimeComponents
+    ]
+
+
+def buildStartupFailureMessage(
+    failingComponents: Sequence[RuntimeComponentSchema],
+) -> str:
+    """Collapse failing runtime components into one operator-readable startup error."""
+    formattedFailures = []
+    for component in failingComponents:
+        if component.remediation:
+            formattedFailures.append(
+                f"{component.name}: {component.detail} | remediation: {component.remediation}"
+            )
+        else:
+            formattedFailures.append(f"{component.name}: {component.detail}")
+    return "worker startup blocked by runtime health checks: " + "; ".join(formattedFailures)
 
 
 async def runWorkerIteration(settings) -> None:
