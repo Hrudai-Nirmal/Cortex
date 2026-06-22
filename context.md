@@ -54,6 +54,8 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package runtime validation now rejects documentation placeholder domains, non-HTTPS production browser URLs, nested-path public URLs, and relative production object-storage roots before client packages boot.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
 - Runtime object-storage readiness now performs an explicit write/delete probe, and `package:status` prints the live external query-contract summary from the running query host.
+- The packaged API now applies the same fail-closed startup policy as the worker for degraded static startup health, while development profiles remain report-only for debugging.
+- Package bootstrap now prints Compose service state plus recent `api`/`worker`/`edge` logs when startup still fails after boot, which makes direct client-package debugging much less opaque.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

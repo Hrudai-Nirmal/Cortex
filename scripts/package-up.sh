@@ -145,6 +145,7 @@ wait_for_endpoint() {
   done
 
   echo "Timed out waiting for ${host}${path}" >&2
+  print_compose_diagnostics
   exit 1
 }
 
@@ -188,6 +189,7 @@ wait_for_health_ready() {
     if printf "%s" "$payload" | grep -q '"status":"degraded"'; then
       echo "Package ${label} failed." >&2
       print_health_failures "$payload" >&2
+      print_compose_diagnostics
       exit 1
     fi
     sleep 2
@@ -197,6 +199,7 @@ wait_for_health_ready() {
   if [ -n "$payload" ]; then
     print_health_failures "$payload" >&2
   fi
+  print_compose_diagnostics
   exit 1
 }
 
@@ -219,6 +222,13 @@ PY
   else
     printf "%s\n" "$payload"
   fi
+}
+
+print_compose_diagnostics() {
+  echo "Compose service state:" >&2
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps >&2 || true
+  echo "Recent service logs:" >&2
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=40 api worker edge >&2 || true
 }
 
 require_command docker

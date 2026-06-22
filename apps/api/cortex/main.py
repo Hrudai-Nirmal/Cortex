@@ -11,8 +11,24 @@ import cortex.api.routes as routeModule
 from cortex.api.routes import router
 from cortex.config import Settings, getSettings
 from cortex.logging_config import configureLogging, getLogger
+from cortex.services.model_provider import OllamaModelProvider
+from cortex.services.runtime import RuntimeHealthService
 
 logger = getLogger("api")
+
+
+def shouldFailClosedOnStartup(settings: Settings) -> bool:
+    """Fail packaged API processes on degraded static startup health in production profiles."""
+    return settings.environment == "production" and not settings.devMode
+
+
+def buildApiModelProvider(settings: Settings) -> OllamaModelProvider:
+    """Create the local model provider used by startup-safe API validation."""
+    return OllamaModelProvider(
+        baseUrl=settings.ollamaBaseUrl,
+        generatorModel=settings.generatorModel,
+        embeddingModel=settings.embeddingModel,
+    )
 
 
 def createApp(settingsOverride: Settings | None = None) -> FastAPI:
@@ -33,6 +49,36 @@ def createApp(settingsOverride: Settings | None = None) -> FastAPI:
             ollamaBaseUrl=activeSettings.ollamaBaseUrl,
             corsOrigins=list(activeSettings.getCorsOrigins()),
         )
+        startupHealth = await RuntimeHealthService(
+            session=None,
+            settings=activeSettings,
+            modelProvider=buildApiModelProvider(activeSettings),
+        ).getStartupReadiness()
+        logger.info(
+            "api_startup_health",
+            status=startupHealth.status,
+            environment=startupHealth.environment,
+            components=RuntimeHealthService.serializeRuntimeComponents(startupHealth.components),
+        )
+        failingComponents = RuntimeHealthService.getFailingComponents(startupHealth)
+        if failingComponents:
+            failureMessage = RuntimeHealthService.buildFailureMessage(
+                "api startup blocked by runtime health checks",
+                failingComponents,
+            )
+            if shouldFailClosedOnStartup(activeSettings):
+                logger.error(
+                    "api_startup_blocked",
+                    components=RuntimeHealthService.serializeRuntimeComponents(
+                        failingComponents
+                    ),
+                )
+                raise RuntimeError(failureMessage)
+            logger.warning(
+                "api_startup_degraded",
+                components=RuntimeHealthService.serializeRuntimeComponents(failingComponents),
+                message=failureMessage,
+            )
         yield
 
     application = FastAPI(

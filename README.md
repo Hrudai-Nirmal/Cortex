@@ -150,6 +150,10 @@ The worker now validates both startup-safe configuration and live dependency rea
 before it enters its durable job loop, so broken package deployments fail fast instead
 of quietly polling forever.
 
+The API now applies the same fail-closed startup policy for packaged production profiles:
+if static startup health is degraded, the process logs the failing components and exits
+instead of serving a partially valid client package.
+
 `pnpm package:up` now prints the exact degraded startup/readiness components and their
 remediation instead of failing with a generic timeout when package validation disagrees
 with the deployment profile.
@@ -158,6 +162,10 @@ It also fails fast when operators leave the documentation placeholder domains in
 configure non-HTTPS public browser URLs, append a path to a public surface URL, point
 the model endpoint at a public host without explicitly allowing that dependency, or use
 a non-absolute object-storage mount path.
+
+When the package still cannot become healthy, `pnpm package:up` now prints the current
+Compose service state plus recent `api`, `worker`, and `edge` logs so operators are not
+left guessing whether the failure happened in static config, API startup, or the routed edge.
 
 See [context.md](context.md), [architecture.md](docs/architecture.md),
 [external-query-contract.md](docs/external-query-contract.md),

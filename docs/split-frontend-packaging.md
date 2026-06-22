@@ -98,6 +98,10 @@ The package exposes:
 object-storage access, parser availability, accelerator expectations, and the local-model
 network policy without waiting for PostgreSQL or Ollama round trips.
 
+In packaged production profiles, the API now treats degraded static startup health as a
+fail-closed condition during process startup. That keeps direct Kubernetes/ECS/OpenShift
+rollouts aligned with the same contract that `package:up` enforces in the compose bundle.
+
 `ready` adds live dependency checks for:
 
 - PostgreSQL connectivity
@@ -122,6 +126,7 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` confirms that the console host emits `X-Cortex-Surface: console`
   and the query host emits `X-Cortex-Surface: query`
 - `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints
+- `package:up` prints `docker compose ps` plus recent `api`/`worker`/`edge` logs when the package still fails to reach a healthy state
 - `package:status` prints both routed health views plus the observed surface identity
 - `package:status` also prints the live external query-contract summary exported by the query host
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery

@@ -180,6 +180,28 @@ async def testStartupHealthReportsDeclaredModelProfile() -> None:
 
 
 @pytest.mark.asyncio
+async def testStartupHealthReportsDeploymentStartupPolicy() -> None:
+    """Operators should be able to see whether the packaged API will fail closed on startup."""
+    settings = buildPackageSettings()
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    deploymentComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "deployment-config"
+    )
+    assert deploymentComponent.status == "ready"
+    assert "startupPolicy=fail-closed" in deploymentComponent.detail
+
+
+@pytest.mark.asyncio
 async def testStartupHealthReportsPackagedTorchBuildProfile() -> None:
     """Operators should be able to inspect the packaged Torch wheel channel at runtime."""
     settings = buildPackageSettings(

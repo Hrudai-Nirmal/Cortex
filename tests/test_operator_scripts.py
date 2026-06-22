@@ -113,6 +113,9 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
     assert 'echo "Package ${label} failed."' in scriptText
     assert 'print_health_failures "$payload"' in scriptText
+    assert 'print_compose_diagnostics' in scriptText
+    assert 'docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps' in scriptText
+    assert 'docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=40 api worker edge' in scriptText
     assert 'echo "Package PyTorch wheel source: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL}"' in scriptText
 
 

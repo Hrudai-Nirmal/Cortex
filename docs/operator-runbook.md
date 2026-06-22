@@ -180,6 +180,15 @@ It also blocks immediately on the most common packaging mistakes:
 - relative object-storage mount paths
 - public remote model endpoints when `CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false`
 
+If the package still fails to become healthy after container boot, `package:up` now
+prints:
+
+- `docker compose ps` output for the packaged services
+- recent `api`, `worker`, and `edge` logs
+
+That makes it much easier to distinguish an API fail-closed startup exit from an edge
+routing issue or a worker-only readiness problem.
+
 `ready` adds live checks for:
 
 - PostgreSQL connectivity
@@ -202,10 +211,17 @@ The readiness payload now includes:
 - `model-profile` for the declared generator model, embedding model, and required accelerator
 - `package-build-profile` for the packaged Torch wheel channel and preinstalled model-runtime packages
 - `identity-profile` for the declared auth mode plus OIDC issuer and audience contract
+- `deployment-config` with the split-host browser origins plus `startupPolicy=fail-closed|report-only`
 
 When the packaged deployment is still running with `authMode=fixture`, Cortex reports
 that identity profile as a warning so operators do not mistake evaluation auth for the
 final client rollout boundary.
+
+For packaged production profiles (`CORTEX_ENVIRONMENT=production`, `CORTEX_DEV_MODE=false`),
+the API now fails closed during lifespan startup if static startup health is degraded.
+That behavior is intentional: Kubernetes, OpenShift, and ECS operators should see a
+crash-looping or non-ready API rather than a partially valid deployment that only fails
+later under real onboarding or query traffic.
 
 An empty website allowlist no longer blocks package readiness. Cortex reports it as an
 uploads-only deployment and tells operators how to enable allowlisted website ingestion.

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,7 +52,9 @@ async def validateWorkerStartup(settings: Settings) -> None:
             phase="startup",
             components=serializeRuntimeComponents(staticFailures),
         )
-        raise WorkerStartupError(buildStartupFailureMessage(staticFailures))
+        raise WorkerStartupError(
+            buildStartupFailureMessage(staticFailures)
+        )
 
     try:
         async with sessionFactory() as session:
@@ -76,7 +77,9 @@ async def validateWorkerStartup(settings: Settings) -> None:
             phase="live",
             components=serializeRuntimeComponents(liveFailures),
         )
-        raise WorkerStartupError(buildStartupFailureMessage(liveFailures))
+        raise WorkerStartupError(
+            buildStartupFailureMessage(liveFailures)
+        )
 
 
 def logRuntimeHealth(eventName: str, runtimeHealth: RuntimeHealthResponse) -> None:
@@ -90,7 +93,7 @@ def logRuntimeHealth(eventName: str, runtimeHealth: RuntimeHealthResponse) -> No
 
 
 def serializeRuntimeComponents(
-    runtimeComponents: Sequence[RuntimeComponentSchema],
+    runtimeComponents: list[RuntimeComponentSchema],
 ) -> list[dict[str, str | None]]:
     """Convert runtime-health components into stable structured-log dictionaries."""
     return [
@@ -106,7 +109,7 @@ def serializeRuntimeComponents(
 
 
 def buildStartupFailureMessage(
-    failingComponents: Sequence[RuntimeComponentSchema],
+    failingComponents: list[RuntimeComponentSchema],
 ) -> str:
     """Collapse failing runtime components into one operator-readable startup error."""
     formattedFailures = []

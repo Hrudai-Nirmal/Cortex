@@ -165,9 +165,15 @@ class RuntimeHealthService:
 
     def _checkDeploymentConfig(self) -> RuntimeComponentSchema:
         """Show operators the host split and browser origins the package expects."""
+        startupPolicy = (
+            "fail-closed"
+            if self.settings.environment == "production" and not self.settings.devMode
+            else "report-only"
+        )
         detail = (
             f"console={self.settings.consolePublicUrl}, query={self.settings.queryPublicUrl}, "
-            f"cors={', '.join(self.settings.getCorsOrigins())}"
+            f"cors={', '.join(self.settings.getCorsOrigins())}, "
+            f"startupPolicy={startupPolicy}"
         )
         return self._buildComponent(
             name="deployment-config",
@@ -386,6 +392,38 @@ class RuntimeHealthService:
             for component in runtimeHealth.components
             if component.status != "ready"
         ]
+
+    @staticmethod
+    def serializeRuntimeComponents(
+        runtimeComponents: list[RuntimeComponentSchema],
+    ) -> list[dict[str, str | None]]:
+        """Convert runtime-health components into stable structured-log dictionaries."""
+        return [
+            {
+                "name": component.name,
+                "status": component.status,
+                "severity": component.severity,
+                "detail": component.detail,
+                "remediation": component.remediation,
+            }
+            for component in runtimeComponents
+        ]
+
+    @staticmethod
+    def buildFailureMessage(
+        prefix: str,
+        failingComponents: list[RuntimeComponentSchema],
+    ) -> str:
+        """Collapse failing runtime components into one operator-readable startup error."""
+        formattedFailures = []
+        for component in failingComponents:
+            if component.remediation:
+                formattedFailures.append(
+                    f"{component.name}: {component.detail} | remediation: {component.remediation}"
+                )
+            else:
+                formattedFailures.append(f"{component.name}: {component.detail}")
+        return f"{prefix}: " + "; ".join(formattedFailures)
 
     @staticmethod
     def _buildComponent(
