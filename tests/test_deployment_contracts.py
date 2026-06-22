@@ -12,6 +12,7 @@ import cortex.api.routes as routeModule
 import cortex.services.runtime as runtimeModule
 from cortex.config import Settings
 from cortex.database import getDatabaseSession
+from cortex.errors import ProviderOperationError
 from cortex.main import createApp
 from cortex.schemas import QueryResponse, SeedFixturesResponse, StageSchema
 from cortex.services.model_provider import OllamaModelProvider
@@ -413,6 +414,47 @@ async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadat
     assert payload["x_cortex"]["evidenceStatus"] == "sufficient"
     assert payload["x_cortex"]["abstained"] is False
     assert payload["x_cortex"]["stages"][0]["name"] == "Scoped hybrid retrieval"
+
+
+@pytest.mark.asyncio
+async def testExternalChatContractSurfacesProviderFailuresAsServiceUnavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Replacement query shells should receive retryable transport semantics for model timeouts."""
+    application = createApp(buildPackageSettings())
+
+    async def overrideDatabaseSession():
+        yield object()
+
+    class StubQueryService:
+        """Raise one provider failure without depending on the live model endpoint."""
+
+        def __init__(self, session, settings, modelProvider) -> None:
+            self.session = session
+
+        async def answerQuery(self, request) -> QueryResponse:
+            raise ProviderOperationError("bounded generation request failed")
+
+    monkeypatch.setattr(routeModule, "QueryService", StubQueryService)
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer fixture-employee"},
+            json={
+                "model": "cortex-bounded-rag",
+                "messages": [{"role": "user", "content": "What are our retention rules?"}],
+                "stream": False,
+                "cortex": {"showCitations": True},
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "bounded generation request failed"
 
 
 @pytest.mark.asyncio

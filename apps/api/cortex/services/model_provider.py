@@ -14,6 +14,7 @@ from cortex.errors import InputValidationError, ProviderOperationError
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 STRUCTURED_GENERATION_MAX_TOKENS = 256
 STRUCTURED_GENERATION_REASONING_EFFORT = "none"
+STRUCTURED_GENERATION_TIMEOUT_SECONDS = 300.0
 
 
 class EmbeddingProvider(Protocol):
@@ -123,7 +124,7 @@ class OllamaModelProvider:
             },
         }
         try:
-            async with httpx.AsyncClient(timeout=self.timeoutSeconds) as client:
+            async with httpx.AsyncClient(timeout=STRUCTURED_GENERATION_TIMEOUT_SECONDS) as client:
                 response = await client.post(
                     f"{self.baseUrl}/v1/chat/completions",
                     json=requestPayload,

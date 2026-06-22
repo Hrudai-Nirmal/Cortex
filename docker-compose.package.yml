@@ -32,6 +32,9 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.api
+      args:
+        CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+        CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}
       CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}
@@ -71,6 +74,9 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.worker
+      args:
+        CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+        CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}
       CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}
@@ -154,6 +160,9 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.api
+      args:
+        CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+        CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     command: ["alembic", "upgrade", "head"]
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}

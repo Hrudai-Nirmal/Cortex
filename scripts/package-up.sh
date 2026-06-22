@@ -39,6 +39,21 @@ require_one_of() {
   exit 1
 }
 
+validate_torch_build_profile() {
+  local accelerator="$1"
+  local torch_index_url="$2"
+
+  if [ "$accelerator" = "cpu" ] && [[ "$torch_index_url" != *"/cpu"* ]]; then
+    echo "CORTEX_REQUIRED_ACCELERATOR=cpu expects a CPU-oriented CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL so the package build does not pull CUDA-heavy Torch artifacts." >&2
+    exit 1
+  fi
+
+  if [ "$accelerator" = "cuda" ] && [[ "$torch_index_url" == *"/cpu"* ]]; then
+    echo "CORTEX_REQUIRED_ACCELERATOR=cuda cannot use the CPU PyTorch wheel channel. Point CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL at the matching CUDA wheel channel before rebuilding the package images." >&2
+    exit 1
+  fi
+}
+
 wait_for_endpoint() {
   local host="$1"
   local path="$2"
@@ -158,11 +173,13 @@ require_env CORTEX_OLLAMA_BASE_URL
 require_env CORTEX_GENERATOR_MODEL
 require_env CORTEX_EMBEDDING_MODEL
 require_env CORTEX_REQUIRED_ACCELERATOR
+require_env CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL
 require_env CORTEX_EDGE_PORT
 
 require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production
 require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false
 require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda
+validate_torch_build_profile "$CORTEX_REQUIRED_ACCELERATOR" "$CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL"
 
 if [ "$CORTEX_CONSOLE_HOST" = "$CORTEX_QUERY_HOST" ]; then
   echo "CORTEX_CONSOLE_HOST and CORTEX_QUERY_HOST must be different." >&2
@@ -180,6 +197,7 @@ if [ "$(extract_url_host "$CORTEX_QUERY_PUBLIC_URL")" != "$CORTEX_QUERY_HOST" ];
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
+echo "Package PyTorch wheel source: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL}"
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"

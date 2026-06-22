@@ -66,8 +66,22 @@ Model-profile values are also deployment-critical in the packaged flow:
 - `CORTEX_GENERATOR_MODEL`
 - `CORTEX_EMBEDDING_MODEL`
 - `CORTEX_REQUIRED_ACCELERATOR`
+- `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL`
+- `CORTEX_PACKAGE_PYTORCH_PREINSTALL`
 
 Do not hardcode the development domains in client builds.
+
+The package images now force an explicit PyTorch wheel source before Docling installs its
+OCR/layout dependencies. The shipped local profile defaults to the CPU wheel channel:
+
+- `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL=https://download.pytorch.org/whl/cpu`
+- `CORTEX_PACKAGE_PYTORCH_PREINSTALL=torch torchvision`
+
+For intentional NVIDIA deployments, operators must point
+`CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL` at the matching CUDA wheel channel before
+rebuilding `api`, `worker`, and `migrate`. This keeps CPU verification builds from
+silently ballooning with CUDA-only artifacts while preserving explicit accelerator-driven
+client packaging.
 
 ## Health checks
 

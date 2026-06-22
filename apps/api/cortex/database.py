@@ -15,10 +15,5 @@ sessionFactory = async_sessionmaker(engine, expire_on_commit=False)
 
 async def getDatabaseSession() -> AsyncIterator[AsyncSession]:
     """Yield a transaction-capable session and always close it afterward."""
-    try:
-        async with sessionFactory() as session:
-            yield session
-    except Exception as error:
-        raise RuntimeError("database session failed") from error
-    finally:
-        pass
+    async with sessionFactory() as session:
+        yield session

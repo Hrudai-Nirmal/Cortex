@@ -42,6 +42,8 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
         "CORTEX_GENERATOR_MODEL",
         "CORTEX_EMBEDDING_MODEL",
         "CORTEX_REQUIRED_ACCELERATOR",
+        "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL",
+        "CORTEX_PACKAGE_PYTORCH_PREINSTALL",
         "CORTEX_EDGE_PORT",
     ):
         assert f"{requiredName}=" in exampleText
@@ -55,6 +57,8 @@ def testPackageEnvExampleDefaultsToOfflineCapableModelPolicy() -> None:
     assert "CORTEX_DEV_MODE=false" in exampleText
     assert "CORTEX_OLLAMA_BASE_URL=http://ollama:11434" in exampleText
     assert "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false" in exampleText
+    assert "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL=https://download.pytorch.org/whl/cpu" in exampleText
+    assert 'CORTEX_PACKAGE_PYTORCH_PREINSTALL="torch torchvision"' in exampleText
 
 
 def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
@@ -82,7 +86,9 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'require_env CORTEX_GENERATOR_MODEL' in scriptText
     assert 'require_env CORTEX_EMBEDDING_MODEL' in scriptText
     assert 'require_env CORTEX_REQUIRED_ACCELERATOR' in scriptText
+    assert 'require_env CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL' in scriptText
     assert 'require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda' in scriptText
+    assert 'validate_torch_build_profile "$CORTEX_REQUIRED_ACCELERATOR" "$CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
     assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
@@ -92,6 +98,7 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
     assert 'echo "Package ${label} failed."' in scriptText
     assert 'print_health_failures "$payload"' in scriptText
+    assert 'echo "Package PyTorch wheel source: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL}"' in scriptText
 
 
 def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:

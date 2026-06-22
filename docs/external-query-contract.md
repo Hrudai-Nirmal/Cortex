@@ -132,7 +132,8 @@ Response headers:
   - no `user` message
   - `stream=true`
 - `403` means Cortex rejected the request because the authenticated identity or scope was not allowed.
-- `500` means Cortex itself failed while executing the deterministic pipeline.
+- `503` means a required local provider, most commonly the bounded generation model call, was unavailable or timed out while Cortex was executing the deterministic pipeline.
+- `500` means Cortex itself failed outside the expected domain/provider error contract.
 
 Replacement UIs should distinguish these cases from intentional abstention. Abstention is represented as a successful `200` response with evidence metadata, not as an exception path.
 

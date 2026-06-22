@@ -11,6 +11,7 @@ from cortex.services.model_provider import (
     OllamaModelProvider,
     STRUCTURED_GENERATION_MAX_TOKENS,
     STRUCTURED_GENERATION_REASONING_EFFORT,
+    STRUCTURED_GENERATION_TIMEOUT_SECONDS,
 )
 
 
@@ -18,8 +19,10 @@ class FakeAsyncClient:
     """Capture one outbound generation request without hitting a real model endpoint."""
 
     capturedJson: dict[str, Any] | None = None
+    capturedTimeout: object | None = None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
+        FakeAsyncClient.capturedTimeout = kwargs.get("timeout")
         return
 
     async def __aenter__(self) -> FakeAsyncClient:
@@ -52,6 +55,7 @@ async def testGenerateStructuredDisablesReasoningAndCapsTokens(monkeypatch: pyte
     import cortex.services.model_provider as modelProviderModule
 
     FakeAsyncClient.capturedJson = None
+    FakeAsyncClient.capturedTimeout = None
     monkeypatch.setattr(modelProviderModule.httpx, "AsyncClient", FakeAsyncClient)
     provider = OllamaModelProvider(
         baseUrl="http://127.0.0.1:11434",
@@ -72,3 +76,4 @@ async def testGenerateStructuredDisablesReasoningAndCapsTokens(monkeypatch: pyte
         FakeAsyncClient.capturedJson["reasoning_effort"]
         == STRUCTURED_GENERATION_REASONING_EFFORT
     )
+    assert FakeAsyncClient.capturedTimeout == STRUCTURED_GENERATION_TIMEOUT_SECONDS

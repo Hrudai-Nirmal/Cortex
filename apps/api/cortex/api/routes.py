@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cortex.config import Settings, getSettings
 from cortex.database import getDatabaseSession
 from cortex.domain.chunking import ChunkerConfig
-from cortex.errors import CortexError
+from cortex.errors import AuthorizationScopeError, CortexError, InputValidationError, ProviderOperationError
 from cortex.schemas import (
     ActivatePipelineRequest,
     ChatCompletionRequestSchema,
@@ -74,6 +74,23 @@ def buildSourceService(session: AsyncSession) -> SourceService:
         settings=settings,
         objectStorage=LocalObjectStorage(Path(settings.objectStorageRoot)),
     )
+
+
+def mapCortexErrorToHttp(error: CortexError) -> HTTPException:
+    """Preserve domain failure meaning at the HTTP contract boundary."""
+    if isinstance(error, InputValidationError):
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        )
+    if isinstance(error, AuthorizationScopeError):
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error))
+    if isinstance(error, ProviderOperationError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(error),
+        )
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
 
 
 def buildPipelineService(session: AsyncSession) -> PipelineService:
@@ -408,7 +425,7 @@ async def submitQuery(
         )
         return await queryService.answerQuery(request)
     except CortexError as error:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+        raise mapCortexErrorToHttp(error) from error
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="query failed"
@@ -460,7 +477,7 @@ async def submitChatCompletion(
             )
         )
     except CortexError as error:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+        raise mapCortexErrorToHttp(error) from error
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

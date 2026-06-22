@@ -130,6 +130,12 @@ The package now includes:
   - `pnpm package:verify`
   - `pnpm package:down`
 
+The shipped local package profile also defaults the Docling/Torch build path to the CPU
+PyTorch wheel channel (`CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL=https://download.pytorch.org/whl/cpu`)
+so Docker Desktop verification does not accidentally pull CUDA-heavy Linux wheels. For an
+intentional NVIDIA client build, set that variable to the matching PyTorch CUDA wheel
+channel before rebuilding the `api`, `worker`, and `migrate` package images.
+
 The worker now validates both startup-safe configuration and live dependency readiness
 before it enters its durable job loop, so broken package deployments fail fast instead
 of quietly polling forever.

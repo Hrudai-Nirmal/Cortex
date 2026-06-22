@@ -53,6 +53,38 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert composeText.count("CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}") >= 3
     assert "CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}" in composeText
     assert composeText.count("CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}") >= 3
+    assert composeText.count(
+        "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}"
+    ) >= 3
+    assert composeText.count(
+        "CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}"
+    ) >= 3
+
+
+def testPackageDockerfilesPreinstallPyTorchFromAnExplicitWheelChannel() -> None:
+    """Package Python images should force the intended torch wheel source before Docling installs."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    apiDockerfile = (rootDirectory / "infra" / "docker" / "Dockerfile.api").read_text(
+        encoding="utf-8"
+    )
+    workerDockerfile = (
+        rootDirectory / "infra" / "docker" / "Dockerfile.worker"
+    ).read_text(encoding="utf-8")
+    helperScript = (
+        rootDirectory / "infra" / "docker" / "install-python-package.sh"
+    ).read_text(encoding="utf-8")
+    for dockerfileText in (apiDockerfile, workerDockerfile):
+        assert (
+            'ARG CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL="https://download.pytorch.org/whl/cpu"'
+            in dockerfileText
+        )
+        assert (
+            "COPY infra/docker/install-python-package.sh /usr/local/bin/install-python-package"
+            in dockerfileText
+        )
+        assert "RUN /usr/local/bin/install-python-package '.[dev,ingestion]'" in dockerfileText
+    assert 'pip install --no-cache-dir --index-url "$torchWheelIndexUrl" $torchPreinstallPackages' in helperScript
+    assert 'pip install --no-cache-dir --extra-index-url "$torchWheelIndexUrl" -e "$projectInstallTarget"' in helperScript
 
 
 def testOpenShiftRoutesPreserveSplitHostsThroughEdgeService() -> None:

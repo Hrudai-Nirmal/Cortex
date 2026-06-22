@@ -64,6 +64,9 @@ pnpm package:up
 
 The first image build can take a while because the offline parsing stack bundles Docling
 and its local model/runtime dependencies into the API and worker images.
+The package also preinstalls PyTorch from `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL`
+before Docling resolves its model/runtime stack so the default CPU verification profile
+does not silently pull CUDA-heavy Linux artifacts.
 
 5. Verify the running package:
 
@@ -98,6 +101,11 @@ models are missing, pull them into the running package:
 pnpm package:pull-models
 pnpm package:verify
 ```
+
+If a client deployment intentionally targets NVIDIA Linux workers, set
+`CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL` to the matching PyTorch CUDA wheel channel and
+rebuild the package images before rollout. Keep the default CPU wheel channel for
+Docker Desktop, ECS CPU tasks, and other non-CUDA verification environments.
 
 ## What `package:up` validates
 
