@@ -73,6 +73,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 - The console now exposes persisted source hashes, extraction diagnostics, accelerator reports, and focused durable job detail for operator troubleshooting.
 - The console version lane now distinguishes active, validated, and retired immutable pipeline versions so operators can see promotable releases and explicit rollback targets.
 - The console trace lane now shows validated answer preview, claim support status, citation linkage, and stage evidence together for faster operator review.
+- The console settings lane now surfaces the packaged model profile and identity profile directly, not only as rows in the readiness table.
 - Supported source formats: PDF, DOCX, HTML, TXT/Markdown, and CSV.
 - Uploads are stored once by raw SHA-256 beneath `CORTEX_OBJECT_STORAGE_ROOT`, then ingested through durable jobs.
 - Single-page website ingestion is restricted to `CORTEX_WEBSITE_ALLOWLIST`.

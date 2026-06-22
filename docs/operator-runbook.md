@@ -32,6 +32,11 @@ The console trace timeline now also shows:
 - persisted claim support status
 - claim-to-citation linkage beside stage evidence
 
+The console settings view now foregrounds:
+
+- packaged model profile
+- packaged identity profile
+
 ## Required host split
 
 Operators must provide two distinct browser hosts:

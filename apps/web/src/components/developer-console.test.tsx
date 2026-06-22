@@ -90,6 +90,20 @@ describe("DeveloperConsole", () => {
             status: "degraded",
             environment: "development",
             components: [
+              {
+                name: "model-profile",
+                status: "ready",
+                severity: "info",
+                detail: "generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu",
+                remediation: "Keep this profile aligned with the client deployment agreement.",
+              },
+              {
+                name: "identity-profile",
+                status: "ready",
+                severity: "info",
+                detail: "authMode=fixture, oidcIssuer=https://cortex.local/oidc, oidcAudience=cortex",
+                remediation: "Verify that bearer tokens reaching Cortex match the declared issuer and audience.",
+              },
               { name: "postgresql", status: "ready", severity: "info", detail: "database ready", remediation: null },
               { name: "ollama", status: "ready", severity: "info", detail: "ollama models ready", remediation: null },
               {
@@ -182,6 +196,10 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("supported")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
+    expect(screen.getByText("Model profile")).toBeVisible();
+    expect(screen.getByText("Identity profile")).toBeVisible();
+    expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);
+    expect(screen.getAllByText("authMode=fixture, oidcIssuer=https://cortex.local/oidc, oidcAudience=cortex")).toHaveLength(2);
     expect(screen.getByText("Surface routing")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
     expect(await screen.findByText("Rollback ready")).toBeVisible();

@@ -69,6 +69,8 @@ export function DeveloperConsole() {
   const runtimeAlerts = runtimeHealth?.components.filter(
     (component) => component.status !== "ready",
   ) ?? [];
+  const modelProfile = runtimeHealth?.components.find((component) => component.name === "model-profile") ?? null;
+  const identityProfile = runtimeHealth?.components.find((component) => component.name === "identity-profile") ?? null;
   const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
   const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
   const activeVersion = pipelineVersions.find((version) => version.status === "active") ?? null;
@@ -396,6 +398,26 @@ export function DeveloperConsole() {
                   rerank top-K {pipeline?.rerankTopK ?? 40}. The fixed console remains first-party;
                   client chat shells should integrate through the external query contract.
                 </p>
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Model profile</strong>
+                </div>
+                <p>{modelProfile?.detail ?? "Runtime profile is still loading."}</p>
+                {modelProfile?.remediation ? (
+                  <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {modelProfile.remediation}</p>
+                ) : null}
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <ShieldCheck aria-hidden size={18} />
+                  <strong>Identity profile</strong>
+                </div>
+                <p>{identityProfile?.detail ?? "Identity contract is still loading."}</p>
+                {identityProfile?.remediation ? (
+                  <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {identityProfile.remediation}</p>
+                ) : null}
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">
