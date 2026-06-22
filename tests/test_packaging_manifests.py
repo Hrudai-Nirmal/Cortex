@@ -37,6 +37,17 @@ def testKubernetesPackageManifestPreservesSplitHostRouting() -> None:
     assert "name: cortex-api" in manifestText
 
 
+def testKubernetesPackageManifestAddsWorkerStartupChecks() -> None:
+    """Worker deployments should expose explicit startup validation to orchestrators."""
+    manifestText = (
+        Path(__file__).resolve().parents[1] / "infra" / "k8s" / "cortex-package.yaml"
+    ).read_text(encoding="utf-8")
+    assert 'command: ["python", "-m", "cortex.worker"]' in manifestText
+    assert 'command: ["python", "-m", "cortex.worker", "--check-startup"]' in manifestText
+    assert "startupProbe:" in manifestText
+    assert "livenessProbe:" in manifestText
+
+
 def testEdgeRouterAdvertisesSplitSurfaceIdentity() -> None:
     """The package router should expose which packaged surface each host resolved to."""
     edgeTemplateText = (
@@ -61,6 +72,7 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert composeText.count(
         "CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}"
     ) >= 3
+    assert 'test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in composeText
 
 
 def testPackageDockerfilesPreinstallPyTorchFromAnExplicitWheelChannel() -> None:
@@ -121,6 +133,7 @@ def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText
     assert '"CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu"' in taskDefinitionText
     assert '"CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision"' in taskDefinitionText
+    assert '"command": ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in taskDefinitionText
 
 
 def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 
 import pytest
 
@@ -120,3 +121,25 @@ async def testValidateWorkerStartupRaisesForLiveReadinessFailures(monkeypatch) -
 
     with pytest.raises(WorkerStartupError, match="postgresql"):
         await workerModule.validateWorkerStartup(buildWorkerSettings())
+
+
+def testWorkerMainRunsStartupCheckInsteadOfLoop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The worker CLI should support a health-check mode for orchestrator probes."""
+    observed: dict[str, str] = {}
+    realAsyncioRun = workerModule.asyncio.run
+
+    async def stubValidateWorkerStartup(settings: Settings) -> None:
+        observed["environment"] = settings.environment
+
+    def stubRun(coroutine):
+        return realAsyncioRun(coroutine)
+
+    monkeypatch.setattr(workerModule.argparse.ArgumentParser, "parse_args", lambda self: SimpleNamespace(check_startup=True))
+    monkeypatch.setattr(workerModule, "validateWorkerStartup", stubValidateWorkerStartup)
+    monkeypatch.setattr(workerModule.asyncio, "run", stubRun)
+
+    workerModule.main()
+
+    assert observed["environment"] == "development"

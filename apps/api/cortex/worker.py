@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -157,6 +158,19 @@ async def processNextJob(session: AsyncSession, settings) -> None:
 
 def main() -> None:
     """Start the worker process from a module or container command."""
+    argumentParser = argparse.ArgumentParser(description="Run the Cortex durable worker.")
+    argumentParser.add_argument(
+        "--check-startup",
+        action="store_true",
+        help="Validate worker startup health and exit without entering the job loop.",
+    )
+    arguments = argumentParser.parse_args()
+    configureLogging()
+    settings = getSettings()
+    if arguments.check_startup:
+        asyncio.run(validateWorkerStartup(settings))
+        logger.info("worker_startup_check_passed")
+        return
     asyncio.run(runWorker())
 
 

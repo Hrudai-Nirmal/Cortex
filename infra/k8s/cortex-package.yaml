@@ -130,6 +130,18 @@ spec:
             - secretRef:
                 name: cortex-secrets
           command: ["python", "-m", "cortex.worker"]
+          startupProbe:
+            exec:
+              command: ["python", "-m", "cortex.worker", "--check-startup"]
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            exec:
+              command: ["python", "-m", "cortex.worker", "--check-startup"]
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
           volumeMounts:
             - name: cortex-object-storage
               mountPath: /var/lib/cortex/object-storage

@@ -139,6 +139,9 @@ After startup, it waits for:
 - `X-Cortex-Surface` identity headers on both routed browser hosts
 
 The package also runs database migrations before `api` and `worker` proceed.
+The packaged worker now publishes its own exec-style startup contract through
+`python -m cortex.worker --check-startup`, and the shipped Compose/Kubernetes/ECS
+examples wire that into their worker health signals.
 
 ## What `package:verify` checks
 
@@ -252,6 +255,7 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 - use host-based ingress rules for console and query hosts
 - keep separate services for `console-web`, `query-web`, and `api`
 - use the provided startup/readiness/liveness probes as the baseline
+- keep the worker exec probes that run `python -m cortex.worker --check-startup`; they are the packaged signal that database/model/object-storage readiness is safe for durable jobs
 - run the migration job before promoting the API and worker deployments
 - replace the example `.example.com` hosts in `infra/k8s/cortex-package.yaml` with the client-owned console and app domains before deployment
 - keep the ConfigMap public URLs rooted at the host and HTTPS once the real client domains are substituted
@@ -274,6 +278,7 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 - map console/query hosts through ALB host-based listener rules
 - run `api`, `worker`, `console-web`, and `query-web` as separate services or tasks
 - keep `edge` only if you want the Nginx host router inside the package rather than at the ALB layer
+- preserve the worker container health check that runs `python -m cortex.worker --check-startup`
 - run the migration command as a one-shot task before the API service rolls forward
 - back the object-storage root with durable shared storage or a compatible mounted filesystem volume for `api` and `worker`
 - `infra/ecs/cortex-task-family.json` shows an edit-in-place task-family baseline with

@@ -154,6 +154,10 @@ The API now applies the same fail-closed startup policy for packaged production 
 if static startup health is degraded, the process logs the failing components and exits
 instead of serving a partially valid client package.
 
+The worker now also exposes an explicit `python -m cortex.worker --check-startup` probe
+contract, and the shipped Compose/Kubernetes/ECS manifests use it so client-managed
+orchestrators can tell “safe to process jobs” from “container merely started.”
+
 `pnpm package:up` now prints the exact degraded startup/readiness components and their
 remediation instead of failing with a generic timeout when package validation disagrees
 with the deployment profile.

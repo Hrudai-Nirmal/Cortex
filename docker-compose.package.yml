@@ -105,6 +105,12 @@ services:
         condition: service_completed_successfully
       api:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - cortex-object-storage:/var/lib/cortex/object-storage
 

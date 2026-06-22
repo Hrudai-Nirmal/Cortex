@@ -56,6 +56,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Runtime object-storage readiness now performs an explicit write/delete probe, and `package:status` prints the live external query-contract summary from the running query host.
 - The packaged API now applies the same fail-closed startup policy as the worker for degraded static startup health, while development profiles remain report-only for debugging.
 - Package bootstrap now prints Compose service state plus recent `api`/`worker`/`edge` logs when startup still fails after boot, which makes direct client-package debugging much less opaque.
+- The worker now also exposes a dedicated `--check-startup` probe path, and the shipped Compose/Kubernetes/ECS manifests use it so orchestrators can gate durable job execution on real runtime readiness instead of process existence alone.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

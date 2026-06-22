@@ -94,6 +94,13 @@
           "readOnly": false
         }
       ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "python -m cortex.worker --check-startup"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 30
+      },
       "dependsOn": [
         { "containerName": "api", "condition": "HEALTHY" }
       ]

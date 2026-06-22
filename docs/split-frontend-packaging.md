@@ -102,6 +102,10 @@ In packaged production profiles, the API now treats degraded static startup heal
 fail-closed condition during process startup. That keeps direct Kubernetes/ECS/OpenShift
 rollouts aligned with the same contract that `package:up` enforces in the compose bundle.
 
+The packaged worker exposes the same principle through
+`python -m cortex.worker --check-startup`, which the shipped Compose, Kubernetes, and ECS
+manifests use for worker health signaling.
+
 `ready` adds live dependency checks for:
 
 - PostgreSQL connectivity
