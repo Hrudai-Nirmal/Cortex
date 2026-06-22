@@ -59,6 +59,12 @@ Domain values are deployment-critical and must be supplied by the operator:
 - `VITE_CORTEX_CONSOLE_PUBLIC_URL`
 - `VITE_CORTEX_QUERY_PUBLIC_URL`
 
+Model-profile values are also deployment-critical in the packaged flow:
+
+- `CORTEX_GENERATOR_MODEL`
+- `CORTEX_EMBEDDING_MODEL`
+- `CORTEX_REQUIRED_ACCELERATOR`
+
 Do not hardcode the development domains in client builds.
 
 ## Health checks

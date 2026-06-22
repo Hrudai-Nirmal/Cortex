@@ -100,8 +100,10 @@ Before starting containers, the script validates:
 
 - env file presence
 - required domain variables
+- required model-profile variables
 - distinct console/query hosts
 - public URL host alignment
+- explicit non-`auto` accelerator declaration (`cpu`, `mps`, or `cuda`)
 - Docker Compose rendering
 
 After startup, it waits for:

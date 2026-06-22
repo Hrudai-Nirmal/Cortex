@@ -26,6 +26,19 @@ require_env() {
   fi
 }
 
+require_one_of() {
+  local value="$1"
+  local label="$2"
+  shift 2
+  for allowed_value in "$@"; do
+    if [ "$value" = "$allowed_value" ]; then
+      return 0
+    fi
+  done
+  echo "${label} must be one of: $*" >&2
+  exit 1
+}
+
 wait_for_endpoint() {
   local host="$1"
   local path="$2"
@@ -140,7 +153,12 @@ require_env CORTEX_QUERY_PUBLIC_URL
 require_env CORTEX_DATABASE_URL
 require_env CORTEX_OBJECT_STORAGE_ROOT
 require_env CORTEX_OLLAMA_BASE_URL
+require_env CORTEX_GENERATOR_MODEL
+require_env CORTEX_EMBEDDING_MODEL
+require_env CORTEX_REQUIRED_ACCELERATOR
 require_env CORTEX_EDGE_PORT
+
+require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda
 
 if [ "$CORTEX_CONSOLE_HOST" = "$CORTEX_QUERY_HOST" ]; then
   echo "CORTEX_CONSOLE_HOST and CORTEX_QUERY_HOST must be different." >&2

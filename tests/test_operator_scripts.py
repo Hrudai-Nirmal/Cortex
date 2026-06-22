@@ -39,6 +39,7 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
         "CORTEX_OLLAMA_BASE_URL",
         "CORTEX_GENERATOR_MODEL",
         "CORTEX_EMBEDDING_MODEL",
+        "CORTEX_REQUIRED_ACCELERATOR",
         "CORTEX_EDGE_PORT",
     ):
         assert f"{requiredName}=" in exampleText
@@ -70,6 +71,10 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     """Package bootstrap should surface failing health components instead of a generic timeout."""
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
+    assert 'require_env CORTEX_GENERATOR_MODEL' in scriptText
+    assert 'require_env CORTEX_EMBEDDING_MODEL' in scriptText
+    assert 'require_env CORTEX_REQUIRED_ACCELERATOR' in scriptText
+    assert 'require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
     assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
