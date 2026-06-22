@@ -22,6 +22,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query surface with citation display control, live pipeline/health fetches, and persisted trace playback.
 - The developer console now surfaces focused durable-job detail plus persisted source hashes, extraction diagnostics, and accelerator reports for operator troubleshooting.
+- The developer console now distinguishes validated pipeline versions from the active release and exposes retired immutable versions as explicit rollback targets.
 - Multi-image frontend packaging with separate console/query Vite builds, static frontend Docker images, edge Nginx host routing, and package/Kubernetes deployment manifests.
 - The Kubernetes package example now models client-owned domains, shared non-secret config, secret injection, and persistent object storage instead of baking in development hostnames.
 - External query-surface contract through an OpenAI-compatible `/v1/chat/completions` facade that derives access scope from authenticated identity and returns `x_cortex` evidence metadata, a stable contract version, an operator-oriented trace-events path, and trace-oriented response headers.
@@ -59,4 +60,4 @@ The selected visual target is the first generated direction, “Signal Grid”: 
 - Large-scale retrieval engines remain adapters; PostgreSQL/pgvector is the initial implementation.
 - Local live-integration verification beyond the unit/component suite still depends on an available PostgreSQL service and local Ollama-compatible model endpoint.
 - Malware scanning is still a required hook with a local no-op adapter; enterprise scanner integrations remain a deployment concern rather than a product concern.
-- Pipeline validation currently audits and re-validates the active immutable definition when no edited draft exists; draft authoring remains tied to future pipeline-edit persistence work.
+- Pipeline validation now clones the latest immutable definition into a distinct validated version when no draft exists; richer draft authoring and explicit evaluated/approved gates remain tied to future pipeline-edit persistence work.

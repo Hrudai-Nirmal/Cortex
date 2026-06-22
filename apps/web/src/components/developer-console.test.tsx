@@ -50,6 +50,17 @@ describe("DeveloperConsole", () => {
             {
               pipelineVersionId: "e5165ff1-a5ee-48dd-a8b2-c955153bd837",
               enterpriseId: "00000000-0000-0000-0000-000000000001",
+              version: 4,
+              status: "validated",
+              createdBy: "alex.rivera@example.com",
+              createdAt: "2026-06-22T00:00:00+00:00",
+              activatedAt: null,
+              rerankTopK: 40,
+              definitionHash: "8d24df0a6d7e39c0ec9f6a2f7c1b66f1",
+            },
+            {
+              pipelineVersionId: "e5165ff1-a5ee-48dd-a8b2-c955153bd838",
+              enterpriseId: "00000000-0000-0000-0000-000000000001",
               version: 3,
               status: "active",
               createdBy: "alex.rivera@example.com",
@@ -57,6 +68,17 @@ describe("DeveloperConsole", () => {
               activatedAt: "2026-06-21T00:00:00+00:00",
               rerankTopK: 40,
               definitionHash: "7d24df0a6d7e39c0ec9f6a2f7c1b66f0",
+            },
+            {
+              pipelineVersionId: "e5165ff1-a5ee-48dd-a8b2-c955153bd839",
+              enterpriseId: "00000000-0000-0000-0000-000000000001",
+              version: 2,
+              status: "retired",
+              createdBy: "maya.chen@example.com",
+              createdAt: "2026-06-20T00:00:00+00:00",
+              activatedAt: "2026-06-20T00:00:00+00:00",
+              rerankTopK: 30,
+              definitionHash: "6d24df0a6d7e39c0ec9f6a2f7c1b66ef",
             },
           ]),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -139,6 +161,10 @@ describe("DeveloperConsole", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
     expect(screen.getByText("Surface routing")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Versions" }));
+    expect(await screen.findByText("Rollback ready")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
   });
 });

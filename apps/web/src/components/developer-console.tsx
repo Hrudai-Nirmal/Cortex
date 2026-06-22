@@ -1,6 +1,6 @@
 /** Graph-first developer console faithful to the selected Signal Grid mockup. */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CaretDown,
   CheckCircle,
@@ -69,6 +69,29 @@ export function DeveloperConsole() {
   const runtimeAlerts = runtimeHealth?.components.filter(
     (component) => component.status !== "ready",
   ) ?? [];
+  const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
+  const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
+  const activeVersion = pipelineVersions.find((version) => version.status === "active") ?? null;
+
+  const loadConsole = useCallback(async (): Promise<void> => {
+    try {
+      const [activePipeline, liveVersions, health, trace, resolvedSession] = await Promise.all([
+        getActivePipeline(ENTERPRISE_ID),
+        getPipelineVersions(ENTERPRISE_ID),
+        getRuntimeHealth(),
+        getLatestTrace(ENTERPRISE_ID),
+        getSession(),
+      ]);
+      setPipeline(activePipeline);
+      setPipelineVersions(liveVersions);
+      setRuntimeHealth(health);
+      setLatestTrace(trace);
+      setSession(resolvedSession);
+      setTracePlayback([]);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Developer console failed to load");
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -79,40 +102,22 @@ export function DeveloperConsole() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadConsole(): Promise<void> {
-      try {
-        const [activePipeline, liveVersions, health, trace, resolvedSession] = await Promise.all([
-          getActivePipeline(ENTERPRISE_ID),
-          getPipelineVersions(ENTERPRISE_ID),
-          getRuntimeHealth(),
-          getLatestTrace(ENTERPRISE_ID),
-          getSession(),
-        ]);
-        if (!isMounted) {
-          return;
-        }
-        setPipeline(activePipeline);
-        setPipelineVersions(liveVersions);
-        setRuntimeHealth(health);
-        setLatestTrace(trace);
-        setSession(resolvedSession);
-        setTracePlayback([]);
-      } catch (error) {
-        if (isMounted) {
-          setErrorMessage(error instanceof Error ? error.message : "Developer console failed to load");
-        }
+    void (async () => {
+      if (!isMounted) {
+        return;
       }
-    }
-
-    void loadConsole();
+      await loadConsole();
+    })();
     const pollTimer = window.setInterval(() => {
-      void loadConsole();
+      if (isMounted) {
+        void loadConsole();
+      }
     }, 5000);
     return () => {
       isMounted = false;
       window.clearInterval(pollTimer);
     };
-  }, []);
+  }, [loadConsole]);
 
   useEffect(() => {
     traceSubscriptionRef.current?.();
@@ -147,6 +152,7 @@ export function DeveloperConsole() {
     try {
       const validatedPipeline = await validatePipeline(ENTERPRISE_ID);
       setPipeline(validatedPipeline);
+      await loadConsole();
       setPublishState("saved");
     } catch (error) {
       setPublishState("saved");
@@ -155,19 +161,24 @@ export function DeveloperConsole() {
   }
 
   async function handlePublish(): Promise<void> {
+    await handleActivateVersion();
+  }
+
+  async function handleActivateVersion(version?: number): Promise<void> {
     if (!session?.isAdmin) {
-      setErrorMessage("Only administrators can publish pipeline changes.");
+      setErrorMessage("Only administrators can activate pipeline versions.");
       return;
     }
     setPublishState("publishing");
     setErrorMessage(null);
     try {
-      const activatedPipeline = await activatePipeline(ENTERPRISE_ID);
+      const activatedPipeline = await activatePipeline(ENTERPRISE_ID, version);
       setPipeline(activatedPipeline);
+      await loadConsole();
       setPublishState("published");
     } catch (error) {
       setPublishState("saved");
-      setErrorMessage(error instanceof Error ? error.message : "Pipeline publish failed");
+      setErrorMessage(error instanceof Error ? error.message : "Pipeline activation failed");
     }
   }
 
@@ -241,6 +252,29 @@ export function DeveloperConsole() {
                 <strong>Pipeline versions</strong>
                 <span>{pipelineVersions.length}</span>
               </div>
+              <div className="metric-strip" style={{ marginBottom: 16 }}>
+                <span><small>Active</small><strong>{activeVersion ? `v${activeVersion.version}` : "none"}</strong></span>
+                <span><small>Validated</small><strong>{validatedVersions.length}</strong></span>
+                <span><small>Rollback</small><strong>{rollbackCandidates.length}</strong></span>
+                <span><small>Current top-K</small><strong>{pipeline?.rerankTopK ?? 40}</strong></span>
+              </div>
+              {validatedVersions.length > 0 ? (
+                <div className="toast" style={{ position: "static", marginBottom: 16 }}>
+                  <CheckCircle weight="fill" /> Version v{validatedVersions[0].version} is validated and ready for activation.
+                </div>
+              ) : null}
+              {rollbackCandidates.length > 0 ? (
+                <div className="source-form-card" style={{ marginBottom: 16 }}>
+                  <div className="source-form-card__heading">
+                    <Clock aria-hidden size={18} />
+                    <strong>Rollback ready</strong>
+                  </div>
+                  <p>
+                    Retired versions remain available for explicit rollback. Cortex only reactivates
+                    immutable versions and preserves the audit trail for every activation.
+                  </p>
+                </div>
+              ) : null}
               <table>
                 <thead>
                   <tr>
@@ -250,6 +284,7 @@ export function DeveloperConsole() {
                     <th>Activated</th>
                     <th>Top-K</th>
                     <th>Definition hash</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -262,10 +297,35 @@ export function DeveloperConsole() {
                         <td>{version.activatedAt ? new Date(version.activatedAt).toLocaleString() : "—"}</td>
                         <td>{version.rerankTopK}</td>
                         <td><code>{version.definitionHash.slice(0, 16)}</code></td>
+                        <td>
+                          {version.status === "validated" ? (
+                            <button
+                              className="button button--primary"
+                              type="button"
+                              onClick={() => void handleActivateVersion(version.version)}
+                              disabled={!session?.isAdmin || publishState !== "saved"}
+                            >
+                              Promote
+                            </button>
+                          ) : version.status === "retired" ? (
+                            <button
+                              className="button button--secondary"
+                              type="button"
+                              onClick={() => void handleActivateVersion(version.version)}
+                              disabled={!session?.isAdmin || publishState !== "saved"}
+                            >
+                              Roll back
+                            </button>
+                          ) : version.status === "active" ? (
+                            <span>Live</span>
+                          ) : (
+                            <span>Awaiting validation</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan={6}>No persisted pipeline versions yet.</td></tr>
+                    <tr><td colSpan={7}>No persisted pipeline versions yet.</td></tr>
                   )}
                 </tbody>
               </table>

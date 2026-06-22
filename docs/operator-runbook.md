@@ -20,6 +20,12 @@ The `console-web` image is the fixed first-party operator surface.
 The `query-web` image is optional and may be replaced by a client-owned chat UI that
 calls the external query contract.
 
+Inside the fixed console, operators can now distinguish:
+
+- the currently active immutable pipeline version
+- validated versions waiting activation
+- retired versions that remain eligible for explicit rollback
+
 ## Required host split
 
 Operators must provide two distinct browser hosts:
@@ -162,6 +168,9 @@ When clients use their own chat UI:
 
 The custom query UI must not send raw access-scope principals from the browser. Cortex
 derives scope from the authenticated user token.
+
+When operators promote or roll back pipeline versions in the console, Cortex activates
+only immutable versions and keeps audit evidence for both forward promotion and rollback.
 
 ## Kubernetes, OpenShift, and ECS notes
 

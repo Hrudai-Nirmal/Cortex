@@ -59,15 +59,18 @@ class PipelineService:
         """Create or reuse the next draft version and move it into the validated state."""
         draftVersion = await self._getLatestVersionByStatus(identity.enterpriseId, "draft")
         if draftVersion is None:
-            draftVersion = await self._getLatestVersion(identity.enterpriseId)
-            if draftVersion is None:
-                draftVersion = await self._bootstrapDefaultPipeline(identity)
+            latestVersion = await self._getLatestVersion(identity.enterpriseId)
+            if latestVersion is None:
+                await self._bootstrapDefaultPipeline(identity)
+                latestVersion = await self._getLatestVersion(identity.enterpriseId)
+            if latestVersion is None:
+                raise InputValidationError("active pipeline bootstrap failed")
+            draftVersion = await self._createNextDraft(identity)
         definition = PipelineDefinition.model_validate(draftVersion.definition)
         definitionHash = definition.calculateDefinitionHash()
         draftVersion.definition = definition.model_dump(mode="json")
         draftVersion.definitionHash = definitionHash
-        if draftVersion.status == "draft":
-            draftVersion.status = "validated"
+        draftVersion.status = "validated"
         await persistControlPlaneAudit(
             session=self.session,
             settings=self.settings,
@@ -75,7 +78,7 @@ class PipelineService:
             actorId=identity.actorId,
             action="pipeline.validate",
             scope={"enterpriseId": str(identity.enterpriseId), "version": draftVersion.version},
-            outcome="validated" if draftVersion.status == "validated" else draftVersion.status,
+            outcome="validated",
             pipelineVersion=draftVersion.version,
             eventPayload={
                 "definitionHash": definitionHash.hex(),
@@ -94,12 +97,13 @@ class PipelineService:
     ) -> PipelineGraphResponse:
         """Promote a validated pipeline version to active and retire the previous active version."""
         targetVersion = await self._resolveActivationTarget(identity.enterpriseId, version)
-        if targetVersion.status not in {"validated", "approved", "active"}:
+        if targetVersion.status not in {"validated", "approved", "active", "retired"}:
             raise InputValidationError(
-                "only validated or active pipeline versions can be activated"
+                "only validated, approved, active, or retired pipeline versions can be activated"
             )
         activeVersion = await self._getActiveVersion(identity.enterpriseId)
         activationTime = datetime.now(UTC)
+        isRollback = targetVersion.status == "retired"
         if activeVersion is not None and activeVersion.id != targetVersion.id:
             activeVersion.status = "retired"
         targetVersion.status = "active"
@@ -115,6 +119,7 @@ class PipelineService:
             pipelineVersion=targetVersion.version,
             eventPayload={
                 "previousVersion": activeVersion.version if activeVersion is not None else None,
+                "rollback": isRollback,
                 "activatedAt": activationTime.isoformat(),
             },
         )

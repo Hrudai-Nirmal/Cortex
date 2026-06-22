@@ -635,7 +635,7 @@ async def testPipelineLifecyclePersistsAndAuditsLive(
     liveDatabaseUrl: str,
     localModelServer: str,
 ) -> None:
-    """Active, validated, and activated pipeline versions should persist with audit evidence."""
+    """Validation should create a promotable version and activation should retire the prior active version."""
     settings = buildSettings(localModelServer, liveDatabaseUrl)
     routeModule.settings = settings
     application = createApp()
@@ -695,16 +695,89 @@ async def testPipelineLifecyclePersistsAndAuditsLive(
     assert activeResponse.status_code == 200
     assert activeResponse.json()["status"] == "active"
     assert validateResponse.status_code == 200
-    assert validateResponse.json()["status"] == "active"
+    assert validateResponse.json()["status"] == "validated"
+    assert validateResponse.json()["version"] == 2
     assert activateResponse.status_code == 200
     assert activateResponse.json()["status"] == "active"
+    assert activateResponse.json()["version"] == 2
     assert versionsResponse.status_code == 200
-    assert [version["status"] for version in versionsPayload] == ["active"]
+    assert [version["status"] for version in versionsPayload] == ["active", "retired"]
+    assert [version["version"] for version in versionsPayload] == [2, 1]
     assert [(row["action"], row["outcome"]) for row in auditActions] == [
         ("pipeline.bootstrap", "active"),
-        ("pipeline.validate", "active"),
+        ("pipeline.validate", "validated"),
         ("pipeline.activate", "active"),
     ]
+
+
+@pytest.mark.asyncio
+async def testPipelineRollbackReactivatesRetiredVersionLive(
+    databaseSession: AsyncSession,
+    liveDatabaseUrl: str,
+    localModelServer: str,
+) -> None:
+    """Operators should be able to roll back to an earlier immutable retired version."""
+    settings = buildSettings(localModelServer, liveDatabaseUrl)
+    routeModule.settings = settings
+    application = createApp()
+
+    async def overrideDatabaseSession():
+        yield databaseSession
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        await client.get(
+            f"/v1/pipelines/active?enterpriseId={settings.enterpriseId}",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+        await client.post(
+            "/v1/pipelines/validate",
+            headers={"Authorization": "Bearer fixture-admin"},
+            json={"enterpriseId": str(settings.enterpriseId)},
+        )
+        await client.post(
+            "/v1/pipelines/activate",
+            headers={"Authorization": "Bearer fixture-admin"},
+            json={"enterpriseId": str(settings.enterpriseId)},
+        )
+        rollbackResponse = await client.post(
+            "/v1/pipelines/activate",
+            headers={"Authorization": "Bearer fixture-admin"},
+            json={"enterpriseId": str(settings.enterpriseId), "version": 1},
+        )
+        versionsResponse = await client.get(
+            f"/v1/pipelines/versions?enterpriseId={settings.enterpriseId}",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+
+    auditRows = (
+        (
+            await databaseSession.execute(
+                text(
+                    """
+                    SELECT action, event_payload
+                    FROM audit_log
+                    WHERE action = 'pipeline.activate'
+                    ORDER BY created_at ASC
+                    """
+                )
+            )
+        )
+        .mappings()
+        .all()
+    )
+
+    versionsPayload = versionsResponse.json()
+    assert rollbackResponse.status_code == 200
+    assert rollbackResponse.json()["status"] == "active"
+    assert rollbackResponse.json()["version"] == 1
+    assert [version["status"] for version in versionsPayload] == ["retired", "active"]
+    assert [version["version"] for version in versionsPayload] == [2, 1]
+    assert auditRows[-1]["event_payload"]["rollback"] is True
 
 
 @pytest.mark.asyncio
