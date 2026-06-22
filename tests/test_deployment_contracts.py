@@ -150,6 +150,30 @@ async def testStartupHealthReportsDeclaredModelProfile() -> None:
 
 
 @pytest.mark.asyncio
+async def testStartupHealthReportsDeclaredIdentityProfile() -> None:
+    """Operators should be able to see the declared auth mode and OIDC contract."""
+    settings = buildPackageSettings()
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    identityComponent = next(
+        component for component in runtimeHealth.components if component.name == "identity-profile"
+    )
+    assert identityComponent.status == "ready"
+    assert identityComponent.severity == "info"
+    assert "authMode=fixture" in identityComponent.detail
+    assert f"oidcIssuer={settings.oidcIssuerUrl}" in identityComponent.detail
+    assert f"oidcAudience={settings.oidcAudience}" in identityComponent.detail
+    assert identityComponent.remediation is not None
+
+
+@pytest.mark.asyncio
 async def testStartupHealthFlagsObjectStorageWriteFailures(tmp_path: pytest.TempPathFactory) -> None:
     """Packages should report an operator-facing error when object storage is not writable."""
     blockedPath = tmp_path / "blocked-root"

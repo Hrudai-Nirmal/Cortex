@@ -32,6 +32,7 @@ class RuntimeHealthService:
         """Aggregate database, local model, object storage, and accelerator readiness."""
         components = [
             self._checkDeploymentConfig(),
+            self._checkIdentityProfile(),
             self._checkModelProfile(),
             await self._checkDatabase(),
             await self._checkOllama(),
@@ -54,6 +55,7 @@ class RuntimeHealthService:
         """Expose static startup checks that do not require remote dependency round trips."""
         components = [
             self._checkDeploymentConfig(),
+            self._checkIdentityProfile(),
             self._checkModelProfile(),
             self._checkModelEndpointPolicy(),
             self._checkObjectStorage(),
@@ -218,6 +220,23 @@ class RuntimeHealthService:
             remediation=(
                 "Keep this profile aligned with the client deployment agreement and the "
                 "locally available model artifacts before promoting the package."
+            ),
+        )
+
+    def _checkIdentityProfile(self) -> RuntimeComponentSchema:
+        """Expose the declared identity mode and OIDC contract to operators."""
+        return self._buildComponent(
+            name="identity-profile",
+            status="ready",
+            severity="info",
+            detail=(
+                f"authMode={self.settings.authMode}, "
+                f"oidcIssuer={self.settings.oidcIssuerUrl}, "
+                f"oidcAudience={self.settings.oidcAudience}"
+            ),
+            remediation=(
+                "Keep this identity profile aligned with the client authentication boundary "
+                "and verify that bearer tokens reaching Cortex match the declared issuer and audience."
             ),
         )
 
