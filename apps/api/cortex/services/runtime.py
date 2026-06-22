@@ -225,6 +225,22 @@ class RuntimeHealthService:
 
     def _checkIdentityProfile(self) -> RuntimeComponentSchema:
         """Expose the declared identity mode and OIDC contract to operators."""
+        if self.settings.environment == "production" and self.settings.authMode == "fixture":
+            return self._buildComponent(
+                name="identity-profile",
+                status="ready",
+                severity="warning",
+                detail=(
+                    f"authMode={self.settings.authMode}, "
+                    f"oidcIssuer={self.settings.oidcIssuerUrl}, "
+                    f"oidcAudience={self.settings.oidcAudience}"
+                ),
+                remediation=(
+                    "Fixture auth is suitable for packaged evaluation and local proof flows, "
+                    "but client production rollouts should replace it with real bearer tokens "
+                    "that match the declared issuer and audience contract."
+                ),
+            )
         return self._buildComponent(
             name="identity-profile",
             status="ready",

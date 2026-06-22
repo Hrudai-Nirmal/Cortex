@@ -166,11 +166,12 @@ async def testStartupHealthReportsDeclaredIdentityProfile() -> None:
         component for component in runtimeHealth.components if component.name == "identity-profile"
     )
     assert identityComponent.status == "ready"
-    assert identityComponent.severity == "info"
+    assert identityComponent.severity == "warning"
     assert "authMode=fixture" in identityComponent.detail
     assert f"oidcIssuer={settings.oidcIssuerUrl}" in identityComponent.detail
     assert f"oidcAudience={settings.oidcAudience}" in identityComponent.detail
     assert identityComponent.remediation is not None
+    assert "Fixture auth is suitable for packaged evaluation" in identityComponent.remediation
 
 
 @pytest.mark.asyncio

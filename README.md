@@ -109,6 +109,7 @@ The package now includes:
 - explicit packaged model-profile declaration for generator, embeddings, and accelerator expectations
 - explicit packaged production-profile declaration so client bundles do not inherit development-mode defaults
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
+- runtime health warns when the package is still using fixture auth so operators do not confuse evaluation identity with a real client auth rollout
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task

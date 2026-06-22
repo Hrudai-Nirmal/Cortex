@@ -172,6 +172,10 @@ The readiness payload now includes:
 - `model-profile` for the declared generator model, embedding model, and required accelerator
 - `identity-profile` for the declared auth mode plus OIDC issuer and audience contract
 
+When the packaged deployment is still running with `authMode=fixture`, Cortex reports
+that identity profile as a warning so operators do not mistake evaluation auth for the
+final client rollout boundary.
+
 An empty website allowlist no longer blocks package readiness. Cortex reports it as an
 uploads-only deployment and tells operators how to enable allowlisted website ingestion.
 

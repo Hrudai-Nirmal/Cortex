@@ -95,6 +95,9 @@ Those components now include the declared packaged model and identity profiles a
 so operators can verify which generator, embedding model, required accelerator, auth
 mode, issuer, and audience a deployment is advertising before they debug deeper runtime
 failures.
+If that identity profile is still `fixture` in a packaged production-style deployment,
+the runtime health payload surfaces it as a warning rather than silently treating it as
+production-ready authentication.
 
 The packaged operator scripts now verify the split-host contract directly:
 
