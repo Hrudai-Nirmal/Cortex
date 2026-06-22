@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -97,6 +97,24 @@ class Settings(BaseSettings):
             raise ValueError("configuration value cannot be empty")
         return normalizedValue
 
+    @field_validator("consolePublicUrl", "queryPublicUrl")
+    @classmethod
+    def validatePublicUrl(cls, value: str) -> str:
+        """Keep public browser URLs at the host root so split-host routing stays unambiguous."""
+        parsedUrl = cls._parseAbsoluteHttpUrl(value)
+        if parsedUrl.path not in {"", "/"} or parsedUrl.params or parsedUrl.query or parsedUrl.fragment:
+            raise ValueError("public URL must not include a path, query string, or fragment")
+        return value.rstrip("/")
+
+    @field_validator("ollamaBaseUrl")
+    @classmethod
+    def validateModelBaseUrl(cls, value: str) -> str:
+        """Require one absolute model-endpoint URL without query or fragment state."""
+        parsedUrl = cls._parseAbsoluteHttpUrl(value)
+        if parsedUrl.query or parsedUrl.fragment:
+            raise ValueError("ollamaBaseUrl must not include a query string or fragment")
+        return value.rstrip("/")
+
     @field_validator("websiteAllowlist")
     @classmethod
     def validateNormalizedSequence(cls, values: tuple[str, ...]) -> tuple[str, ...]:
@@ -129,6 +147,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validateDeploymentProfile(self) -> Settings:
         """Enforce deployment-critical domain and storage invariants before startup."""
+        consolePublicUrl = self._parseAbsoluteHttpUrl(self.consolePublicUrl)
+        queryPublicUrl = self._parseAbsoluteHttpUrl(self.queryPublicUrl)
         consolePublicHost = self._parseUrlHost(self.consolePublicUrl, "consolePublicUrl")
         queryPublicHost = self._parseUrlHost(self.queryPublicUrl, "queryPublicUrl")
         if consolePublicHost != self.consoleHost:
@@ -143,6 +163,14 @@ class Settings(BaseSettings):
                 "localhost",
             }:
                 raise ValueError("production public URLs must not use localhost origins")
+            if consolePublicUrl.scheme != "https" or queryPublicUrl.scheme != "https":
+                raise ValueError("production public URLs must use https")
+            if self._isReservedDocumentationHost(consolePublicHost) or self._isReservedDocumentationHost(
+                queryPublicHost
+            ):
+                raise ValueError(
+                    "production consoleHost/queryHost must be real client domains, not documentation placeholders"
+                )
             if not Path(self.objectStorageRoot).is_absolute():
                 raise ValueError("production objectStorageRoot must be an absolute path")
         return self
@@ -164,17 +192,40 @@ class Settings(BaseSettings):
     @staticmethod
     def _parseUrlHost(urlValue: str, fieldName: str) -> str:
         """Extract a host from one public URL and reject unusable values early."""
-        parsedUrl = urlparse(urlValue)
-        if parsedUrl.scheme not in {"http", "https"} or not parsedUrl.hostname:
-            raise ValueError(f"{fieldName} must be an absolute http(s) URL")
+        parsedUrl = Settings._parseAbsoluteHttpUrl(urlValue)
+        if not parsedUrl.hostname:
+            raise ValueError(f"{fieldName} must include a hostname")
         return parsedUrl.hostname.lower()
 
     @staticmethod
     def _normalizeOrigin(urlValue: str) -> str:
         """Convert a configured public URL into the browser origin used for CORS."""
-        parsedUrl = urlparse(urlValue)
+        parsedUrl = Settings._parseAbsoluteHttpUrl(urlValue)
         portSegment = f":{parsedUrl.port}" if parsedUrl.port is not None else ""
         return f"{parsedUrl.scheme}://{parsedUrl.hostname}{portSegment}"
+
+    @staticmethod
+    def _parseAbsoluteHttpUrl(urlValue: str) -> ParseResult:
+        """Parse one absolute HTTP(S) URL and reject incomplete deployment endpoints."""
+        parsedUrl = urlparse(urlValue)
+        if parsedUrl.scheme not in {"http", "https"} or not parsedUrl.hostname:
+            raise ValueError("configuration URL must be an absolute http(s) URL")
+        return parsedUrl
+
+    @staticmethod
+    def _isReservedDocumentationHost(hostValue: str) -> bool:
+        """Reject example-domain placeholders from packaged production runtime settings."""
+        normalizedHost = hostValue.strip().lower()
+        if normalizedHost in {
+            "example.com",
+            "example.org",
+            "example.net",
+            "example.test",
+        }:
+            return True
+        return normalizedHost.endswith(
+            (".example.com", ".example.org", ".example.net", ".example.test")
+        )
 
 
 @lru_cache(maxsize=1)

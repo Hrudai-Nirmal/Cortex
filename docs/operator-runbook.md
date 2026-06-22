@@ -53,13 +53,17 @@ And matching public URLs:
 - `CORTEX_QUERY_PUBLIC_URL`
 
 The public URL hostnames must match the corresponding host values exactly.
+They must also stay rooted at the host with no extra path, query string, or fragment,
+and packaged production surfaces must use `https://`.
 
 ## Docker package workflow
 
 1. Copy `.env.package.example` to `.env.package`
 2. Replace the example domains with the real client domains
 3. Review model endpoint, database, and object-storage values
-4. Start the package:
+4. Keep the public URLs rooted at the host itself, for example `https://cortex-app.company.com`
+   instead of `https://cortex-app.company.com/chat`
+5. Start the package:
 
 ```bash
 pnpm package:up
@@ -71,13 +75,13 @@ The package also preinstalls PyTorch from `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_UR
 before Docling resolves its model/runtime stack so the default CPU verification profile
 does not silently pull CUDA-heavy Linux artifacts.
 
-5. Verify the running package:
+6. Verify the running package:
 
 ```bash
 pnpm package:verify
 ```
 
-6. Inspect status or logs when needed:
+7. Inspect status or logs when needed:
 
 ```bash
 pnpm package:status
@@ -85,7 +89,7 @@ pnpm package:logs
 pnpm package:logs .env.package api
 ```
 
-7. Stop it when needed:
+8. Stop it when needed:
 
 ```bash
 pnpm package:down
@@ -117,10 +121,14 @@ Before starting containers, the script validates:
 - env file presence
 - production package profile (`CORTEX_ENVIRONMENT=production`, `CORTEX_DEV_MODE=false`)
 - required domain variables
+- placeholder-domain replacement (`example.com`-style hosts are rejected until edited)
 - required model-profile variables
 - distinct console/query hosts
 - public URL host alignment
+- HTTPS root-only public URLs for both browser surfaces
+- absolute object-storage root path
 - explicit non-`auto` accelerator declaration (`cpu`, `mps`, or `cuda`)
+- local/private model-endpoint policy unless remote model access is explicitly allowed
 - Docker Compose rendering
 
 After startup, it waits for:
@@ -149,7 +157,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  query host, and routed surface identity, including severity and remediation guidance for every non-ready component
+  query host, routed surface identity, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 ## Health endpoints
@@ -165,12 +173,20 @@ offline-policy violations.
 `package:up` now surfaces any degraded startup/readiness components immediately, including
 their severity and remediation guidance, instead of only reporting a timeout.
 
+It also blocks immediately on the most common packaging mistakes:
+
+- unchanged documentation placeholder domains
+- HTTP or nested-path public browser URLs
+- relative object-storage mount paths
+- public remote model endpoints when `CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false`
+
 `ready` adds live checks for:
 
 - PostgreSQL connectivity
 - pgvector extension availability
 - Ollama/model availability
 - object storage
+- object-storage probe file creation and deletion
 - accelerator expectations
 - website-ingestion configuration visibility
 
@@ -222,6 +238,7 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 - use the provided startup/readiness/liveness probes as the baseline
 - run the migration job before promoting the API and worker deployments
 - replace the example `.example.com` hosts in `infra/k8s/cortex-package.yaml` with the client-owned console and app domains before deployment
+- keep the ConfigMap public URLs rooted at the host and HTTPS once the real client domains are substituted
 - populate `cortex-secrets` with database and model endpoint values while keeping shared non-secret package settings in `cortex-config`
 - mount persistent storage for `/var/lib/cortex/object-storage` so uploads, website snapshots, and parsed source blobs survive pod restarts
 
@@ -252,12 +269,18 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 
 - `consolePublicUrl host must match consoleHost`:
   operator domains do not align
+- `production public URLs must use https`:
+  one or both browser-surface URLs are still configured for plaintext HTTP
+- `public URL must not include a path, query string, or fragment`:
+  the packaged split-host UI was pointed at a nested route instead of the host root
 - `database ready but pgvector extension is missing`:
   PostgreSQL is up, but the vector extension is not installed
 - `missing models:`:
   Ollama is reachable but the configured model names are not present
 - `model endpoint host ... is not local or private`:
   Cortex detected a public model endpoint while remote model usage is not explicitly allowed
+- `production consoleHost/queryHost must be real client domains, not documentation placeholders`:
+  `package:up` or the runtime settings still contain the example hostnames from the docs
 - `worker startup blocked by runtime health checks`:
   the worker refused to enter its durable job loop because one or more startup or live
   readiness checks failed; inspect `pnpm package:status` and `pnpm package:logs .env.package worker`

@@ -87,11 +87,13 @@ describe("SourceOperations", () => {
     );
 
     expect(await screen.findByText("Retention Packet")).toBeVisible();
-    expect(screen.getByText("Active")).toBeVisible();
+    expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Processing")).toBeVisible();
     expect(await screen.findByText(/2.x-pinned-at-install/)).toBeVisible();
     expect(screen.getByText(/quarantine clear/i)).toBeVisible();
     expect(screen.getByText("Latest version diagnostics")).toBeVisible();
+    expect(screen.getByText("Latest active")).toBeVisible();
+    expect(screen.getAllByText("ACL principals").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("alex.rivera@example.com")).toBeVisible();
     expect(screen.getByText(/Extraction diagnostics/)).toBeVisible();
     expect(screen.getByText(/12/)).toBeVisible();

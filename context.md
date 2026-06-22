@@ -22,6 +22,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query surface with citation display control, live pipeline/health fetches, and persisted trace playback.
 - The developer console now surfaces focused durable-job detail plus persisted source hashes, extraction diagnostics, and accelerator reports for operator troubleshooting.
+- The source-detail lane now also surfaces active/failed/quarantined version counts plus the currently active version label so operators can tell whether the latest onboarding attempt actually changed the live corpus.
 - The developer console now distinguishes validated pipeline versions from the active release and exposes retired immutable versions as explicit rollback targets.
 - The developer console trace view now includes validated answer preview plus persisted claims, support status, and citation linkage instead of only stage counts and citation totals.
 - The developer console trace view now also exposes persisted retrieved-evidence rows with source, locator, and ranking scores so operators can inspect the actual chunks behind a response.
@@ -50,7 +51,9 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Packaged local verification now completes end to end against live PostgreSQL, Ollama, worker, and split-host routing by using a CPU-friendly local model profile plus shorter bounded-claim generation tuned for deterministic citation-backed answers.
 - The generated TypeScript API contract is now re-synced with the live FastAPI OpenAPI schema and guarded by tests so the external chat facade metadata cannot silently drift from the browser clients.
 - Package startup now reports degraded startup/readiness components with remediation instead of generic timeouts, and the package artifacts now include corrected OpenShift Route examples plus ECS runtime and migration task examples for split-host client deployments.
+- Package runtime validation now rejects documentation placeholder domains, non-HTTPS production browser URLs, nested-path public URLs, and relative production object-storage roots before client packages boot.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.
+- Runtime object-storage readiness now performs an explicit write/delete probe, and `package:status` prints the live external query-contract summary from the running query host.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

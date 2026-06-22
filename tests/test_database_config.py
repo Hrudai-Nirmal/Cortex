@@ -46,13 +46,13 @@ def testSettingsReadSnakeCaseEnvironmentVariables(monkeypatch) -> None:
     monkeypatch.setenv("CORTEX_OLLAMA_BASE_URL", "http://ollama:11434")
     monkeypatch.setenv("CORTEX_OBJECT_STORAGE_ROOT", "/var/lib/cortex/object-storage")
     monkeypatch.setenv("CORTEX_REQUIRED_ACCELERATOR", "cpu")
-    monkeypatch.setenv("CORTEX_CONSOLE_HOST", "cortex-console.example.com")
-    monkeypatch.setenv("CORTEX_QUERY_HOST", "cortex-app.example.com")
-    monkeypatch.setenv("CORTEX_CONSOLE_PUBLIC_URL", "https://cortex-console.example.com")
-    monkeypatch.setenv("CORTEX_QUERY_PUBLIC_URL", "https://cortex-app.example.com")
+    monkeypatch.setenv("CORTEX_CONSOLE_HOST", "cortex-console.client.internal")
+    monkeypatch.setenv("CORTEX_QUERY_HOST", "cortex-app.client.internal")
+    monkeypatch.setenv("CORTEX_CONSOLE_PUBLIC_URL", "https://cortex-console.client.internal")
+    monkeypatch.setenv("CORTEX_QUERY_PUBLIC_URL", "https://cortex-app.client.internal")
 
     settings = Settings()
 
     assert settings.databaseUrl == "postgresql+asyncpg://cortex:cortex@postgres:5432/cortex"
-    assert settings.consoleHost == "cortex-console.example.com"
-    assert settings.queryHost == "cortex-app.example.com"
+    assert settings.consoleHost == "cortex-console.client.internal"
+    assert settings.queryHost == "cortex-app.client.internal"

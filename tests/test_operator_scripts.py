@@ -33,12 +33,14 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
     for requiredName in (
         "CORTEX_ENVIRONMENT",
         "CORTEX_DEV_MODE",
+        "CORTEX_AUTH_MODE",
         "CORTEX_CONSOLE_HOST",
         "CORTEX_QUERY_HOST",
         "CORTEX_CONSOLE_PUBLIC_URL",
         "CORTEX_QUERY_PUBLIC_URL",
         "CORTEX_DATABASE_URL",
         "CORTEX_OLLAMA_BASE_URL",
+        "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT",
         "CORTEX_GENERATOR_MODEL",
         "CORTEX_EMBEDDING_MODEL",
         "CORTEX_REQUIRED_ACCELERATOR",
@@ -84,14 +86,24 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
     assert 'require_env CORTEX_ENVIRONMENT' in scriptText
     assert 'require_env CORTEX_DEV_MODE' in scriptText
+    assert 'require_env CORTEX_AUTH_MODE' in scriptText
     assert 'require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production' in scriptText
     assert 'require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false' in scriptText
+    assert 'require_env CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT' in scriptText
+    assert 'require_one_of "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" true false' in scriptText
     assert 'require_env CORTEX_GENERATOR_MODEL' in scriptText
     assert 'require_env CORTEX_EMBEDDING_MODEL' in scriptText
     assert 'require_env CORTEX_REQUIRED_ACCELERATOR' in scriptText
     assert 'require_env CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL' in scriptText
     assert 'require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda' in scriptText
     assert 'validate_torch_build_profile "$CORTEX_REQUIRED_ACCELERATOR" "$CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL"' in scriptText
+    assert 'require_numeric_port "$CORTEX_EDGE_PORT" "CORTEX_EDGE_PORT"' in scriptText
+    assert 'require_absolute_path "$CORTEX_OBJECT_STORAGE_ROOT" "CORTEX_OBJECT_STORAGE_ROOT"' in scriptText
+    assert 'require_https_public_url "$CORTEX_CONSOLE_PUBLIC_URL" "CORTEX_CONSOLE_PUBLIC_URL"' in scriptText
+    assert 'require_https_public_url "$CORTEX_QUERY_PUBLIC_URL" "CORTEX_QUERY_PUBLIC_URL"' in scriptText
+    assert 'validate_model_endpoint_policy "$CORTEX_OLLAMA_BASE_URL" "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT"' in scriptText
+    assert 'is_reserved_placeholder_host' in scriptText
+    assert "must be replaced with the client's real domains" in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
     assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
@@ -110,8 +122,10 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     scriptText = (rootDirectory / "scripts" / "package-status.sh").read_text(encoding="utf-8")
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/"' in scriptText
     assert 'read_headers "$CORTEX_QUERY_HOST" "/"' in scriptText
     assert 'echo "Surface routing:"' in scriptText
     assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
     assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
+    assert 'print_contract_summary "$query_contract_payload"' in scriptText

@@ -18,6 +18,18 @@ extract_url_host() {
   printf "%s" "$1" | sed -E 's#^[a-zA-Z]+://([^/:]+).*#\1#'
 }
 
+is_reserved_placeholder_host() {
+  local host="$1"
+  case "$host" in
+    example.com|example.org|example.net|example.test|*.example.com|*.example.org|*.example.net|*.example.test)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 require_env() {
   local name="$1"
   if [ -z "${!name:-}" ]; then
@@ -36,6 +48,68 @@ require_one_of() {
     fi
   done
   echo "${label} must be one of: $*" >&2
+  exit 1
+}
+
+require_https_public_url() {
+  local value="$1"
+  local label="$2"
+
+  if [[ ! "$value" =~ ^https://[^/?#]+/?$ ]]; then
+    echo "${label} must be an https URL rooted at the host with no path, query string, or fragment." >&2
+    exit 1
+  fi
+}
+
+require_absolute_path() {
+  local value="$1"
+  local label="$2"
+
+  if [[ "$value" != /* ]]; then
+    echo "${label} must be an absolute path inside the package runtime." >&2
+    exit 1
+  fi
+}
+
+require_numeric_port() {
+  local value="$1"
+  local label="$2"
+
+  if [[ ! "$value" =~ ^[0-9]+$ ]] || [ "$value" -lt 1 ] || [ "$value" -gt 65535 ]; then
+    echo "${label} must be an integer between 1 and 65535." >&2
+    exit 1
+  fi
+}
+
+validate_model_endpoint_policy() {
+  local base_url="$1"
+  local allow_remote="$2"
+  local host=""
+
+  host="$(extract_url_host "$base_url")"
+  if [ -z "$host" ]; then
+    echo "CORTEX_OLLAMA_BASE_URL must be an absolute URL." >&2
+    exit 1
+  fi
+
+  if [ "$allow_remote" = "true" ]; then
+    return 0
+  fi
+
+  case "$host" in
+    localhost|127.*|10.*|192.168.*|ollama|*.local|*.internal)
+      return 0
+      ;;
+    172.1[6-9].*|172.2[0-9].*|172.3[0-1].*)
+      return 0
+      ;;
+  esac
+
+  if [[ "$host" != *.* ]]; then
+    return 0
+  fi
+
+  echo "CORTEX_OLLAMA_BASE_URL resolves to ${host}, which is not local/private while CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false. Point Cortex at a local model endpoint or explicitly allow the remote dependency." >&2
   exit 1
 }
 
@@ -167,9 +241,11 @@ require_env CORTEX_CONSOLE_PUBLIC_URL
 require_env CORTEX_QUERY_PUBLIC_URL
 require_env CORTEX_ENVIRONMENT
 require_env CORTEX_DEV_MODE
+require_env CORTEX_AUTH_MODE
 require_env CORTEX_DATABASE_URL
 require_env CORTEX_OBJECT_STORAGE_ROOT
 require_env CORTEX_OLLAMA_BASE_URL
+require_env CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT
 require_env CORTEX_GENERATOR_MODEL
 require_env CORTEX_EMBEDDING_MODEL
 require_env CORTEX_REQUIRED_ACCELERATOR
@@ -178,11 +254,22 @@ require_env CORTEX_EDGE_PORT
 
 require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production
 require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false
+require_one_of "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" true false
 require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda
 validate_torch_build_profile "$CORTEX_REQUIRED_ACCELERATOR" "$CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL"
+require_numeric_port "$CORTEX_EDGE_PORT" "CORTEX_EDGE_PORT"
+require_absolute_path "$CORTEX_OBJECT_STORAGE_ROOT" "CORTEX_OBJECT_STORAGE_ROOT"
+require_https_public_url "$CORTEX_CONSOLE_PUBLIC_URL" "CORTEX_CONSOLE_PUBLIC_URL"
+require_https_public_url "$CORTEX_QUERY_PUBLIC_URL" "CORTEX_QUERY_PUBLIC_URL"
+validate_model_endpoint_policy "$CORTEX_OLLAMA_BASE_URL" "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT"
 
 if [ "$CORTEX_CONSOLE_HOST" = "$CORTEX_QUERY_HOST" ]; then
   echo "CORTEX_CONSOLE_HOST and CORTEX_QUERY_HOST must be different." >&2
+  exit 1
+fi
+
+if is_reserved_placeholder_host "$CORTEX_CONSOLE_HOST" || is_reserved_placeholder_host "$CORTEX_QUERY_HOST"; then
+  echo "CORTEX_CONSOLE_HOST and CORTEX_QUERY_HOST must be replaced with the client's real domains before booting the package." >&2
   exit 1
 fi
 

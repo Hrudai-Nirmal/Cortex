@@ -139,24 +139,28 @@ class RuntimeHealthService:
 
     def _checkObjectStorage(self) -> RuntimeComponentSchema:
         storageRoot = Path(self.settings.objectStorageRoot)
+        probePath = storageRoot / ".cortex-write-probe"
         try:
             storageRoot.mkdir(parents=True, exist_ok=True)
+            probePath.write_text("cortex-ready", encoding="utf-8")
+            probePath.unlink()
         except OSError as error:
             return self._buildComponent(
                 name="object-storage",
                 status="unavailable",
                 severity="error",
-                detail=str(error),
+                detail=f"{storageRoot}: {error}",
                 remediation=(
-                    "Create the object-storage directory with write permissions for the "
-                    "api and worker containers, or mount the correct persistent volume."
+                    "Create the object-storage directory with read/write permissions for the "
+                    "api and worker containers, and confirm the mounted persistent volume allows "
+                    "Cortex to create and delete probe files."
                 ),
             )
         return self._buildComponent(
             name="object-storage",
             status="ready",
             severity="info",
-            detail=str(storageRoot.resolve()),
+            detail=f"{storageRoot.resolve()} (read/write probe ok)",
         )
 
     def _checkDeploymentConfig(self) -> RuntimeComponentSchema:

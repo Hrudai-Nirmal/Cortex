@@ -82,6 +82,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 
 - Developer source operations live in the console surface on the console host in the `Sources` and `Jobs` tabs.
 - The console now exposes persisted source hashes, extraction diagnostics, accelerator reports, and focused durable job detail for operator troubleshooting.
+- The source-detail lane now surfaces per-document version counts, active vs failed/quarantined history, and the currently active version label so operators can see whether a bad retry actually displaced the live source.
 - The console version lane now distinguishes active, validated, and retired immutable pipeline versions so operators can see promotable releases and explicit rollback targets.
 - The console trace lane now shows validated answer preview, claim support status, citation linkage, and stage evidence together for faster operator review.
 - The console trace lane now also exposes ranked retrieved evidence rows so operators can inspect which source chunks actually drove a response without leaving the fixed console.
@@ -120,13 +121,16 @@ The package now includes:
 - runtime-health payloads that explicitly declare the packaged identity profile, including auth mode and OIDC contract
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
+- production public-surface validation that rejects HTTP browser URLs, nested-path public URLs, and unmodified `example.com` placeholder hosts before the package boots
 - explicit packaged model-profile declaration for generator, embeddings, and accelerator expectations
 - explicit packaged production-profile declaration so client bundles do not inherit development-mode defaults
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
+- a startup object-storage read/write probe so mis-mounted persistent volumes fail with a precise operator message instead of a later ingestion surprise
 - runtime health warns when the package is still using fixture auth so operators do not confuse evaluation identity with a real client auth rollout
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
 - package verification that checks query-contract route and abstention headers so third-party chat shells can rely on the packaged facade behavior
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
+- package status now prints the live query-contract version, route set, abstention evidence states, and response headers from `GET /v1/chat/contracts/v1`
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:
   - `pnpm package:up`
@@ -149,6 +153,11 @@ of quietly polling forever.
 `pnpm package:up` now prints the exact degraded startup/readiness components and their
 remediation instead of failing with a generic timeout when package validation disagrees
 with the deployment profile.
+
+It also fails fast when operators leave the documentation placeholder domains in place,
+configure non-HTTPS public browser URLs, append a path to a public surface URL, point
+the model endpoint at a public host without explicitly allowing that dependency, or use
+a non-absolute object-storage mount path.
 
 See [context.md](context.md), [architecture.md](docs/architecture.md),
 [external-query-contract.md](docs/external-query-contract.md),

@@ -123,6 +123,19 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
   const latestFailureVersion = selectedSource?.versions.find(
     (version) => version.failureCode || version.failureDetail,
   ) ?? null;
+  const activeVersion = selectedSource?.versions.find(
+    (version) => version.ingestionStatus === "active" && version.activatedAt,
+  ) ?? null;
+  const sourceVersionCount = selectedSource?.versions.length ?? 0;
+  const activeVersionCount = selectedSource?.versions.filter(
+    (version) => version.ingestionStatus === "active" && version.activatedAt,
+  ).length ?? 0;
+  const failedVersionCount = selectedSource?.versions.filter(
+    (version) => Boolean(version.failureCode || version.failureDetail),
+  ).length ?? 0;
+  const quarantinedVersionCount = selectedSource?.versions.filter(
+    (version) => version.quarantineStatus.toLowerCase() !== "clear",
+  ).length ?? 0;
 
   async function handleUploadSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -384,7 +397,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                   <div><dt>Owner</dt><dd>{selectedSource.createdBy}</dd></div>
                   <div><dt>Updated</dt><dd>{new Date(selectedSource.updatedAt).toLocaleString()}</dd></div>
                   <div><dt>ACLs</dt><dd>{latestVersion.principalIds.join(", ")}</dd></div>
-                  <div><dt>Activation</dt><dd>{latestVersion.activatedAt ? new Date(latestVersion.activatedAt).toLocaleString() : "inactive"}</dd></div>
+                  <div><dt>Latest active</dt><dd>{activeVersion ? activeVersion.versionLabel : "inactive"}</dd></div>
                   <div><dt>Malware</dt><dd>{latestVersion.malwareStatus}</dd></div>
                   <div><dt>Quarantine</dt><dd>{latestVersion.quarantineStatus}</dd></div>
                   <div><dt>Parser</dt><dd>{latestVersion.parserName} · {latestVersion.parserVersion}</dd></div>
@@ -392,6 +405,14 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                   <div><dt>Authority</dt><dd>{latestVersion.sourceAuthority.toFixed(2)}</dd></div>
                   <div><dt>Accelerators</dt><dd>{latestVersion.acceleratorReports.length || 0}</dd></div>
                 </dl>
+              </div>
+              <div className="metric-strip" style={{ marginBottom: 16 }}>
+                <span><small>Versions</small><strong>{sourceVersionCount}</strong></span>
+                <span><small>Active</small><strong>{activeVersionCount}</strong></span>
+                <span><small>Failed</small><strong>{failedVersionCount}</strong></span>
+                <span><small>Quarantined</small><strong>{quarantinedVersionCount}</strong></span>
+                <span><small>ACL principals</small><strong>{latestVersion.principalIds.length}</strong></span>
+                <span><small>Active label</small><strong>{activeVersion?.versionLabel ?? "inactive"}</strong></span>
               </div>
               <div className="source-form-card" style={{ marginBottom: 16 }}>
                 <div className="source-form-card__heading">
@@ -453,6 +474,8 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                       <th>Version</th>
                       <th>Status</th>
                       <th>MIME</th>
+                      <th>Quarantine</th>
+                      <th>Malware</th>
                       <th>Raw SHA-256</th>
                       <th>Activated</th>
                       <th>Failure</th>
@@ -464,6 +487,8 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                         <td>{version.versionLabel}</td>
                         <td>{version.ingestionStatus}</td>
                         <td>{version.mimeType ?? "unknown"}</td>
+                        <td>{version.quarantineStatus}</td>
+                        <td>{version.malwareStatus}</td>
                         <td><code>{version.rawSha256.slice(0, 16)}</code></td>
                         <td>{version.activatedAt ? new Date(version.activatedAt).toLocaleDateString() : "—"}</td>
                         <td>{version.failureCode ?? "—"}</td>

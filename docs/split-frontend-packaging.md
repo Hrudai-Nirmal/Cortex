@@ -70,6 +70,9 @@ Model-profile values are also deployment-critical in the packaged flow:
 - `CORTEX_PACKAGE_PYTORCH_PREINSTALL`
 
 Do not hardcode the development domains in client builds.
+The package bootstrap now rejects unchanged `example.com` placeholders, and production
+browser URLs must remain `https://` origins rooted directly at the host instead of a
+nested path such as `/chat` or `/console`.
 
 The package images now force an explicit PyTorch wheel source before Docling installs its
 OCR/layout dependencies. The shipped local profile defaults to the CPU wheel channel:
@@ -118,7 +121,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` waits for `startup` and `ready` on both browser hosts
 - `package:up` confirms that the console host emits `X-Cortex-Surface: console`
   and the query host emits `X-Cortex-Surface: query`
+- `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints
 - `package:status` prints both routed health views plus the observed surface identity
+- `package:status` also prints the live external query-contract summary exported by the query host
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - `package:verify` confirms the replacement-query facade emits stable Cortex contract headers for trace, evidence status, route, and abstention
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`

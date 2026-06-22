@@ -61,6 +61,31 @@ PY
   fi
 }
 
+print_contract_summary() {
+  local payload="$1"
+  if command -v python3 >/dev/null 2>&1; then
+    CONTRACT_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["CONTRACT_PAYLOAD"])
+print("query contract:")
+print(
+    f"  - v{payload.get('contractVersion')} :: "
+    f"{payload.get('method')} {payload.get('endpointPath')} :: "
+    f"auth={payload.get('authentication')} :: "
+    f"streaming={payload.get('supportsStreaming')}"
+)
+print(f"  - trace events: {payload.get('traceEventsPathTemplate')}")
+print(f"  - routes: {', '.join(payload.get('routes', []))}")
+print(f"  - abstention evidence: {', '.join(payload.get('abstentionEvidenceStatuses', []))}")
+print(f"  - response headers: {', '.join(payload.get('responseHeaders', []))}")
+PY
+  else
+    printf "query contract: %s\n" "$payload"
+  fi
+}
+
 require_command curl
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -77,6 +102,7 @@ startup_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/startup")"
 ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
+query_contract_payload="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
 console_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/")"
 query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
 
@@ -90,3 +116,4 @@ print_health "console startup" "$startup_payload"
 print_health "console ready" "$ready_payload"
 print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
+print_contract_summary "$query_contract_payload"

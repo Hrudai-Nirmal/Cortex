@@ -28,10 +28,10 @@ def buildPackageSettings(**overrides: object) -> Settings:
         "databaseUrl": "postgresql+asyncpg://cortex:cortex@postgres:5432/cortex",
         "ollamaBaseUrl": "http://ollama:11434",
         "objectStorageRoot": "/var/lib/cortex/object-storage",
-        "consoleHost": "cortex-console.example.com",
-        "queryHost": "cortex-app.example.com",
-        "consolePublicUrl": "https://cortex-console.example.com",
-        "queryPublicUrl": "https://cortex-app.example.com",
+        "consoleHost": "cortex-console.client.internal",
+        "queryHost": "cortex-app.client.internal",
+        "consolePublicUrl": "https://cortex-console.client.internal",
+        "queryPublicUrl": "https://cortex-app.client.internal",
     }
     baseValues.update(overrides)
     return Settings(**baseValues)
@@ -44,6 +44,24 @@ def testProductionSettingsRejectLocalhostHosts() -> None:
             consoleHost="localhost",
             consolePublicUrl="http://localhost:5173",
         )
+
+
+def testProductionSettingsRequireHttpsPublicUrls() -> None:
+    """Client browser surfaces should not ship as plaintext HTTP in production."""
+    with pytest.raises(ValidationError):
+        buildPackageSettings(consolePublicUrl="http://cortex-console.client.internal")
+
+
+def testProductionSettingsRejectDocumentationPlaceholderDomains() -> None:
+    """Package runtime settings must force operators to replace example hosts before boot."""
+    with pytest.raises(ValidationError):
+        buildPackageSettings(consoleHost="cortex-console.example.com")
+
+
+def testProductionSettingsRejectPublicUrlsWithPaths() -> None:
+    """Split-host public URLs should stay rooted at the host, not a nested path."""
+    with pytest.raises(ValidationError):
+        buildPackageSettings(queryPublicUrl="https://cortex-app.client.internal/ask")
 
 
 def testProductionSettingsRequireAbsoluteObjectStorageRoot() -> None:
@@ -72,12 +90,12 @@ async def testConfiguredQueryOriginIsAllowedByCors() -> None:
         response = await client.options(
             "/v1/session",
             headers={
-                "Origin": "https://cortex-app.example.com",
+                "Origin": "https://cortex-app.client.internal",
                 "Access-Control-Request-Method": "GET",
             },
         )
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "https://cortex-app.example.com"
+    assert response.headers["access-control-allow-origin"] == "https://cortex-app.client.internal"
 
 
 @pytest.mark.asyncio
@@ -266,6 +284,37 @@ async def testStartupHealthFlagsObjectStorageWriteFailures(tmp_path: pytest.Temp
     assert storageComponent.severity == "error"
     assert storageComponent.remediation is not None
     assert "persistent volume" in storageComponent.remediation
+
+
+@pytest.mark.asyncio
+async def testStartupHealthFlagsObjectStorageProbeWriteFailures(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Read/write probe failures should surface as explicit storage readiness errors."""
+
+    def raiseWriteFailure(self: Path, data: str, encoding: str | None = None) -> int:
+        raise OSError("read-only file system")
+
+    monkeypatch.setattr(Path, "write_text", raiseWriteFailure)
+    settings = buildPackageSettings(objectStorageRoot=str(tmp_path / "object-storage"))
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    storageComponent = next(
+        component for component in runtimeHealth.components if component.name == "object-storage"
+    )
+    assert runtimeHealth.status == "degraded"
+    assert storageComponent.status == "unavailable"
+    assert storageComponent.severity == "error"
+    assert "read-only file system" in storageComponent.detail
+    assert storageComponent.remediation is not None
 
 
 @pytest.mark.asyncio
