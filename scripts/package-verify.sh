@@ -47,6 +47,13 @@ read_json "$CORTEX_CONSOLE_HOST" "/health/startup" | grep -q '"components"'
 read_json "$CORTEX_QUERY_HOST" "/health/startup" | grep -q '"components"'
 read_json "$CORTEX_CONSOLE_HOST" "/health/ready" | grep -q '"status":"ready"'
 read_json "$CORTEX_QUERY_HOST" "/health/ready" | grep -q '"status":"ready"'
+query_contract="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
+printf "%s" "$query_contract" | grep -q '"contractVersion":"v1"'
+printf "%s" "$query_contract" | grep -q '"endpointPath":"/v1/chat/completions"'
+printf "%s" "$query_contract" | grep -q '"authentication":"bearer-token"'
+printf "%s" "$query_contract" | grep -q '"traceEventsPathTemplate":"/v1/query/{traceId}/events"'
+printf "%s" "$query_contract" | grep -q '"responseHeaders"'
+printf "%s" "$query_contract" | grep -q '"extensionFields"'
 
 if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
   curl \

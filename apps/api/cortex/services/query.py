@@ -22,6 +22,7 @@ from cortex.schemas import (
     ClaimSchema,
     QueryRequest,
     QueryResponse,
+    RetrievedEvidenceSchema,
     QueryStageEventSchema,
     StageSchema,
     TraceSummaryResponse,
@@ -634,6 +635,7 @@ class QueryService:
                     "chunkId": chunk.chunkId,
                     "title": chunk.documentTitle,
                     "version": chunk.documentVersion,
+                    "structuralLocator": chunk.structuralLocator,
                     "supportScore": chunk.supportScore,
                     "sourceScore": chunk.sourceScore,
                     "rerankScore": chunk.rerankScore,
@@ -786,6 +788,7 @@ class QueryService:
             QueryStageEventSchema.model_validate(stageEvent)
             for stageEvent in payload.get("stageEvents", [])
         ]
+        retrievedEvidence = buildRetrievedEvidenceRows(payload)
         return TraceSummaryResponse(
             traceId=row["id"],
             enterpriseId=row["enterprise_id"],
@@ -800,6 +803,7 @@ class QueryService:
             citations=citations,
             stages=stages,
             stageEvents=stageEvents,
+            retrievedEvidence=retrievedEvidence,
             pipelineVersion=row["pipeline_version"],
             outcome=row["outcome"] or payload.get("evidenceStatus", "insufficient"),
         )
@@ -903,6 +907,34 @@ def buildCitations(retrievedChunks: list[RetrievedChunk]) -> list[CitationSchema
             )
         )
     return citationRows
+
+
+def buildRetrievedEvidenceRows(payload: dict[str, Any]) -> list[RetrievedEvidenceSchema]:
+    """Project persisted retrieved evidence into an operator-friendly trace payload."""
+    retrievedChunkRows = payload.get("retrievedChunks", [])
+    retrievedTextRows = payload.get("retrievedText", [])
+    if not isinstance(retrievedChunkRows, list) or not isinstance(retrievedTextRows, list):
+        return []
+    evidenceRows: list[RetrievedEvidenceSchema] = []
+    for index, chunkRow in enumerate(retrievedChunkRows):
+        if not isinstance(chunkRow, dict):
+            continue
+        previewValue = retrievedTextRows[index] if index < len(retrievedTextRows) else ""
+        if not isinstance(previewValue, str):
+            previewValue = ""
+        evidenceRows.append(
+            RetrievedEvidenceSchema(
+                chunkId=str(chunkRow.get("chunkId", "")),
+                documentTitle=str(chunkRow.get("title", "")),
+                documentVersion=str(chunkRow.get("version", "")),
+                structuralLocator=str(chunkRow.get("structuralLocator", "")),
+                supportScore=float(chunkRow.get("supportScore", 0.0) or 0.0),
+                sourceScore=float(chunkRow.get("sourceScore", 0.0) or 0.0),
+                rerankScore=float(chunkRow.get("rerankScore", 0.0) or 0.0),
+                contentPreview=previewValue[:280],
+            )
+        )
+    return evidenceRows
 
 
 def hasConflictingEvidence(retrievedChunks: list[RetrievedChunk]) -> bool:

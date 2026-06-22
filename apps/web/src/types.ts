@@ -24,3 +24,6 @@ export type CreateUploadSourceResponse = components["schemas"]["CreateUploadSour
 export type JobStatus = components["schemas"]["JobStatusResponse"];
 export type JobSummary = components["schemas"]["JobSummaryResponse"];
 export type ExternalChatCompletionResponse = components["schemas"]["ChatCompletionResponseSchema"];
+export type ExternalQueryContractDescriptor =
+  components["schemas"]["ExternalQueryContractDescriptorSchema"];
+export type RetrievedEvidence = components["schemas"]["RetrievedEvidenceSchema"];

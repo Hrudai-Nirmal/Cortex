@@ -116,6 +116,19 @@ class QueryStageEventSchema(BaseModel):
     durationMs: int = Field(ge=0)
 
 
+class RetrievedEvidenceSchema(BaseModel):
+    """Expose one persisted retrieved-evidence row for operator trace inspection."""
+
+    chunkId: str
+    documentTitle: str
+    documentVersion: str
+    structuralLocator: str
+    supportScore: float = Field(ge=0, le=1)
+    sourceScore: float = Field(ge=0, le=1)
+    rerankScore: float = Field(ge=0, le=1)
+    contentPreview: str
+
+
 class TraceSummaryResponse(BaseModel):
     """Expose the latest persisted trace for the developer operations surface."""
 
@@ -132,6 +145,7 @@ class TraceSummaryResponse(BaseModel):
     citations: list[CitationSchema]
     stages: list[StageSchema]
     stageEvents: list[QueryStageEventSchema]
+    retrievedEvidence: list[RetrievedEvidenceSchema] = Field(default_factory=list)
     pipelineVersion: int | None
     outcome: str
 
@@ -220,6 +234,28 @@ class ExternalQueryMetadataSchema(BaseModel):
     claims: list[ClaimSchema]
     citations: list[CitationSchema]
     stages: list[StageSchema]
+
+
+class ExternalQueryContractDescriptorSchema(BaseModel):
+    """Describe the stable third-party query integration contract exported by Cortex."""
+
+    contractVersion: Literal["v1"]
+    endpointPath: str
+    method: Literal["POST"]
+    authentication: Literal["bearer-token"]
+    supportsStreaming: bool
+    traceEventsPathTemplate: str
+    operatorConsolePath: str
+    responseHeaders: list[str] = Field(min_length=1)
+    extensionFields: list[str] = Field(min_length=1)
+    evidenceStatuses: list[Literal["sufficient", "partial", "insufficient", "conflict"]] = (
+        Field(min_length=1)
+    )
+    routes: list[Literal["rag", "compute", "retrieve-then-compute"]] = Field(min_length=1)
+    abstentionEvidenceStatuses: list[Literal["insufficient", "conflict"]] = Field(
+        min_length=1
+    )
+    notes: list[str] = Field(min_length=1)
 
 
 class ChatCompletionResponseSchema(BaseModel):

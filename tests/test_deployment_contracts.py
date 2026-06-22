@@ -318,6 +318,38 @@ async def testStartupHealthTreatsWebsiteAllowlistAsOptionalCapability() -> None:
 
 
 @pytest.mark.asyncio
+async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata() -> None:
+    """Replacement chat shells should be able to discover the live v1 contract descriptor."""
+    application = createApp(buildPackageSettings())
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.get("/v1/chat/contracts/v1")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["contractVersion"] == "v1"
+    assert payload["endpointPath"] == "/v1/chat/completions"
+    assert payload["method"] == "POST"
+    assert payload["authentication"] == "bearer-token"
+    assert payload["supportsStreaming"] is False
+    assert payload["traceEventsPathTemplate"] == "/v1/query/{traceId}/events"
+    assert payload["operatorConsolePath"] == "/developer"
+    assert payload["responseHeaders"] == [
+        "X-Cortex-Contract-Version",
+        "X-Cortex-Trace-Id",
+        "X-Cortex-Evidence-Status",
+        "X-Cortex-Route",
+        "X-Cortex-Abstained",
+    ]
+    assert payload["extensionFields"][0] == "contractVersion"
+    assert payload["abstentionEvidenceStatuses"] == ["insufficient", "conflict"]
+    assert "Do not send raw enterprise scope" in payload["notes"][1]
+
+
+@pytest.mark.asyncio
 async def testExternalChatContractRejectsStreamingRequests() -> None:
     """Replacement chat shells must use the non-streaming facade and trace SSE separately."""
     application = createApp(buildPackageSettings())

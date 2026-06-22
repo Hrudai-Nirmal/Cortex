@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/chat/contracts/v1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getexternalquerycontract
+         * @description Publish the live stable query-facade contract for replacement client UIs.
+         */
+        get: operations["getExternalQueryContract_v1_chat_contracts_v1_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ingestion/text": {
         parameters: {
             query?: never;
@@ -711,6 +731,47 @@ export interface components {
             status: string;
         };
         /**
+         * ExternalQueryContractDescriptorSchema
+         * @description Describe the stable third-party query integration contract exported by Cortex.
+         */
+        ExternalQueryContractDescriptorSchema: {
+            /**
+             * Contractversion
+             * @constant
+             */
+            contractVersion: "v1";
+            /** Endpointpath */
+            endpointPath: string;
+            /**
+             * Method
+             * @constant
+             */
+            method: "POST";
+            /**
+             * Authentication
+             * @constant
+             */
+            authentication: "bearer-token";
+            /** Supportsstreaming */
+            supportsStreaming: boolean;
+            /** Traceeventspathtemplate */
+            traceEventsPathTemplate: string;
+            /** Operatorconsolepath */
+            operatorConsolePath: string;
+            /** Responseheaders */
+            responseHeaders: string[];
+            /** Extensionfields */
+            extensionFields: string[];
+            /** Evidencestatuses */
+            evidenceStatuses: ("sufficient" | "partial" | "insufficient" | "conflict")[];
+            /** Routes */
+            routes: ("rag" | "compute" | "retrieve-then-compute")[];
+            /** Abstentionevidencestatuses */
+            abstentionEvidenceStatuses: ("insufficient" | "conflict")[];
+            /** Notes */
+            notes: string[];
+        };
+        /**
          * ExternalQueryMetadataSchema
          * @description Expose evidence metadata replacement query shells need beside assistant text.
          */
@@ -1047,6 +1108,28 @@ export interface components {
             status: string;
         };
         /**
+         * RetrievedEvidenceSchema
+         * @description Expose one persisted retrieved-evidence row for operator trace inspection.
+         */
+        RetrievedEvidenceSchema: {
+            /** Chunkid */
+            chunkId: string;
+            /** Documenttitle */
+            documentTitle: string;
+            /** Documentversion */
+            documentVersion: string;
+            /** Structurallocator */
+            structuralLocator: string;
+            /** Supportscore */
+            supportScore: number;
+            /** Sourcescore */
+            sourceScore: number;
+            /** Rerankscore */
+            rerankScore: number;
+            /** Contentpreview */
+            contentPreview: string;
+        };
+        /**
          * RuntimeComponentSchema
          * @description Describe the readiness state of one required runtime dependency.
          */
@@ -1297,6 +1380,8 @@ export interface components {
             stages: components["schemas"]["StageSchema"][];
             /** Stageevents */
             stageEvents: components["schemas"]["QueryStageEventSchema"][];
+            /** Retrievedevidence */
+            retrievedEvidence?: components["schemas"]["RetrievedEvidenceSchema"][];
             /** Pipelineversion */
             pipelineVersion: number | null;
             /** Outcome */
@@ -1413,6 +1498,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    getExternalQueryContract_v1_chat_contracts_v1_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalQueryContractDescriptorSchema"];
                 };
             };
         };

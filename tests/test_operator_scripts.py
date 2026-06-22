@@ -71,7 +71,10 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in verifyText
     assert "X-Cortex-Contract-Version: v1" in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in verifyText
     assert '"contractVersion":"v1"' in verifyText
+    assert '"endpointPath":"/v1/chat/completions"' in verifyText
+    assert '"authentication":"bearer-token"' in verifyText
     assert '"traceEventsPath"' in verifyText
 
 

@@ -168,8 +168,61 @@ describe("DeveloperConsole", () => {
                 durationMs: 120,
               },
             ],
+            retrievedEvidence: [
+              {
+                chunkId: "abc123",
+                documentTitle: "Security Handbook",
+                documentVersion: "v2",
+                structuralLocator: "p.12",
+                supportScore: 0.98,
+                sourceScore: 0.96,
+                rerankScore: 0.99,
+                contentPreview: "Raw query and response content is retained for 30 days.",
+              },
+            ],
             pipelineVersion: 3,
             outcome: "sufficient",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            contractVersion: "v1",
+            endpointPath: "/v1/chat/completions",
+            method: "POST",
+            authentication: "bearer-token",
+            supportsStreaming: false,
+            traceEventsPathTemplate: "/v1/query/{traceId}/events",
+            operatorConsolePath: "/developer",
+            responseHeaders: [
+              "X-Cortex-Contract-Version",
+              "X-Cortex-Trace-Id",
+              "X-Cortex-Evidence-Status",
+              "X-Cortex-Route",
+              "X-Cortex-Abstained",
+            ],
+            extensionFields: [
+              "contractVersion",
+              "traceId",
+              "traceEventsPath",
+              "route",
+              "correctedQuery",
+              "evidenceStatus",
+              "abstained",
+              "claims",
+              "citations",
+              "stages",
+            ],
+            evidenceStatuses: ["sufficient", "partial", "insufficient", "conflict"],
+            routes: ["rag", "compute", "retrieve-then-compute"],
+            abstentionEvidenceStatuses: ["insufficient", "conflict"],
+            notes: [
+              "Use the last non-empty user message as the deterministic query input.",
+              "Do not send raw enterprise scope or ACL principals from the browser; Cortex derives them from the bearer token.",
+              "Treat traceEventsPath as an operator-grade debugging surface rather than a standard employee UI dependency.",
+            ],
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
@@ -200,13 +253,20 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("degraded")).toBeVisible();
     expect(screen.getByText("Validated answer preview")).toBeVisible();
     expect(screen.getByText("Operator correlation")).toBeVisible();
-    expect(screen.getByText("Security Handbook")).toBeVisible();
+    expect(screen.getAllByText("Security Handbook")).toHaveLength(2);
     expect(screen.getByText("supported")).toBeVisible();
+    expect(screen.getByText("Evidence chunk")).toBeVisible();
+    expect(
+      screen.getAllByText("Raw query and response content is retained for 30 days."),
+    ).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
     expect(screen.getByText("Contract headers")).toBeVisible();
     expect(screen.getByText("X-Cortex-Route")).toBeVisible();
     expect(screen.getByText("X-Cortex-Abstained")).toBeVisible();
+    expect(screen.getByText("Contract guidance")).toBeVisible();
+    expect(screen.getByText("x_cortex.traceEventsPath")).toBeVisible();
+    expect(screen.getByText("insufficient")).toBeVisible();
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Package build profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
@@ -222,6 +282,6 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
   });
 });

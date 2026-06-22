@@ -119,6 +119,7 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` confirms that the console host emits `X-Cortex-Surface: console`
   and the query host emits `X-Cortex-Surface: query`
 - `package:status` prints both routed health views plus the observed surface identity
+- `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - `package:verify` confirms the replacement-query facade emits stable Cortex contract headers for trace, evidence status, route, and abstention
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`
 

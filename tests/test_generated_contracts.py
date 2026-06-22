@@ -16,9 +16,13 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
         / "cortex-api.ts"
     ).read_text(encoding="utf-8")
     assert '"/v1/chat/completions"' in generatedTypesText
+    assert '"/v1/chat/contracts/v1"' in generatedTypesText
     assert "ChatCompletionResponseSchema" in generatedTypesText
+    assert "ExternalQueryContractDescriptorSchema" in generatedTypesText
     assert "ExternalQueryMetadataSchema" in generatedTypesText
     assert "contractVersion: \"v1\";" in generatedTypesText
     assert "traceEventsPath: string;" in generatedTypesText
+    assert "responseHeaders: string[];" in generatedTypesText
     assert "TraceSummaryResponse" in generatedTypesText
+    assert "RetrievedEvidenceSchema" in generatedTypesText
     assert "claims: components[\"schemas\"][\"ClaimSchema\"][];" in generatedTypesText

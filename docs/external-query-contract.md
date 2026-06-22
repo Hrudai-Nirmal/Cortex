@@ -6,6 +6,7 @@ Cortex ships a bundled `query-web` surface, but enterprise clients may replace i
 their own chat shell. The supported integration boundary for those clients is:
 
 - `POST /v1/chat/completions`
+- `GET /v1/chat/contracts/v1`
 
 This route is intentionally OpenAI-compatible enough for standard chat UIs while adding
 the Cortex evidence metadata a governed RAG system needs.
@@ -16,6 +17,29 @@ Contract stability rules:
 - Cortex-specific behavior is additive through `x_cortex` fields and `X-Cortex-*` headers.
 - Replacement UIs should gate feature assumptions on `contractVersion === "v1"`.
 - Trace replay remains an elevated operator/debug capability even when the query UI is fully replaced.
+- `GET /v1/chat/contracts/v1` is the machine-readable discovery endpoint for the live `v1` contract.
+
+## Live discovery
+
+The running Cortex package exposes `GET /v1/chat/contracts/v1` as a machine-readable
+descriptor for the replacement-query contract. It publishes:
+
+- `contractVersion`
+- `endpointPath`
+- `method`
+- `authentication`
+- `supportsStreaming`
+- `traceEventsPathTemplate`
+- `operatorConsolePath`
+- `responseHeaders`
+- `extensionFields`
+- `evidenceStatuses`
+- `routes`
+- `abstentionEvidenceStatuses`
+- `notes`
+
+Replacement query shells may cache this descriptor at startup to confirm they are
+integrating with a compatible Cortex deployment before issuing real user queries.
 
 ## Authentication and scope
 
@@ -59,6 +83,7 @@ Notes:
 - Stage progress remains available through persisted trace events rather than token streaming.
 - `GET /v1/query/{traceId}/events` is a builder/operator trace surface, not an employee-client browser API.
 - Replacement employee chat shells should use the returned `traceId` for correlation, feedback, and support escalation rather than attempting to replay trace events directly.
+- The live discovery descriptor always points back to this request shape through `endpointPath` and `method`.
 
 ## Response
 

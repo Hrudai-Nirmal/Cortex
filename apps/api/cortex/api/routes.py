@@ -24,6 +24,7 @@ from cortex.schemas import (
     CreateUploadSourceResponse,
     CreateWebsiteSourceRequest,
     CreateWebsiteSourceResponse,
+    ExternalQueryContractDescriptorSchema,
     IngestTextRequest,
     IngestTextResponse,
     JobStatusResponse,
@@ -56,6 +57,30 @@ from cortex.services.sources import SourceService
 router = APIRouter()
 settings = getSettings()
 DatabaseSession = Annotated[AsyncSession, Depends(getDatabaseSession)]
+EXTERNAL_QUERY_CONTRACT_RESPONSE_HEADERS = [
+    "X-Cortex-Contract-Version",
+    "X-Cortex-Trace-Id",
+    "X-Cortex-Evidence-Status",
+    "X-Cortex-Route",
+    "X-Cortex-Abstained",
+]
+EXTERNAL_QUERY_CONTRACT_EXTENSION_FIELDS = [
+    "contractVersion",
+    "traceId",
+    "traceEventsPath",
+    "route",
+    "correctedQuery",
+    "evidenceStatus",
+    "abstained",
+    "claims",
+    "citations",
+    "stages",
+]
+EXTERNAL_QUERY_CONTRACT_NOTES = [
+    "Use the last non-empty user message as the deterministic query input.",
+    "Do not send raw enterprise scope or ACL principals from the browser; Cortex derives them from the bearer token.",
+    "Treat traceEventsPath as an operator-grade debugging surface rather than a standard employee UI dependency.",
+]
 
 
 def buildModelProvider(activeSettings: Settings) -> OllamaModelProvider:
@@ -96,6 +121,25 @@ def mapCortexErrorToHttp(error: CortexError) -> HTTPException:
 def buildPipelineService(session: AsyncSession) -> PipelineService:
     """Create the persisted pipeline governance service for the active enterprise."""
     return PipelineService(session=session, settings=settings)
+
+
+def buildExternalQueryContractDescriptor() -> ExternalQueryContractDescriptorSchema:
+    """Return the stable live contract exported to replacement employee chat shells."""
+    return ExternalQueryContractDescriptorSchema(
+        contractVersion="v1",
+        endpointPath="/v1/chat/completions",
+        method="POST",
+        authentication="bearer-token",
+        supportsStreaming=False,
+        traceEventsPathTemplate="/v1/query/{traceId}/events",
+        operatorConsolePath="/developer",
+        responseHeaders=EXTERNAL_QUERY_CONTRACT_RESPONSE_HEADERS,
+        extensionFields=EXTERNAL_QUERY_CONTRACT_EXTENSION_FIELDS,
+        evidenceStatuses=["sufficient", "partial", "insufficient", "conflict"],
+        routes=["rag", "compute", "retrieve-then-compute"],
+        abstentionEvidenceStatuses=["insufficient", "conflict"],
+        notes=EXTERNAL_QUERY_CONTRACT_NOTES,
+    )
 
 
 @router.get("/health/live")
@@ -142,6 +186,15 @@ async def getSession(request: Request) -> SessionResponse:
         isAdmin=identity.isAdmin,
         isBuilder=identity.isBuilder,
     )
+
+
+@router.get(
+    "/v1/chat/contracts/v1",
+    response_model=ExternalQueryContractDescriptorSchema,
+)
+async def getExternalQueryContract() -> ExternalQueryContractDescriptorSchema:
+    """Publish the live stable query-facade contract for replacement client UIs."""
+    return buildExternalQueryContractDescriptor()
 
 
 @router.post("/v1/ingestion/text", response_model=IngestTextResponse)

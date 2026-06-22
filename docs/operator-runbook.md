@@ -31,12 +31,14 @@ The console trace timeline now also shows:
 - validated answer preview
 - persisted claim support status
 - claim-to-citation linkage beside stage evidence
+- ranked retrieved evidence rows with source, locator, and scoring detail
 
 The console settings view now foregrounds:
 
 - packaged model profile
 - packaged build profile
 - packaged identity profile
+- live replacement-query contract metadata from the running API
 
 ## Required host split
 
@@ -136,6 +138,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 - query host routes to the employee frontend
 - both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
+- the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata
@@ -197,6 +200,7 @@ When clients use their own chat UI:
 
 - keep `console-web`
 - keep `api`
+- optionally read `GET /v1/chat/contracts/v1` at startup to confirm the live Cortex package still exports the expected `v1` contract
 - call `POST /v1/chat/completions`
 - render citations from `x_cortex.citations`
 - preserve `x_cortex.traceId` for feedback and support workflows

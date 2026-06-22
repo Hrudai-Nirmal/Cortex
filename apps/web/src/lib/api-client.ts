@@ -5,6 +5,7 @@ import type {
   CreateWebsiteSourceRequest,
   CreateWebsiteSourceResponse,
   CreateUploadSourceResponse,
+  ExternalQueryContractDescriptor,
   ExternalChatCompletionResponse,
   JobStatus,
   JobSummary,
@@ -104,6 +105,11 @@ export async function submitChatQuery(
     citations: response.x_cortex.citations,
     stages: response.x_cortex.stages,
   };
+}
+
+/** Load the live replacement-query contract descriptor exported by Cortex. */
+export async function getExternalQueryContract(): Promise<ExternalQueryContractDescriptor> {
+  return fetchJson<ExternalQueryContractDescriptor>("/v1/chat/contracts/v1");
 }
 
 /** Load the immutable active pipeline definition for the developer graph. */

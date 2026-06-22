@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import {
   activatePipeline,
+  getExternalQueryContract,
   getActivePipeline,
   getLatestTrace,
   getPipelineVersions,
@@ -22,6 +23,7 @@ import {
 } from "../lib/api-client";
 import { getConsolePublicUrl, getQueryPublicUrl } from "../config";
 import type {
+  ExternalQueryContractDescriptor,
   PipelineGraph,
   PipelineVersionSummary,
   QueryStageEvent,
@@ -66,6 +68,9 @@ export function DeveloperConsole() {
   const [pipelineVersions, setPipelineVersions] = useState<PipelineVersionSummary[]>([]);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
+  const [queryContract, setQueryContract] = useState<ExternalQueryContractDescriptor | null>(
+    null,
+  );
   const [session, setSession] = useState<Session | null>(null);
   const [tracePlayback, setTracePlayback] = useState<QueryStageEvent[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -86,17 +91,20 @@ export function DeveloperConsole() {
 
   const loadConsole = useCallback(async (): Promise<void> => {
     try {
-      const [activePipeline, liveVersions, health, trace, resolvedSession] = await Promise.all([
+      const [activePipeline, liveVersions, health, trace, contract, resolvedSession] =
+        await Promise.all([
         getActivePipeline(ENTERPRISE_ID),
         getPipelineVersions(ENTERPRISE_ID),
         getRuntimeHealth(),
         getLatestTrace(ENTERPRISE_ID),
+        getExternalQueryContract(),
         getSession(),
       ]);
       setPipeline(activePipeline);
       setPipelineVersions(liveVersions);
       setRuntimeHealth(health);
       setLatestTrace(trace);
+      setQueryContract(contract);
       setSession(resolvedSession);
       setTracePlayback([]);
     } catch (error) {
@@ -200,6 +208,8 @@ export function DeveloperConsole() {
   const latestTraceEventsPath = latestTrace
     ? `/v1/query/${latestTrace.traceId}/events`
     : "/v1/query/{traceId}/events";
+  const retrievedEvidence = latestTrace?.retrievedEvidence ?? [];
+  const contractHeaderNames = queryContract?.responseHeaders ?? [...EXTERNAL_QUERY_HEADER_NAMES];
 
   return (
     <main className="developer-console">
@@ -458,11 +468,43 @@ export function DeveloperConsole() {
                   <strong>Client query contract</strong>
                 </div>
                 <p>
-                  Contract {EXTERNAL_QUERY_CONTRACT_VERSION} lives at <code>POST /v1/chat/completions</code>.
-                  Replacement UIs should preserve <code>x_cortex.traceId</code>, evidence status, abstention state,
-                  and citations from the response payload. <code>x_cortex.traceEventsPath</code> is reserved for
-                  builder-grade trace replay and operator tooling.
+                  Contract {queryContract?.contractVersion ?? EXTERNAL_QUERY_CONTRACT_VERSION} lives at{" "}
+                  <code>
+                    {queryContract?.method ?? "POST"}{" "}
+                    {queryContract?.endpointPath ?? "/v1/chat/completions"}
+                  </code>.
+                  Replacement UIs should preserve <code>x_cortex.traceId</code>, evidence
+                  status, abstention state, and citations from the response payload.
                 </p>
+                <p style={{ marginTop: 8 }}>
+                  Authentication is <code>{queryContract?.authentication ?? "bearer-token"}</code>.
+                  Streaming support is <code>{String(queryContract?.supportsStreaming ?? false)}</code>.
+                  Trace replay remains reserved for operator tooling at{" "}
+                  <code>
+                    {queryContract?.traceEventsPathTemplate ?? "/v1/query/{traceId}/events"}
+                  </code>, and the fixed console lives at{" "}
+                  <code>{queryContract?.operatorConsolePath ?? "/developer"}</code>.
+                </p>
+                {queryContract ? (
+                  <div style={{ marginTop: 12 }}>
+                    <strong>Extension fields</strong>
+                    <p style={{ marginTop: 6 }}>
+                      {queryContract.extensionFields.map((fieldName) => (
+                        <code key={fieldName} style={{ marginRight: 8 }}>
+                          x_cortex.{fieldName}
+                        </code>
+                      ))}
+                    </p>
+                    <strong>Abstention evidence states</strong>
+                    <p style={{ marginTop: 6 }}>
+                      {queryContract.abstentionEvidenceStatuses.map((statusName) => (
+                        <code key={statusName} style={{ marginRight: 8 }}>
+                          {statusName}
+                        </code>
+                      ))}
+                    </p>
+                  </div>
+                ) : null}
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">
@@ -474,11 +516,24 @@ export function DeveloperConsole() {
                   before parsing the JSON body:
                 </p>
                 <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-                  {EXTERNAL_QUERY_HEADER_NAMES.map((headerName) => (
+                  {contractHeaderNames.map((headerName) => (
                     <li key={headerName}><code>{headerName}</code></li>
                   ))}
                 </ul>
               </div>
+              {queryContract?.notes.length ? (
+                <div className="source-form-card" style={{ marginTop: 16 }}>
+                  <div className="source-form-card__heading">
+                    <ShieldCheck aria-hidden size={18} />
+                    <strong>Contract guidance</strong>
+                  </div>
+                  <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+                    {queryContract.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
           </div>
         ) : (
@@ -528,6 +583,7 @@ export function DeveloperConsole() {
             <span><small>Claims</small><strong>{latestTrace.claims.length}</strong></span>
             <span><small>Citations</small><strong>{latestTrace.citations.length}</strong></span>
             <span><small>Pipeline</small><strong>v{latestTrace.pipelineVersion ?? 0}</strong></span>
+            <span><small>Evidence rows</small><strong>{retrievedEvidence.length}</strong></span>
           </div>
         ) : null}
         {latestTrace && latestTrace.outcome !== "sufficient" ? (
@@ -583,6 +639,38 @@ export function DeveloperConsole() {
                   <td>{citation.documentTitle}</td>
                   <td>{citation.structuralLocator}</td>
                   <td>{citation.supportScore.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+        {retrievedEvidence.length ? (
+          <table style={{ marginTop: 12 }}>
+            <thead>
+              <tr>
+                <th>Evidence chunk</th>
+                <th>Locator</th>
+                <th>Scores</th>
+                <th>Preview</th>
+              </tr>
+            </thead>
+            <tbody>
+              {retrievedEvidence.map((evidenceRow) => (
+                <tr key={evidenceRow.chunkId}>
+                  <td>
+                    <strong>{evidenceRow.documentTitle}</strong>
+                    <div>
+                      <small>{evidenceRow.documentVersion}</small>
+                    </div>
+                  </td>
+                  <td>{evidenceRow.structuralLocator || "—"}</td>
+                  <td>
+                    support {evidenceRow.supportScore.toFixed(2)}
+                    <br />
+                    rerank {evidenceRow.rerankScore.toFixed(2)} · source{" "}
+                    {evidenceRow.sourceScore.toFixed(2)}
+                  </td>
+                  <td>{evidenceRow.contentPreview}</td>
                 </tr>
               ))}
             </tbody>
