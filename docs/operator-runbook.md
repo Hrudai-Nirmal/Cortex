@@ -35,6 +35,7 @@ The console trace timeline now also shows:
 The console settings view now foregrounds:
 
 - packaged model profile
+- packaged build profile
 - packaged identity profile
 
 ## Required host split
@@ -180,6 +181,7 @@ Each runtime component now includes:
 The readiness payload now includes:
 
 - `model-profile` for the declared generator model, embedding model, and required accelerator
+- `package-build-profile` for the packaged Torch wheel channel and preinstalled model-runtime packages
 - `identity-profile` for the declared auth mode plus OIDC issuer and audience contract
 
 When the packaged deployment is still running with `authMode=fixture`, Cortex reports

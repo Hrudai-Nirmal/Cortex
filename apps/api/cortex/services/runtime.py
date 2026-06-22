@@ -34,6 +34,7 @@ class RuntimeHealthService:
             self._checkDeploymentConfig(),
             self._checkIdentityProfile(),
             self._checkModelProfile(),
+            self._checkPackageBuildProfile(),
             await self._checkDatabase(),
             await self._checkOllama(),
             self._checkModelEndpointPolicy(),
@@ -57,6 +58,7 @@ class RuntimeHealthService:
             self._checkDeploymentConfig(),
             self._checkIdentityProfile(),
             self._checkModelProfile(),
+            self._checkPackageBuildProfile(),
             self._checkModelEndpointPolicy(),
             self._checkObjectStorage(),
             self._checkAccelerator(),
@@ -221,6 +223,55 @@ class RuntimeHealthService:
                 "Keep this profile aligned with the client deployment agreement and the "
                 "locally available model artifacts before promoting the package."
             ),
+        )
+
+    def _checkPackageBuildProfile(self) -> RuntimeComponentSchema:
+        """Expose the packaged Torch wheel channel used for Docling-backed image builds."""
+        wheelIndexUrl = self.settings.packagePyTorchWheelIndexUrl
+        preinstallPackages = self.settings.packagePyTorchPreinstall
+        accelerator = self.settings.requiredAccelerator
+        detail = (
+            f"torchWheelIndex={wheelIndexUrl}, "
+            f"preinstall={preinstallPackages}, "
+            f"requiredAccelerator={accelerator}"
+        )
+        if accelerator == "cpu" and "/cpu" not in wheelIndexUrl:
+            return self._buildComponent(
+                name="package-build-profile",
+                status="degraded",
+                severity="error",
+                detail=detail,
+                remediation=(
+                    "Set CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL to the CPU PyTorch wheel "
+                    "channel before rebuilding package images for a CPU deployment profile."
+                ),
+            )
+        if accelerator == "cuda" and "/cpu" in wheelIndexUrl:
+            return self._buildComponent(
+                name="package-build-profile",
+                status="degraded",
+                severity="error",
+                detail=detail,
+                remediation=(
+                    "Point CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL at the matching CUDA "
+                    "PyTorch wheel channel before rebuilding package images for a CUDA deployment."
+                ),
+            )
+        remediation = (
+            "Keep this build profile aligned with the package image that was built for the "
+            "client deployment target, especially when switching between CPU and CUDA Linux runtimes."
+        )
+        if accelerator == "mps":
+            remediation = (
+                "MPS is a local macOS runtime expectation; packaged Linux images should still use "
+                "an explicit CPU or CUDA PyTorch wheel channel when they are built."
+            )
+        return self._buildComponent(
+            name="package-build-profile",
+            status="ready",
+            severity="info",
+            detail=detail,
+            remediation=remediation,
         )
 
     def _checkIdentityProfile(self) -> RuntimeComponentSchema:

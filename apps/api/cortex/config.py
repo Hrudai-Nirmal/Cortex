@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     allowRemoteModelEndpoint: bool = False
     generatorModel: str = "qwen3:14b"
     embeddingModel: str = "qwen3-embedding:0.6b"
+    packagePyTorchWheelIndexUrl: str = "https://download.pytorch.org/whl/cpu"
+    packagePyTorchPreinstall: str = "torch torchvision"
     objectStorageRoot: str = ".cortex-data/object-storage"
     consoleHost: str = "127.0.0.1"
     queryHost: str = "127.0.0.1"
@@ -81,6 +83,8 @@ class Settings(BaseSettings):
         "ollamaBaseUrl",
         "generatorModel",
         "embeddingModel",
+        "packagePyTorchWheelIndexUrl",
+        "packagePyTorchPreinstall",
         "objectStorageRoot",
         "consolePublicUrl",
         "queryPublicUrl",

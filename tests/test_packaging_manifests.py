@@ -19,6 +19,8 @@ def testKubernetesPackageManifestUsesClientPlaceholdersAndSharedStorage() -> Non
     assert "kind: PersistentVolumeClaim" in manifestText
     assert "claimName: cortex-object-storage" in manifestText
     assert "mountPath: /var/lib/cortex/object-storage" in manifestText
+    assert "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: https://download.pytorch.org/whl/cpu" in manifestText
+    assert 'CORTEX_PACKAGE_PYTORCH_PREINSTALL: "torch torchvision"' in manifestText
 
 
 def testKubernetesPackageManifestPreservesSplitHostRouting() -> None:
@@ -117,6 +119,8 @@ def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
     assert '"CORTEX_DEV_MODE", "value": "false"' in taskDefinitionText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in taskDefinitionText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText
+    assert '"CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu"' in taskDefinitionText
+    assert '"CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision"' in taskDefinitionText
 
 
 def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:
@@ -131,3 +135,5 @@ def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:
     assert '"CORTEX_DEV_MODE", "value": "false"' in migrationTaskText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in migrationTaskText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in migrationTaskText
+    assert '"CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu"' in migrationTaskText
+    assert '"CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision"' in migrationTaskText

@@ -218,7 +218,10 @@ class QueryService:
             )
         )
         validationStartTime = time.perf_counter()
-        claims, citations, evidenceStatus = await self._generateValidatedClaims(retrievedChunks)
+        claims, citations, evidenceStatus = await self._generateValidatedClaims(
+            retrievedChunks,
+            retrievalQuery,
+        )
         finalDetail = (
             f"{len(claims)} supported claims"
             if claims
@@ -454,9 +457,19 @@ class QueryService:
     async def _generateValidatedClaims(
         self,
         retrievedChunks: list[RetrievedChunk],
+        queryText: str,
     ) -> tuple[list[ClaimSchema], list[CitationSchema], str]:
         if not retrievedChunks:
             return [], [], "insufficient"
+        if hasConflictingEvidence(retrievedChunks):
+            return [], buildCitations(retrievedChunks[:2]), "conflict"
+        deterministicClaims = buildDeterministicExtractiveClaims(
+            queryText=queryText,
+            retrievedChunks=retrievedChunks,
+            minimumSupportScore=max(self.settings.sourceConfidenceThreshold, 0.7),
+        )
+        if deterministicClaims is not None:
+            return deterministicClaims
         responseSchema = {
             "type": "object",
             "additionalProperties": False,
@@ -570,8 +583,6 @@ class QueryService:
                 supportStatus="supported",
             )
             return [fallbackClaim], [fallbackCitation], "sufficient"
-        if hasConflictingEvidence(retrievedChunks):
-            return [], buildCitations(retrievedChunks[:2]), "conflict"
         return [], [], "insufficient"
 
     def _buildRagResponse(
@@ -827,6 +838,45 @@ def buildFocusedRetrievalQuery(queryText: str) -> str | None:
     if focusedQuery == queryText.lower():
         return None
     return focusedQuery
+
+
+def buildDeterministicExtractiveClaims(
+    queryText: str,
+    retrievedChunks: list[RetrievedChunk],
+    minimumSupportScore: float,
+) -> tuple[list[ClaimSchema], list[CitationSchema], str] | None:
+    """Prefer an exact top-evidence extract when one strong chunk already answers the query."""
+    if not retrievedChunks:
+        return None
+    topChunk = retrievedChunks[0]
+    if topChunk.supportScore < minimumSupportScore:
+        return None
+    queryTokens = {
+        token
+        for token in TOKEN_PATTERN.findall(queryText.lower())
+        if token not in LEXICAL_NOISE_WORDS
+    }
+    topChunkTokens = set(TOKEN_PATTERN.findall(topChunk.content.lower()))
+    titleTokens = set(TOKEN_PATTERN.findall(topChunk.documentTitle.lower()))
+    if queryTokens and not (queryTokens & (topChunkTokens | titleTokens)):
+        return None
+    citation = CitationSchema(
+        citationId="C1",
+        documentTitle=topChunk.documentTitle,
+        documentVersion=topChunk.documentVersion,
+        chunkId=topChunk.chunkId,
+        structuralLocator=topChunk.structuralLocator,
+        exactSpan=topChunk.content,
+        supportScore=round(topChunk.supportScore, 4),
+    )
+    claim = ClaimSchema(
+        claimId="claim-1",
+        text=topChunk.content,
+        confidence=round(topChunk.supportScore, 4),
+        citationIds=[citation.citationId],
+        supportStatus="supported",
+    )
+    return [claim], [citation], "sufficient"
 
 
 def extractNumericValues(retrievedChunks: list[RetrievedChunk]) -> list[float]:

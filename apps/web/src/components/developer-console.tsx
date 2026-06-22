@@ -77,6 +77,8 @@ export function DeveloperConsole() {
     (component) => component.status !== "ready",
   ) ?? [];
   const modelProfile = runtimeHealth?.components.find((component) => component.name === "model-profile") ?? null;
+  const packageBuildProfile =
+    runtimeHealth?.components.find((component) => component.name === "package-build-profile") ?? null;
   const identityProfile = runtimeHealth?.components.find((component) => component.name === "identity-profile") ?? null;
   const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
   const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
@@ -417,6 +419,16 @@ export function DeveloperConsole() {
                 <p>{modelProfile?.detail ?? "Runtime profile is still loading."}</p>
                 {modelProfile?.remediation ? (
                   <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {modelProfile.remediation}</p>
+                ) : null}
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Clock aria-hidden size={18} />
+                  <strong>Package build profile</strong>
+                </div>
+                <p>{packageBuildProfile?.detail ?? "Packaged build profile is still loading."}</p>
+                {packageBuildProfile?.remediation ? (
+                  <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {packageBuildProfile.remediation}</p>
                 ) : null}
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>

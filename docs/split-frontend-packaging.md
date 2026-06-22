@@ -106,9 +106,9 @@ network policy without waiting for PostgreSQL or Ollama round trips.
 Both health endpoints return per-component `severity`, `detail`, and `remediation`
 fields so operators and the fixed console show the same troubleshooting guidance.
 Those components now include the declared packaged model and identity profiles as well,
-so operators can verify which generator, embedding model, required accelerator, auth
-mode, issuer, and audience a deployment is advertising before they debug deeper runtime
-failures.
+the packaged Torch wheel/build profile, so operators can verify which generator,
+embedding model, required accelerator, auth mode, issuer, audience, and container build
+channel a deployment is advertising before they debug deeper runtime failures.
 If that identity profile is still `fixture` in a packaged production-style deployment,
 the runtime health payload surfaces it as a warning rather than silently treating it as
 production-ready authentication.

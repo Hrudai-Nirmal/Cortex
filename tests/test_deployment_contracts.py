@@ -162,6 +162,63 @@ async def testStartupHealthReportsDeclaredModelProfile() -> None:
 
 
 @pytest.mark.asyncio
+async def testStartupHealthReportsPackagedTorchBuildProfile() -> None:
+    """Operators should be able to inspect the packaged Torch wheel channel at runtime."""
+    settings = buildPackageSettings(
+        packagePyTorchWheelIndexUrl="https://download.pytorch.org/whl/cpu",
+        packagePyTorchPreinstall="torch torchvision",
+        requiredAccelerator="cpu",
+    )
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    buildProfileComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "package-build-profile"
+    )
+    assert buildProfileComponent.status == "ready"
+    assert "torchWheelIndex=https://download.pytorch.org/whl/cpu" in buildProfileComponent.detail
+    assert "preinstall=torch torchvision" in buildProfileComponent.detail
+    assert buildProfileComponent.remediation is not None
+
+
+@pytest.mark.asyncio
+async def testStartupHealthFlagsMismatchedPackagedTorchBuildProfile() -> None:
+    """A CPU deployment profile should not advertise a CUDA-style packaged Torch channel."""
+    settings = buildPackageSettings(
+        packagePyTorchWheelIndexUrl="https://download.pytorch.org/whl/cu124",
+        packagePyTorchPreinstall="torch torchvision",
+        requiredAccelerator="cpu",
+    )
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    buildProfileComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "package-build-profile"
+    )
+    assert runtimeHealth.status == "degraded"
+    assert buildProfileComponent.status == "degraded"
+    assert buildProfileComponent.severity == "error"
+    assert "torchWheelIndex=https://download.pytorch.org/whl/cu124" in buildProfileComponent.detail
+    assert buildProfileComponent.remediation is not None
+
+
+@pytest.mark.asyncio
 async def testStartupHealthReportsDeclaredIdentityProfile() -> None:
     """Operators should be able to see the declared auth mode and OIDC contract."""
     settings = buildPackageSettings()

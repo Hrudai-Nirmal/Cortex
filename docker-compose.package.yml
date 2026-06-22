@@ -50,6 +50,8 @@ services:
       CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
       CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:1.7b}
       CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+      CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,6 +94,8 @@ services:
       CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
       CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:1.7b}
       CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+      CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,6 +183,8 @@ services:
       CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
       CORTEX_GENERATOR_MODEL: ${CORTEX_GENERATOR_MODEL:-qwen3:1.7b}
       CORTEX_EMBEDDING_MODEL: ${CORTEX_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+      CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}
     depends_on:
       postgres:
         condition: service_healthy

@@ -98,6 +98,13 @@ describe("DeveloperConsole", () => {
                 remediation: "Keep this profile aligned with the client deployment agreement.",
               },
               {
+                name: "package-build-profile",
+                status: "ready",
+                severity: "info",
+                detail: "torchWheelIndex=https://download.pytorch.org/whl/cpu, preinstall=torch torchvision, requiredAccelerator=cpu",
+                remediation: "Keep this build profile aligned with the package image that was built for the client deployment target.",
+              },
+              {
                 name: "identity-profile",
                 status: "ready",
                 severity: "info",
@@ -201,8 +208,14 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("X-Cortex-Route")).toBeVisible();
     expect(screen.getByText("X-Cortex-Abstained")).toBeVisible();
     expect(screen.getByText("Model profile")).toBeVisible();
+    expect(screen.getByText("Package build profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
     expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);
+    expect(
+      screen.getAllByText(
+        "torchWheelIndex=https://download.pytorch.org/whl/cpu, preinstall=torch torchvision, requiredAccelerator=cpu",
+      ),
+    ).toHaveLength(2);
     expect(screen.getAllByText("authMode=fixture, oidcIssuer=https://cortex.local/oidc, oidcAudience=cortex")).toHaveLength(2);
     expect(screen.getByText("Surface routing")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
