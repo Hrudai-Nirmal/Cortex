@@ -31,7 +31,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deployment hardening: validated split-host/public-URL settings, startup/readiness health endpoints, model-endpoint offline policy checks, pgvector readiness checks, container health probes, and operator-facing package docs.
 - Runtime health now carries severity and remediation guidance across API responses, package scripts, and the fixed developer console; the worker refuses to enter its loop when startup or live readiness checks fail.
 - Operator bootstrap tooling: `.env.package.example`, package up/verify/down scripts, and a deployment runbook for Docker, Kubernetes, OpenShift, and ECS-style host routing.
-- Operator inspection tooling: package status/log-tail scripts and clearer runtime alert surfacing inside the fixed developer console.
+- Operator inspection tooling: package status/log-tail scripts, split-host surface identity checks during bootstrap/status, and clearer runtime alert surfacing inside the fixed developer console.
 - Package verification now asserts split-surface identity headers plus query-contract version and trace-events metadata, while the console trace panel exposes actor, start time, and stage count for the latest run.
 - The generated TypeScript API contract is now re-synced with the live FastAPI OpenAPI schema and guarded by tests so the external chat facade metadata cannot silently drift from the browser clients.
 - Package startup now reports degraded startup/readiness components with remediation instead of generic timeouts, and the package artifacts now include corrected OpenShift Route examples plus ECS runtime and migration task examples for split-host client deployments.

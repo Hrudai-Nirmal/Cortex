@@ -84,6 +84,13 @@ network policy without waiting for PostgreSQL or Ollama round trips.
 Both health endpoints return per-component `severity`, `detail`, and `remediation`
 fields so operators and the fixed console show the same troubleshooting guidance.
 
+The packaged operator scripts now verify the split-host contract directly:
+
+- `package:up` waits for `startup` and `ready` on both browser hosts
+- `package:up` confirms that the console host emits `X-Cortex-Surface: console`
+  and the query host emits `X-Cortex-Surface: query`
+- `package:status` prints both routed health views plus the observed surface identity
+
 ## Development Defaults
 
 Local development keeps two independent frontend dev servers:

@@ -46,6 +46,25 @@ wait_for_endpoint() {
   exit 1
 }
 
+read_headers() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
+assert_surface_header() {
+  local host="$1"
+  local expected_surface="$2"
+  local headers=""
+
+  headers="$(read_headers "$host" "/")"
+  if ! printf "%s" "$headers" | grep -qi "^X-Cortex-Surface: ${expected_surface}$"; then
+    echo "Expected ${host} to resolve to Cortex surface ${expected_surface}, but the routed headers did not match." >&2
+    printf "%s\n" "$headers" >&2
+    exit 1
+  fi
+}
+
 get_json() {
   local host="$1"
   local path="$2"
@@ -142,9 +161,14 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"
+wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"
+wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40
 wait_for_endpoint "$CORTEX_QUERY_HOST" "/" "<!doctype html" 40
+assert_surface_header "$CORTEX_CONSOLE_HOST" "console"
+assert_surface_header "$CORTEX_QUERY_HOST" "query"
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"
+wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"
 
 echo "Package is up."
 echo "Console URL: ${CORTEX_CONSOLE_PUBLIC_URL}"

@@ -100,9 +100,10 @@ Before starting containers, the script validates:
 
 After startup, it waits for:
 
-- `GET /health/startup`
-- `GET /health/ready`
-- query-surface HTML through the split host router
+- `GET /health/startup` through both console and query hosts
+- `GET /health/ready` through both console and query hosts
+- console and query HTML through the split host router
+- `X-Cortex-Surface` identity headers on both routed browser hosts
 
 The package also runs database migrations before `api` and `worker` proceed.
 
@@ -120,7 +121,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  including severity and remediation guidance for every non-ready component
+  query host, and routed surface identity, including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 ## Health endpoints

@@ -68,6 +68,24 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
+    assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
+    assert 'assert_surface_header "$CORTEX_CONSOLE_HOST" "console"' in scriptText
+    assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
     assert 'echo "Package ${label} failed."' in scriptText
     assert 'print_health_failures "$payload"' in scriptText
+
+
+def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
+    """Package status should show routed surface identity and both host health views."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    scriptText = (rootDirectory / "scripts" / "package-status.sh").read_text(encoding="utf-8")
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in scriptText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
+    assert 'read_headers "$CORTEX_CONSOLE_HOST" "/"' in scriptText
+    assert 'read_headers "$CORTEX_QUERY_HOST" "/"' in scriptText
+    assert 'echo "Surface routing:"' in scriptText
+    assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
+    assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
