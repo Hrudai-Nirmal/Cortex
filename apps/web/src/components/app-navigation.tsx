@@ -18,8 +18,8 @@ import {
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { getQueryPublicUrl } from "../config";
-import { getSession } from "../lib/api-client";
-import type { Session, Surface } from "../types";
+import { getSession, getStartupHealth } from "../lib/api-client";
+import type { RuntimeHealth, Session, Surface } from "../types";
 
 interface AppNavigationProps {
   activeSurface: Surface;
@@ -48,6 +48,17 @@ const governanceItems: NavItem[] = [
   { label: "Audit log", icon: BookOpenText },
 ];
 
+function getRuntimeQueryPublicUrl(runtimeHealth: RuntimeHealth | null): string | null {
+  const deploymentConfig = runtimeHealth?.components.find(
+    (component) => component.name === "deployment-config",
+  );
+  if (!deploymentConfig?.detail) {
+    return null;
+  }
+  const queryMatch = deploymentConfig.detail.match(/query=([^,]+), cors=/);
+  return queryMatch?.[1] ?? null;
+}
+
 function renderNavItem(item: NavItem) {
   const ItemIcon = item.icon;
   return (
@@ -65,25 +76,35 @@ function renderNavItem(item: NavItem) {
 /** Render navigation appropriate to the currently selected product surface. */
 export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationProps) {
   const [session, setSession] = useState<Session | null>(null);
-  const queryPublicUrl = getQueryPublicUrl();
+  const [runtimeQueryPublicUrl, setRuntimeQueryPublicUrl] = useState<string | null>(null);
+  const fallbackQueryPublicUrl = getQueryPublicUrl();
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadSession(): Promise<void> {
+    async function loadNavigationContext(): Promise<void> {
       try {
-        const resolvedSession = await getSession();
-        if (isMounted) {
-          setSession(resolvedSession);
+        const sessionPromise = getSession();
+        const startupHealthPromise =
+          activeSurface === "developer" ? getStartupHealth() : Promise.resolve(null);
+        const [resolvedSession, startupHealth] = await Promise.all([
+          sessionPromise,
+          startupHealthPromise,
+        ]);
+        if (!isMounted) {
+          return;
         }
+        setSession(resolvedSession);
+        setRuntimeQueryPublicUrl(getRuntimeQueryPublicUrl(startupHealth));
       } catch {
         if (isMounted) {
           setSession(null);
+          setRuntimeQueryPublicUrl(null);
         }
       }
     }
 
-    void loadSession();
+    void loadNavigationContext();
     return () => {
       isMounted = false;
     };
@@ -131,7 +152,7 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
       <div className="nav-section-label nav-section-label--spaced">Governance</div>
       <nav aria-label="Governance">{governanceItems.map(renderNavItem)}</nav>
       <div className="developer-navigation__footer">
-        <a className="surface-switch" href={queryPublicUrl}>
+        <a className="surface-switch" href={runtimeQueryPublicUrl ?? fallbackQueryPublicUrl}>
           <ChatCircleDots aria-hidden size={17} /> Open employee view
         </a>
         <div className="identity-row">

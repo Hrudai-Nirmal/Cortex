@@ -63,6 +63,10 @@ The shipped browser images now fail closed on this too: if the packaged `VITE_CO
 public URL variables are missing or still point at localhost, documentation placeholders,
 or nested paths, the fixed console/query surfaces will reject the configuration instead
 of quietly rendering bad cross-surface links.
+When the fixed console can reach `GET /health/startup`, it also prefers the runtime
+`deployment-config` query URL for the “Open employee view” link. That keeps the
+operator-facing console aligned with the live package contract even if a browser image
+was rebuilt at a different time from the API/worker package.
 
 ## Docker package workflow
 

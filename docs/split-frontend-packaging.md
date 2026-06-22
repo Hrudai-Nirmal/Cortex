@@ -80,6 +80,9 @@ The browser surfaces now enforce the same expectation themselves: packaged produ
 builds reject missing `VITE_CORTEX_*_PUBLIC_URL` values as well as localhost,
 documentation-placeholder, non-HTTPS, or nested-path public URLs before operators follow
 bad cross-surface navigation inside the shipped UI.
+The fixed console also prefers the runtime `deployment-config` query URL from
+`GET /health/startup` for its cross-surface employee-view link, so the operator surface
+tracks the live package contract instead of relying only on baked frontend build args.
 
 The package images now force an explicit PyTorch wheel source before Docling installs its
 OCR/layout dependencies. The shipped local profile defaults to the CPU wheel channel:
