@@ -62,6 +62,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - The worker now also exposes a dedicated `--check-startup` probe path, and the shipped Compose/Kubernetes/ECS manifests use it so orchestrators can gate durable job execution on real runtime readiness instead of process existence alone.
 - Package operator tooling now also runs and reports that worker startup-check contract directly during `package:up`, `package:status`, and `package:verify`, so packaged job safety is visible alongside split-host/API readiness.
 - Durable job detail now exposes its persisted `updatedAt` timestamp through the API contract so the developer jobs lane can render a truthful last-updated value without type drift.
+- The browser surfaces now validate their own packaged Vite public-URL and surface env at runtime, keeping development localhost defaults for local work but rejecting missing, localhost, placeholder, non-HTTPS, or nested-path public URLs in production builds before client operators follow a bad cross-surface link.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

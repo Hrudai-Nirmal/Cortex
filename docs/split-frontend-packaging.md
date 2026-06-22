@@ -76,6 +76,10 @@ Do not hardcode the development domains in client builds.
 The package bootstrap now rejects unchanged `example.com` placeholders, and production
 browser URLs must remain `https://` origins rooted directly at the host instead of a
 nested path such as `/chat` or `/console`.
+The browser surfaces now enforce the same expectation themselves: packaged production
+builds reject missing `VITE_CORTEX_*_PUBLIC_URL` values as well as localhost,
+documentation-placeholder, non-HTTPS, or nested-path public URLs before operators follow
+bad cross-surface navigation inside the shipped UI.
 
 The package images now force an explicit PyTorch wheel source before Docling installs its
 OCR/layout dependencies. The shipped local profile defaults to the CPU wheel channel:

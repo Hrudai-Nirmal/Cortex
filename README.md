@@ -137,6 +137,7 @@ The package now includes:
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
 - package status now prints the live query-contract version, route set, abstention evidence states, and response headers from `GET /v1/chat/contracts/v1`
+- frontend surface config that keeps localhost defaults for development but rejects missing, placeholder, localhost, non-HTTPS, or nested-path public URLs inside packaged production browser builds
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:
   - `pnpm package:up`

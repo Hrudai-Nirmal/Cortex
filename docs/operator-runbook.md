@@ -59,6 +59,10 @@ And matching public URLs:
 The public URL hostnames must match the corresponding host values exactly.
 They must also stay rooted at the host with no extra path, query string, or fragment,
 and packaged production surfaces must use `https://`.
+The shipped browser images now fail closed on this too: if the packaged `VITE_CORTEX_*`
+public URL variables are missing or still point at localhost, documentation placeholders,
+or nested paths, the fixed console/query surfaces will reject the configuration instead
+of quietly rendering bad cross-surface links.
 
 ## Docker package workflow
 
