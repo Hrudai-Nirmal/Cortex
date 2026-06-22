@@ -17,6 +17,41 @@ const sessionResponse = {
   isBuilder: false,
 };
 
+const contractResponse = {
+  contractVersion: "v1",
+  endpointPath: "/v1/chat/completions",
+  method: "POST",
+  authentication: "bearer-token",
+  supportsStreaming: false,
+  traceEventsPathTemplate: "/v1/query/{traceId}/events",
+  operatorConsolePath: "/developer",
+  responseHeaders: [
+    "X-Cortex-Contract-Version",
+    "X-Cortex-Trace-Id",
+    "X-Cortex-Evidence-Status",
+    "X-Cortex-Route",
+    "X-Cortex-Abstained",
+  ],
+  extensionFields: [
+    "contractVersion",
+    "traceId",
+    "traceEventsPath",
+    "route",
+    "correctedQuery",
+    "evidenceStatus",
+    "abstained",
+    "claims",
+    "citations",
+    "stages",
+  ],
+  evidenceStatuses: ["sufficient", "partial", "insufficient", "conflict"],
+  routes: ["rag", "compute", "retrieve-then-compute"],
+  abstentionEvidenceStatuses: ["insufficient", "conflict"],
+  notes: [
+    "Use the last non-empty user message as the deterministic query input.",
+  ],
+};
+
 const queryResponse = {
   id: "cortex-4576b626-c27a-4409-9a51-600cf115ff4a",
   object: "chat.completion",
@@ -104,9 +139,22 @@ function mockSuccessfulQuery(): void {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify(queryResponse), {
+        new Response(JSON.stringify(contractResponse), {
           status: 200,
           headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(queryResponse), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Cortex-Contract-Version": "v1",
+            "X-Cortex-Trace-Id": "4576b626-c27a-4409-9a51-600cf115ff4a",
+            "X-Cortex-Evidence-Status": "sufficient",
+            "X-Cortex-Route": "rag",
+            "X-Cortex-Abstained": "false",
+          },
         }),
       ),
   );
@@ -115,12 +163,20 @@ function mockSuccessfulQuery(): void {
 function mockSessionOnly(): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(sessionResponse), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    ),
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(contractResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
   );
 }
 
@@ -136,10 +192,49 @@ function mockAbstainedQuery(): void {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify(abstainedQueryResponse), {
+        new Response(JSON.stringify(contractResponse), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(abstainedQueryResponse), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Cortex-Contract-Version": "v1",
+            "X-Cortex-Trace-Id": "4576b626-c27a-4409-9a51-600cf115ff4a",
+            "X-Cortex-Evidence-Status": "conflict",
+            "X-Cortex-Route": "rag",
+            "X-Cortex-Abstained": "true",
+          },
+        }),
+      ),
+  );
+}
+
+function mockIncompatibleContract(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...contractResponse,
+            extensionFields: ["contractVersion", "traceId"],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
       ),
   );
 }
@@ -178,7 +273,7 @@ describe("EndUserQuery", () => {
     expect(await screen.findByRole("heading", { name: "Answer" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Sources" })).toBeVisible();
     expect(screen.getByText("Cortex Retention Standard")).toBeVisible();
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
   });
 
   it("hides citation presentation without changing query execution", async () => {
@@ -221,5 +316,13 @@ describe("EndUserQuery", () => {
     expect(
       screen.getByText(/withheld a fully supported answer/i),
     ).toBeVisible();
+  });
+
+  it("fails safely when the deployed package advertises an incompatible query contract", async () => {
+    mockIncompatibleContract();
+    render(<EndUserQuery />);
+
+    expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Submit question" })).toBeDisabled();
   });
 });

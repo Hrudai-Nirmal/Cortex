@@ -24,6 +24,9 @@ operator surface and is not intended to be swapped out.
 The bundled query UI now treats `sufficient`, `partial`, `insufficient`, and `conflict`
 evidence states differently so client-owned chat shells have a trustworthy reference
 consumer for the external contract.
+It also reads `GET /v1/chat/contracts/v1` at startup and validates the response headers
+and `x_cortex` fields it depends on, so it behaves like a real contract consumer rather
+than a privileged in-repo special case.
 
 ## External query contract
 

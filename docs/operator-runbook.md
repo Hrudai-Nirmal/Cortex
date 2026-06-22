@@ -242,6 +242,11 @@ When clients use their own chat UI:
 - preserve `X-Cortex-Route` and `X-Cortex-Abstained` if your gateway, BFF, or observability layer logs response headers for support workflows
 - treat `x_cortex.traceEventsPath` as operator-only trace correlation unless the client intentionally runs an elevated builder/debug integration
 
+The bundled `query-web` surface now follows this same pattern itself: it loads the live
+contract descriptor at startup, verifies the response headers it depends on, and fails
+closed with an employee-safe error if the deployed package no longer matches the expected
+public query contract.
+
 The custom query UI must not send raw access-scope principals from the browser. Cortex
 derives scope from the authenticated user token.
 

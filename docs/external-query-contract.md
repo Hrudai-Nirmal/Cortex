@@ -40,6 +40,8 @@ descriptor for the replacement-query contract. It publishes:
 
 Replacement query shells may cache this descriptor at startup to confirm they are
 integrating with a compatible Cortex deployment before issuing real user queries.
+The shipped `query-web` surface now does exactly this, which keeps the bundled employee UI
+honest as one more consumer of the public contract rather than a bypass around it.
 
 ## Authentication and scope
 
@@ -84,6 +86,8 @@ Notes:
 - `GET /v1/query/{traceId}/events` is a builder/operator trace surface, not an employee-client browser API.
 - Replacement employee chat shells should use the returned `traceId` for correlation, feedback, and support escalation rather than attempting to replay trace events directly.
 - The live discovery descriptor always points back to this request shape through `endpointPath` and `method`.
+- The bundled `query-web` surface now validates the response headers (`X-Cortex-*`) against the
+  `x_cortex` payload so contract drift is detected early.
 
 ## Response
 

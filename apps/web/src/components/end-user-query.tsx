@@ -11,8 +11,12 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "@phosphor-icons/react";
-import { getSession, submitChatQuery } from "../lib/api-client";
-import type { QueryResponse, Session } from "../types";
+import {
+  getExternalQueryContract,
+  getSession,
+  submitChatQuery,
+} from "../lib/api-client";
+import type { ExternalQueryContractDescriptor, QueryResponse, Session } from "../types";
 import { CitationPanel } from "./citation-panel";
 
 const suggestions = [
@@ -64,6 +68,7 @@ export function EndUserQuery() {
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [queryContract, setQueryContract] = useState<ExternalQueryContractDescriptor | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showCitations, setShowCitations] = useState(true);
@@ -74,20 +79,26 @@ export function EndUserQuery() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadSession(): Promise<void> {
+    async function loadSessionAndContract(): Promise<void> {
       try {
-        const resolvedSession = await getSession();
+        const [resolvedSession, resolvedQueryContract] = await Promise.all([
+          getSession(),
+          getExternalQueryContract(),
+        ]);
         if (isMounted) {
           setSession(resolvedSession);
+          setQueryContract(resolvedQueryContract);
         }
       } catch (error) {
         if (isMounted) {
-          setErrorMessage(error instanceof Error ? error.message : "Cortex could not load your session");
+          setErrorMessage(
+            error instanceof Error ? error.message : "Cortex could not load your session",
+          );
         }
       }
     }
 
-    void loadSession();
+    void loadSessionAndContract();
     return () => {
       isMounted = false;
     };
@@ -96,7 +107,7 @@ export function EndUserQuery() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const normalizedQuery = query.trim();
-    if (normalizedQuery.length < 2 || isLoading || !session) {
+    if (normalizedQuery.length < 2 || isLoading || !session || !queryContract) {
       return;
     }
     abortControllerRef.current?.abort();
@@ -109,6 +120,7 @@ export function EndUserQuery() {
       const queryResponse = await submitChatQuery(
         normalizedQuery,
         showCitations,
+        queryContract,
         abortController.signal,
       );
       setResponse(queryResponse);
@@ -189,7 +201,7 @@ export function EndUserQuery() {
       </section>
       <form className="query-composer" onSubmit={handleSubmit}>
         <textarea aria-label="Ask a question" placeholder="Ask about company knowledge…" value={query} onChange={(event) => setQuery(event.target.value)} rows={2} />
-        <div className="query-composer__footer"><span>{session ? "Your access permissions are applied automatically." : "Loading your access scope…"}</span><button type="submit" disabled={query.trim().length < 2 || isLoading || !session} aria-label="Submit question"><ArrowUp aria-hidden size={19} weight="bold" /></button></div>
+        <div className="query-composer__footer"><span>{session && queryContract ? "Your access permissions are applied automatically." : "Loading your access scope…"}</span><button type="submit" disabled={query.trim().length < 2 || isLoading || !session || !queryContract} aria-label="Submit question"><ArrowUp aria-hidden size={19} weight="bold" /></button></div>
       </form>
     </main>
   );

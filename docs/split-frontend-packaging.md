@@ -11,6 +11,9 @@ enterprise deployment patterns where clients use distinct domains such as:
 
 The query UI remains replaceable. Clients may keep the shipped `query-web` image or
 replace it with their own chat shell while continuing to call the Cortex API.
+The shipped `query-web` image now reads the live contract descriptor at startup and
+validates the `X-Cortex-*` response headers plus required `x_cortex` fields on every
+answer, which keeps it aligned with the same public contract client-owned shells use.
 
 ## Images
 

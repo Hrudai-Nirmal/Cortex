@@ -21,6 +21,18 @@ import type {
   TraceSummary,
 } from "../types";
 
+const BUNDLED_QUERY_CONTRACT_VERSION = "v1";
+const REQUIRED_QUERY_EXTENSION_FIELDS = [
+  "contractVersion",
+  "traceId",
+  "route",
+  "evidenceStatus",
+  "abstained",
+  "claims",
+  "citations",
+  "stages",
+] as const;
+
 function getDefaultFixtureToken(): string {
   return getActiveSurface() === "query" ? "fixture-employee" : "fixture-admin";
 }
@@ -60,6 +72,74 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+function buildContractCompatibilityError(message: string): Error {
+  return new Error(`This Cortex query surface is incompatible with the deployed package. ${message}`);
+}
+
+function validateExternalQueryContractDescriptor(
+  descriptor: ExternalQueryContractDescriptor,
+): ExternalQueryContractDescriptor {
+  if (descriptor.contractVersion !== BUNDLED_QUERY_CONTRACT_VERSION) {
+    throw buildContractCompatibilityError("Expected query contract v1.");
+  }
+  if (descriptor.method !== "POST" || descriptor.endpointPath !== "/v1/chat/completions") {
+    throw buildContractCompatibilityError("The deployed query endpoint does not match the bundled UI contract.");
+  }
+  if (descriptor.authentication !== "bearer-token") {
+    throw buildContractCompatibilityError("The deployed query authentication mode is unsupported.");
+  }
+  if (descriptor.supportsStreaming) {
+    throw buildContractCompatibilityError("The bundled query UI only supports non-streaming Cortex chat responses.");
+  }
+  for (const requiredField of REQUIRED_QUERY_EXTENSION_FIELDS) {
+    if (!descriptor.extensionFields.includes(requiredField)) {
+      throw buildContractCompatibilityError(`Missing required Cortex extension field: ${requiredField}.`);
+    }
+  }
+  return descriptor;
+}
+
+function validateExternalChatResponse(
+  response: ExternalChatCompletionResponse,
+  descriptor: ExternalQueryContractDescriptor,
+  headers: Headers,
+): QueryResponse {
+  if (response.x_cortex.contractVersion !== descriptor.contractVersion) {
+    throw buildContractCompatibilityError("The response contract version does not match the live descriptor.");
+  }
+  const contractHeader = headers.get("X-Cortex-Contract-Version");
+  if (contractHeader !== descriptor.contractVersion) {
+    throw buildContractCompatibilityError("The response headers do not match the advertised Cortex contract version.");
+  }
+  const traceIdHeader = headers.get("X-Cortex-Trace-Id");
+  if (!traceIdHeader || traceIdHeader !== response.x_cortex.traceId) {
+    throw buildContractCompatibilityError("The response trace identifier is missing or inconsistent.");
+  }
+  const evidenceStatusHeader = headers.get("X-Cortex-Evidence-Status");
+  if (!evidenceStatusHeader || evidenceStatusHeader !== response.x_cortex.evidenceStatus) {
+    throw buildContractCompatibilityError("The response evidence status is missing or inconsistent.");
+  }
+  const routeHeader = headers.get("X-Cortex-Route");
+  if (!routeHeader || routeHeader !== response.x_cortex.route) {
+    throw buildContractCompatibilityError("The response route header is missing or inconsistent.");
+  }
+  const abstainedHeader = headers.get("X-Cortex-Abstained");
+  const expectedAbstained = String(response.x_cortex.abstained);
+  if (!abstainedHeader || abstainedHeader !== expectedAbstained) {
+    throw buildContractCompatibilityError("The response abstention header is missing or inconsistent.");
+  }
+  return {
+    traceId: response.x_cortex.traceId,
+    route: response.x_cortex.route,
+    correctedQuery: response.x_cortex.correctedQuery,
+    answer: response.choices[0]?.message.content ?? "",
+    evidenceStatus: response.x_cortex.evidenceStatus,
+    claims: response.x_cortex.claims,
+    citations: response.x_cortex.citations,
+    stages: response.x_cortex.stages,
+  };
+}
+
 /** Resolve the current authenticated browser identity for the active surface. */
 export async function getSession(): Promise<Session> {
   return fetchJson<Session>("/v1/session");
@@ -82,34 +162,42 @@ export async function submitQuery(
 export async function submitChatQuery(
   query: string,
   showCitations: boolean,
+  descriptor: ExternalQueryContractDescriptor,
   signal?: AbortSignal,
 ): Promise<QueryResponse> {
-  const response = await fetchJson<ExternalChatCompletionResponse>("/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "cortex-bounded-rag",
-      messages: [{ role: "user", content: query }],
-      stream: false,
-      cortex: { showCitations },
-    }),
-    signal,
-  });
-  return {
-    traceId: response.x_cortex.traceId,
-    route: response.x_cortex.route,
-    correctedQuery: response.x_cortex.correctedQuery,
-    answer: response.choices[0]?.message.content ?? "",
-    evidenceStatus: response.x_cortex.evidenceStatus,
-    claims: response.x_cortex.claims,
-    citations: response.x_cortex.citations,
-    stages: response.x_cortex.stages,
-  };
+  const validatedDescriptor = validateExternalQueryContractDescriptor(descriptor);
+  try {
+    const httpResponse = await fetch("/v1/chat/completions", {
+      method: "POST",
+      headers: buildHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        model: "cortex-bounded-rag",
+        messages: [{ role: "user", content: query }],
+        stream: false,
+        cortex: { showCitations },
+      }),
+      signal,
+    });
+    if (!httpResponse.ok) {
+      throw new Error(await parseFailure(httpResponse));
+    }
+    const response = (await httpResponse.json()) as ExternalChatCompletionResponse;
+    return validateExternalChatResponse(response, validatedDescriptor, httpResponse.headers);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    throw new Error(
+      error instanceof Error ? error.message : "Cortex chat request failed.",
+    );
+  }
 }
 
 /** Load the live replacement-query contract descriptor exported by Cortex. */
 export async function getExternalQueryContract(): Promise<ExternalQueryContractDescriptor> {
-  return fetchJson<ExternalQueryContractDescriptor>("/v1/chat/contracts/v1");
+  return validateExternalQueryContractDescriptor(
+    await fetchJson<ExternalQueryContractDescriptor>("/v1/chat/contracts/v1"),
+  );
 }
 
 /** Load the immutable active pipeline definition for the developer graph. */

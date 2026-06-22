@@ -11,6 +11,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Developer surface: graph-first pipeline operations and trace inspection.
 - End-user surface: friendly query UI with optional citation display, but packaged as a replaceable app surface.
 - The bundled query surface now renders `sufficient`, `partial`, `insufficient`, and `conflict` evidence outcomes distinctly instead of treating every response as fully supported.
+- The bundled query surface now also discovers the live `v1` query contract at startup and validates the `X-Cortex-*` headers plus required `x_cortex` response fields it depends on, so it behaves like a real external contract consumer.
 - Provider interfaces isolate parsing, embedding, reranking, generation, storage, and identity.
 
 ## Implemented Vertical Slice
