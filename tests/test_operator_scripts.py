@@ -58,6 +58,9 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     verifyText = (rootDirectory / "scripts" / "package-verify.sh").read_text(encoding="utf-8")
     assert "X-Cortex-Surface: console" in verifyText
     assert "X-Cortex-Surface: query" in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/live"' in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in verifyText
     assert "X-Cortex-Contract-Version: v1" in verifyText
     assert '"contractVersion":"v1"' in verifyText
     assert '"traceEventsPath"' in verifyText

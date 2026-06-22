@@ -103,7 +103,7 @@ The package now includes:
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
-- package verification that checks split-surface identity headers and query-contract identity headers
+- package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:

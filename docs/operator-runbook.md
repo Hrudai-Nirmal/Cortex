@@ -112,7 +112,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 - console host routes to the operator frontend
 - query host routes to the employee frontend
 - both frontend hosts emit explicit `X-Cortex-Surface` headers
-- `live`, `startup`, and `ready` health endpoints respond
+- `live`, `startup`, and `ready` health endpoints respond through both browser hosts
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata

@@ -33,6 +33,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Operator bootstrap tooling: `.env.package.example`, package up/verify/down scripts, and a deployment runbook for Docker, Kubernetes, OpenShift, and ECS-style host routing.
 - Operator inspection tooling: package status/log-tail scripts, split-host surface identity checks during bootstrap/status, and clearer runtime alert surfacing inside the fixed developer console.
 - Package verification now asserts split-surface identity headers plus query-contract version and trace-events metadata, while the console trace panel exposes actor, start time, and stage count for the latest run.
+- Package verification now asserts split-surface identity headers plus `live`/`startup`/`ready` health responses through both browser hosts, alongside query-contract version and trace-events metadata.
 - The generated TypeScript API contract is now re-synced with the live FastAPI OpenAPI schema and guarded by tests so the external chat facade metadata cannot silently drift from the browser clients.
 - Package startup now reports degraded startup/readiness components with remediation instead of generic timeouts, and the package artifacts now include corrected OpenShift Route examples plus ECS runtime and migration task examples for split-host client deployments.
 - Package bootstrap now includes an explicit migration step and an operator model-pull step for Ollama-backed local deployments.

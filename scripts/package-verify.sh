@@ -42,7 +42,9 @@ printf "%s" "$console_headers" | grep -qi '^X-Cortex-Surface: console'
 printf "%s" "$query_headers" | grep -qi '^X-Cortex-Surface: query'
 
 read_json "$CORTEX_CONSOLE_HOST" "/health/live" | grep -q '"status"'
+read_json "$CORTEX_QUERY_HOST" "/health/live" | grep -q '"status"'
 read_json "$CORTEX_CONSOLE_HOST" "/health/startup" | grep -q '"components"'
+read_json "$CORTEX_QUERY_HOST" "/health/startup" | grep -q '"components"'
 read_json "$CORTEX_CONSOLE_HOST" "/health/ready" | grep -q '"status":"ready"'
 read_json "$CORTEX_QUERY_HOST" "/health/ready" | grep -q '"status":"ready"'
 
