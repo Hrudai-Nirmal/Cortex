@@ -137,6 +137,7 @@ After startup, it waits for:
 - `GET /health/ready` through both console and query hosts
 - console and query HTML through the split host router
 - `X-Cortex-Surface` identity headers on both routed browser hosts
+- `python -m cortex.worker --check-startup` inside the worker container
 
 The package also runs database migrations before `api` and `worker` proceed.
 The packaged worker now publishes its own exec-style startup contract through
@@ -150,6 +151,7 @@ examples wire that into their worker health signals.
 - both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- the worker startup check passes from inside the running package
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata
@@ -160,7 +162,7 @@ examples wire that into their worker health signals.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  query host, routed surface identity, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
+  query host, routed surface identity, worker startup-check result, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 ## Health endpoints

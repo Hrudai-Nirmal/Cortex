@@ -5,6 +5,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
+COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -20,6 +21,7 @@ read_json() {
 }
 
 require_command curl
+require_command docker
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Package env file not found: $ENV_FILE" >&2
@@ -54,6 +56,8 @@ printf "%s" "$query_contract" | grep -q '"authentication":"bearer-token"'
 printf "%s" "$query_contract" | grep -q '"traceEventsPathTemplate":"/v1/query/{traceId}/events"'
 printf "%s" "$query_contract" | grep -q '"responseHeaders"'
 printf "%s" "$query_contract" | grep -q '"extensionFields"'
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
+  python -m cortex.worker --check-startup >/dev/null
 
 if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
   curl \

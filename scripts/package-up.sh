@@ -231,6 +231,22 @@ print_compose_diagnostics() {
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=40 api worker edge >&2 || true
 }
 
+wait_for_worker_startup_check() {
+  local max_attempts="${1:-20}"
+
+  for _ in $(seq 1 "$max_attempts"); do
+    if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
+      python -m cortex.worker --check-startup >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Timed out waiting for the worker startup check to pass." >&2
+  print_compose_diagnostics
+  exit 1
+}
+
 require_command docker
 require_command curl
 
@@ -306,6 +322,7 @@ assert_surface_header "$CORTEX_QUERY_HOST" "query"
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"
 wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"
+wait_for_worker_startup_check
 
 echo "Package is up."
 echo "Console URL: ${CORTEX_CONSOLE_PUBLIC_URL}"

@@ -5,6 +5,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
+COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -86,7 +87,18 @@ PY
   fi
 }
 
+print_worker_status() {
+  if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
+    python -m cortex.worker --check-startup >/dev/null 2>&1; then
+    echo "worker startup: ready"
+  else
+    echo "worker startup: blocked"
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=20 worker 2>/dev/null || true
+  fi
+}
+
 require_command curl
+require_command docker
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Package env file not found: $ENV_FILE" >&2
@@ -117,3 +129,4 @@ print_health "console ready" "$ready_payload"
 print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
 print_contract_summary "$query_contract_payload"
+print_worker_status

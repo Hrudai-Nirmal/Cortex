@@ -131,8 +131,10 @@ The package now includes:
 - a startup object-storage read/write probe so mis-mounted persistent volumes fail with a precise operator message instead of a later ingestion surprise
 - runtime health warns when the package is still using fixture auth so operators do not confuse evaluation identity with a real client auth rollout
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
+- package verification that also runs the worker startup check so durable job readiness is proven alongside API/browser readiness
 - package verification that checks query-contract route and abstention headers so third-party chat shells can rely on the packaged facade behavior
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
+- package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
 - package status now prints the live query-contract version, route set, abstention evidence states, and response headers from `GET /v1/chat/contracts/v1`
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:

@@ -134,9 +134,12 @@ The packaged operator scripts now verify the split-host contract directly:
   and the query host emits `X-Cortex-Surface: query`
 - `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints
 - `package:up` prints `docker compose ps` plus recent `api`/`worker`/`edge` logs when the package still fails to reach a healthy state
+- `package:up` also waits for the worker startup-check contract to pass before declaring the package ready
 - `package:status` prints both routed health views plus the observed surface identity
+- `package:status` prints the worker startup-check result from the running package
 - `package:status` also prints the live external query-contract summary exported by the query host
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- `package:verify` confirms the worker startup-check contract passes inside the running package
 - `package:verify` confirms the replacement-query facade emits stable Cortex contract headers for trace, evidence status, route, and abstention
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`
 

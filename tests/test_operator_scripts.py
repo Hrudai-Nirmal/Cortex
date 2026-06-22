@@ -78,6 +78,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"endpointPath":"/v1/chat/completions"' in verifyText
     assert '"authentication":"bearer-token"' in verifyText
     assert '"traceEventsPath"' in verifyText
+    assert 'docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \\' in verifyText
+    assert 'python -m cortex.worker --check-startup >/dev/null' in verifyText
 
 
 def testPackageUpPrintsStructuredStartupFailures() -> None:
@@ -111,6 +113,8 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
+    assert 'wait_for_worker_startup_check' in scriptText
+    assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
     assert 'echo "Package ${label} failed."' in scriptText
     assert 'print_health_failures "$payload"' in scriptText
     assert 'print_compose_diagnostics' in scriptText
@@ -132,3 +136,6 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
     assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
+    assert 'print_worker_status' in scriptText
+    assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
+    assert 'echo "worker startup: ready"' in scriptText
