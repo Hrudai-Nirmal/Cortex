@@ -34,7 +34,7 @@ assistant message in the standard `choices` envelope and adds `x_cortex` metadat
 
 - `contractVersion`
 - `traceId`
-- `traceEventsPath`
+- `traceEventsPath` for elevated operator/debug tooling
 - `route`
 - `correctedQuery`
 - `evidenceStatus`

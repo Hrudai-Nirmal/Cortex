@@ -355,8 +355,9 @@ export function DeveloperConsole() {
                 </div>
                 <p>
                   Contract {EXTERNAL_QUERY_CONTRACT_VERSION} lives at <code>POST /v1/chat/completions</code>.
-                  Replacement UIs should preserve <code>x_cortex.traceId</code>, <code>x_cortex.traceEventsPath</code>,
-                  evidence status, abstention state, and citations from the response payload.
+                  Replacement UIs should preserve <code>x_cortex.traceId</code>, evidence status, abstention state,
+                  and citations from the response payload. <code>x_cortex.traceEventsPath</code> is reserved for
+                  builder-grade trace replay and operator tooling.
                 </p>
               </div>
             </section>

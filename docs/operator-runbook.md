@@ -109,7 +109,7 @@ The package also runs database migrations before `api` and `worker` proceed.
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata
-  - contract identity includes `traceEventsPath` for persisted SSE progress handoff
+  - contract identity includes `traceEventsPath` for persisted builder/operator trace replay
 
 ## What `package:status` and `package:logs` do
 
@@ -158,6 +158,7 @@ When clients use their own chat UI:
 - call `POST /v1/chat/completions`
 - render citations from `x_cortex.citations`
 - preserve `x_cortex.traceId` for feedback and support workflows
+- treat `x_cortex.traceEventsPath` as operator-only trace correlation unless the client intentionally runs an elevated builder/debug integration
 
 The custom query UI must not send raw access-scope principals from the browser. Cortex
 derives scope from the authenticated user token.

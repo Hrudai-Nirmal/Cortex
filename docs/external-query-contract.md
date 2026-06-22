@@ -50,7 +50,8 @@ Notes:
 - Cortex currently uses the last non-empty `user` message as the deterministic query input.
 - `stream=true` is not supported on this facade.
 - Stage progress remains available through persisted trace events rather than token streaming.
-- Client shells that want progress should subscribe to `GET /v1/query/{traceId}/events` after the completion returns.
+- `GET /v1/query/{traceId}/events` is a builder/operator trace surface, not an employee-client browser API.
+- Replacement employee chat shells should use the returned `traceId` for correlation, feedback, and support escalation rather than attempting to replay trace events directly.
 
 ## Response
 
@@ -97,7 +98,7 @@ Response headers:
 
 - `contractVersion`: stable extension-contract version for replacement query shells
 - `traceId`: stable execution identifier for audit, feedback, and developer trace lookup
-- `traceEventsPath`: SSE path for persisted stage progress on the same Cortex host
+- `traceEventsPath`: persisted SSE trace path for elevated builder/operator tooling on the same Cortex host
 - `route`: `rag`, `compute`, or `retrieve-then-compute`
 - `correctedQuery`: spelling-corrected query when Cortex used one materially
 - `evidenceStatus`: `sufficient`, `partial`, `insufficient`, or `conflict`
@@ -115,6 +116,7 @@ Response headers:
   especially when Cortex returns `partial`, `insufficient`, or `conflict`.
 - Store `x_cortex.traceId` with user feedback so operators can reconcile query outcomes in the console.
 - Expect `x_cortex.contractVersion === "v1"` before relying on this extension shape.
+- Treat `x_cortex.traceEventsPath` as an operator/debug correlation pointer. Do not call it directly from a standard employee-facing replacement UI unless that client is intentionally running with builder-grade identity and permissions.
 - Use the returned `traceId` to fetch persisted trace detail from the fixed developer console rather than recreating hidden pipeline state in the client UI.
 
 ## Replacement UI checklist
@@ -125,6 +127,7 @@ Response headers:
 - Render `x_cortex.citations` and `x_cortex.evidenceStatus` as the evidence boundary.
 - Treat `x_cortex.abstained=true` as an intentional no-answer outcome, not a transport failure.
 - Persist `x_cortex.traceId` anywhere the client captures user feedback or support tickets.
+- Do not depend on direct access to `x_cortex.traceEventsPath` from the employee browser surface.
 
 ## Non-goals of this contract
 
