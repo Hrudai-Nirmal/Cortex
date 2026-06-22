@@ -161,6 +161,10 @@ Each runtime component now includes:
 - `detail`: the observed runtime state
 - `remediation`: the next concrete operator action
 
+The readiness payload now includes a `model-profile` component so operators can confirm
+the declared generator model, embedding model, and required accelerator alongside the
+rest of the deployment checks.
+
 An empty website allowlist no longer blocks package readiness. Cortex reports it as an
 uploads-only deployment and tells operators how to enable allowlisted website ingestion.
 

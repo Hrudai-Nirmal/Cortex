@@ -89,6 +89,9 @@ network policy without waiting for PostgreSQL or Ollama round trips.
 
 Both health endpoints return per-component `severity`, `detail`, and `remediation`
 fields so operators and the fixed console show the same troubleshooting guidance.
+Those components now include the declared packaged model profile as well, so operators
+can verify which generator, embedding model, and required accelerator a deployment is
+advertising before they debug deeper runtime failures.
 
 The packaged operator scripts now verify the split-host contract directly:
 

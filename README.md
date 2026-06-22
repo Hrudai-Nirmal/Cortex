@@ -101,6 +101,7 @@ The package now includes:
 - `GET /health/startup` for static deployment validation
 - `GET /health/ready` for database, pgvector, model, storage, and accelerator readiness
 - runtime-health payloads with per-component severity and remediation guidance for operators
+- runtime-health payloads that explicitly declare the packaged generator, embedding, and accelerator profile
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - explicit packaged model-profile declaration for generator, embeddings, and accelerator expectations

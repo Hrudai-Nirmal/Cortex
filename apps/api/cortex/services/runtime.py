@@ -32,6 +32,7 @@ class RuntimeHealthService:
         """Aggregate database, local model, object storage, and accelerator readiness."""
         components = [
             self._checkDeploymentConfig(),
+            self._checkModelProfile(),
             await self._checkDatabase(),
             await self._checkOllama(),
             self._checkModelEndpointPolicy(),
@@ -53,6 +54,7 @@ class RuntimeHealthService:
         """Expose static startup checks that do not require remote dependency round trips."""
         components = [
             self._checkDeploymentConfig(),
+            self._checkModelProfile(),
             self._checkModelEndpointPolicy(),
             self._checkObjectStorage(),
             self._checkAccelerator(),
@@ -199,6 +201,23 @@ class RuntimeHealthService:
                 "Point CORTEX_OLLAMA_BASE_URL at a local or private endpoint, or set "
                 "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=true only after explicitly approving "
                 "the outbound model dependency."
+            ),
+        )
+
+    def _checkModelProfile(self) -> RuntimeComponentSchema:
+        """Expose the declared generator, embedding, and accelerator profile to operators."""
+        return self._buildComponent(
+            name="model-profile",
+            status="ready",
+            severity="info",
+            detail=(
+                f"generator={self.settings.generatorModel}, "
+                f"embedding={self.settings.embeddingModel}, "
+                f"requiredAccelerator={self.settings.requiredAccelerator}"
+            ),
+            remediation=(
+                "Keep this profile aligned with the client deployment agreement and the "
+                "locally available model artifacts before promoting the package."
             ),
         )
 

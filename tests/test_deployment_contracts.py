@@ -122,6 +122,34 @@ async def testStartupHealthAllowsExplicitRemoteModelEndpoints() -> None:
 
 
 @pytest.mark.asyncio
+async def testStartupHealthReportsDeclaredModelProfile() -> None:
+    """Operators should be able to see the packaged generator, embedding, and accelerator profile."""
+    settings = buildPackageSettings(
+        generatorModel="qwen3:8b",
+        embeddingModel="qwen3-embedding:0.6b",
+        requiredAccelerator="cpu",
+    )
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    profileComponent = next(
+        component for component in runtimeHealth.components if component.name == "model-profile"
+    )
+    assert profileComponent.status == "ready"
+    assert profileComponent.severity == "info"
+    assert "generator=qwen3:8b" in profileComponent.detail
+    assert "embedding=qwen3-embedding:0.6b" in profileComponent.detail
+    assert "requiredAccelerator=cpu" in profileComponent.detail
+    assert profileComponent.remediation is not None
+
+
+@pytest.mark.asyncio
 async def testStartupHealthFlagsObjectStorageWriteFailures(tmp_path: pytest.TempPathFactory) -> None:
     """Packages should report an operator-facing error when object storage is not writable."""
     blockedPath = tmp_path / "blocked-root"
