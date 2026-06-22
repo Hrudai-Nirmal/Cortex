@@ -61,6 +61,8 @@ Domain values are deployment-critical and must be supplied by the operator:
 
 Model-profile values are also deployment-critical in the packaged flow:
 
+- `CORTEX_ENVIRONMENT=production`
+- `CORTEX_DEV_MODE=false`
 - `CORTEX_GENERATOR_MODEL`
 - `CORTEX_EMBEDDING_MODEL`
 - `CORTEX_REQUIRED_ACCELERATOR`

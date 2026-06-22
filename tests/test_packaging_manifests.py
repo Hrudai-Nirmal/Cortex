@@ -49,6 +49,8 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     composeText = (
         Path(__file__).resolve().parents[1] / "docker-compose.package.yml"
     ).read_text(encoding="utf-8")
+    assert composeText.count("CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}") >= 3
+    assert composeText.count("CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}") >= 3
     assert "CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}" in composeText
     assert composeText.count("CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}") >= 3
 
@@ -79,6 +81,8 @@ def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
         assert f'"name": "{containerName}"' in taskDefinitionText
     assert '"sourceVolume": "cortex-object-storage"' in taskDefinitionText
     assert '"containerPath": "/var/lib/cortex/object-storage"' in taskDefinitionText
+    assert '"CORTEX_ENVIRONMENT", "value": "production"' in taskDefinitionText
+    assert '"CORTEX_DEV_MODE", "value": "false"' in taskDefinitionText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in taskDefinitionText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText
 
@@ -91,5 +95,7 @@ def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:
     assert '"name": "migrate"' in migrationTaskText
     assert '"command": ["alembic", "upgrade", "head"]' in migrationTaskText
     assert '"containerPath": "/var/lib/cortex/object-storage"' in migrationTaskText
+    assert '"CORTEX_ENVIRONMENT", "value": "production"' in migrationTaskText
+    assert '"CORTEX_DEV_MODE", "value": "false"' in migrationTaskText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in migrationTaskText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in migrationTaskText

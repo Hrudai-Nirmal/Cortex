@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: cortex-config
 data:
+  CORTEX_ENVIRONMENT: production
+  CORTEX_DEV_MODE: "false"
   CORTEX_AUTH_MODE: fixture
   CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: "false"
   CORTEX_REQUIRED_ACCELERATOR: cpu

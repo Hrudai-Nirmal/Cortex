@@ -105,6 +105,7 @@ The package now includes:
 - container and ingress examples with readiness/liveness probes
 - explicit host/public URL configuration for both browser surfaces
 - explicit packaged model-profile declaration for generator, embeddings, and accelerator expectations
+- explicit packaged production-profile declaration so client bundles do not inherit development-mode defaults
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy

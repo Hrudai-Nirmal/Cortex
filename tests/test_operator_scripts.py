@@ -31,6 +31,8 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
     rootDirectory = Path(__file__).resolve().parents[1]
     exampleText = (rootDirectory / ".env.package.example").read_text(encoding="utf-8")
     for requiredName in (
+        "CORTEX_ENVIRONMENT",
+        "CORTEX_DEV_MODE",
         "CORTEX_CONSOLE_HOST",
         "CORTEX_QUERY_HOST",
         "CORTEX_CONSOLE_PUBLIC_URL",
@@ -49,6 +51,8 @@ def testPackageEnvExampleDefaultsToOfflineCapableModelPolicy() -> None:
     """The package env example should default to a local model endpoint with remote access off."""
     rootDirectory = Path(__file__).resolve().parents[1]
     exampleText = (rootDirectory / ".env.package.example").read_text(encoding="utf-8")
+    assert "CORTEX_ENVIRONMENT=production" in exampleText
+    assert "CORTEX_DEV_MODE=false" in exampleText
     assert "CORTEX_OLLAMA_BASE_URL=http://ollama:11434" in exampleText
     assert "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=false" in exampleText
 
@@ -71,6 +75,10 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     """Package bootstrap should surface failing health components instead of a generic timeout."""
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
+    assert 'require_env CORTEX_ENVIRONMENT' in scriptText
+    assert 'require_env CORTEX_DEV_MODE' in scriptText
+    assert 'require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production' in scriptText
+    assert 'require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false' in scriptText
     assert 'require_env CORTEX_GENERATOR_MODEL' in scriptText
     assert 'require_env CORTEX_EMBEDDING_MODEL' in scriptText
     assert 'require_env CORTEX_REQUIRED_ACCELERATOR' in scriptText

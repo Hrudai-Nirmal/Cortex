@@ -28,6 +28,8 @@
         }
       ],
       "environment": [
+        { "name": "CORTEX_ENVIRONMENT", "value": "production" },
+        { "name": "CORTEX_DEV_MODE", "value": "false" },
         { "name": "CORTEX_AUTH_MODE", "value": "fixture" },
         { "name": "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT", "value": "false" },
         { "name": "CORTEX_REQUIRED_ACCELERATOR", "value": "cpu" },
@@ -64,6 +66,8 @@
       "essential": true,
       "command": ["python", "-m", "cortex.worker"],
       "environment": [
+        { "name": "CORTEX_ENVIRONMENT", "value": "production" },
+        { "name": "CORTEX_DEV_MODE", "value": "false" },
         { "name": "CORTEX_AUTH_MODE", "value": "fixture" },
         { "name": "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT", "value": "false" },
         { "name": "CORTEX_REQUIRED_ACCELERATOR", "value": "cpu" },

@@ -99,6 +99,7 @@ pnpm package:verify
 Before starting containers, the script validates:
 
 - env file presence
+- production package profile (`CORTEX_ENVIRONMENT=production`, `CORTEX_DEV_MODE=false`)
 - required domain variables
 - required model-profile variables
 - distinct console/query hosts
