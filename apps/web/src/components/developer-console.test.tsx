@@ -87,7 +87,7 @@ describe("DeveloperConsole", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            status: "degraded",
+            status: "ready",
             environment: "development",
             components: [
               {
@@ -98,6 +98,24 @@ describe("DeveloperConsole", () => {
                   "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
                 remediation: null,
               },
+              {
+                name: "object-storage",
+                status: "ready",
+                severity: "info",
+                detail: "/var/lib/cortex/object-storage (read/write probe ok)",
+                remediation: null,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "degraded",
+            environment: "development",
+            components: [
               {
                 name: "model-profile",
                 status: "ready",
@@ -278,6 +296,9 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Package build profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
+    expect(screen.getByText("Startup contract")).toBeVisible();
+    expect(screen.getByText("Live readiness")).toBeVisible();
+    expect(screen.getByText("Static package startup contract is satisfied.")).toBeVisible();
     expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);
     expect(
       screen.getAllByText(
@@ -294,7 +315,7 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7));
   });
 
   it("keeps the console usable when the external query contract endpoint is unavailable", async () => {
@@ -317,6 +338,32 @@ describe("DeveloperConsole", () => {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "degraded",
+            environment: "production",
+            components: [
+              {
+                name: "deployment-config",
+                status: "ready",
+                severity: "info",
+                detail:
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                remediation: null,
+              },
+              {
+                name: "object-storage",
+                status: "unavailable",
+                severity: "error",
+                detail: "object storage root is not writable",
+                remediation: "Mount a writable persistent volume before boot.",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
       )
       .mockResolvedValueOnce(
         new Response(
@@ -373,6 +420,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Some operator data is unavailable: Query contract: Request failed with status 503")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Surface deployment contract")).toBeVisible();
+    expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
+    expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
     expect(screen.getByText("The live replacement-query contract descriptor is unavailable.")).toBeVisible();
   });

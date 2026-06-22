@@ -17,6 +17,7 @@ import {
   getLatestTrace,
   getPipelineVersions,
   getRuntimeHealth,
+  getStartupHealth,
   getSession,
   subscribeToTraceEvents,
   validatePipeline,
@@ -163,6 +164,10 @@ function buildLoadWarnings(loadFailures: string[]): string | null {
   return `Some operator data is unavailable: ${loadFailures.join(" | ")}`;
 }
 
+function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
+  return runtimeHealth?.components.filter((component) => component.status !== "ready") ?? [];
+}
+
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
 export function DeveloperConsole() {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
@@ -170,6 +175,7 @@ export function DeveloperConsole() {
   const [publishState, setPublishState] = useState<"saved" | "validating" | "publishing" | "published">("saved");
   const [pipeline, setPipeline] = useState<PipelineGraph | null>(null);
   const [pipelineVersions, setPipelineVersions] = useState<PipelineVersionSummary[]>([]);
+  const [startupHealth, setStartupHealth] = useState<RuntimeHealth | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
   const [queryContract, setQueryContract] = useState<ExternalQueryContractDescriptor | null>(
@@ -182,23 +188,33 @@ export function DeveloperConsole() {
   const traceSubscriptionRef = useRef<(() => void) | null>(null);
   const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
   const displayedEvents = tracePlayback.length > 0 ? tracePlayback : latestTrace?.stageEvents ?? [];
-  const runtimeAlerts = runtimeHealth?.components.filter(
-    (component) => component.status !== "ready",
-  ) ?? [];
+  const startupAlerts = getNonReadyComponents(startupHealth);
+  const runtimeAlerts = getNonReadyComponents(runtimeHealth);
   const modelProfile = findRuntimeComponent(runtimeHealth, "model-profile");
   const packageBuildProfile = findRuntimeComponent(runtimeHealth, "package-build-profile");
   const identityProfile = findRuntimeComponent(runtimeHealth, "identity-profile");
-  const deploymentConfig = findRuntimeComponent(runtimeHealth, "deployment-config");
+  const deploymentConfig =
+    findRuntimeComponent(startupHealth, "deployment-config")
+    ?? findRuntimeComponent(runtimeHealth, "deployment-config");
   const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
   const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
   const activeVersion = pipelineVersions.find((version) => version.status === "active") ?? null;
 
   const loadConsole = useCallback(async (): Promise<void> => {
     try {
-      const [activePipelineResult, versionsResult, healthResult, traceResult, contractResult, sessionResult] =
+      const [
+        activePipelineResult,
+        versionsResult,
+        startupHealthResult,
+        healthResult,
+        traceResult,
+        contractResult,
+        sessionResult,
+      ] =
         await Promise.allSettled([
         getActivePipeline(ENTERPRISE_ID),
         getPipelineVersions(ENTERPRISE_ID),
+        getStartupHealth(),
         getRuntimeHealth(),
         getLatestTrace(ENTERPRISE_ID),
         getExternalQueryContract(),
@@ -214,6 +230,11 @@ export function DeveloperConsole() {
         setPipelineVersions(versionsResult.value);
       } else {
         loadFailures.push(`Versions: ${versionsResult.reason instanceof Error ? versionsResult.reason.message : "load failed"}`);
+      }
+      if (startupHealthResult.status === "fulfilled") {
+        setStartupHealth(startupHealthResult.value);
+      } else {
+        loadFailures.push(`Startup health: ${startupHealthResult.reason instanceof Error ? startupHealthResult.reason.message : "load failed"}`);
       }
       if (healthResult.status === "fulfilled") {
         setRuntimeHealth(healthResult.value);
@@ -341,12 +362,14 @@ export function DeveloperConsole() {
   const effectiveConsoleUrl = deployedSurfaceConfig.consoleUrl ?? consolePublicUrl;
   const effectiveQueryUrl = deployedSurfaceConfig.queryUrl ?? queryPublicUrl;
   const surfaceDeploymentChecks = buildSurfaceDeploymentChecks(
-    runtimeHealth?.environment,
+    startupHealth?.environment ?? runtimeHealth?.environment,
     effectiveConsoleUrl,
     effectiveQueryUrl,
     deployedSurfaceConfig.startupPolicy,
     queryContract,
   );
+  const packageReadinessStatus = startupHealth?.status ?? "loading";
+  const liveReadinessStatus = runtimeHealth?.status ?? "loading";
   const latestTraceEventsPath = latestTrace
     ? `/v1/query/${latestTrace.traceId}/events`
     : "/v1/query/{traceId}/events";
@@ -376,7 +399,8 @@ export function DeveloperConsole() {
           <button className={activeTab === tab ? "is-active" : ""} type="button" key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>
         ))}
         <div className="metric-strip">
-          <span><small>Runtime</small><strong>{runtimeHealth?.status ?? "loading"}</strong></span>
+          <span><small>Startup</small><strong>{packageReadinessStatus}</strong></span>
+          <span><small>Runtime</small><strong>{liveReadinessStatus}</strong></span>
           <span><small>Components</small><strong>{runtimeSummary ?? "checking"}</strong></span>
           <span><small>Alerts</small><strong>{runtimeAlerts.length}</strong></span>
           <span><small>Top-K</small><strong>{pipeline?.rerankTopK ?? 40}</strong></span>
@@ -503,7 +527,84 @@ export function DeveloperConsole() {
               <div className="section-heading">
                 <ShieldCheck aria-hidden size={18} />
                 <strong>Deployment readiness</strong>
-                <span>{runtimeHealth?.status ?? "loading"}</span>
+                <span>{liveReadinessStatus}</span>
+              </div>
+              <div className="metric-strip" style={{ marginBottom: 16 }}>
+                <span><small>Startup</small><strong>{packageReadinessStatus}</strong></span>
+                <span><small>Live</small><strong>{liveReadinessStatus}</strong></span>
+                <span><small>Startup blockers</small><strong>{startupAlerts.length}</strong></span>
+                <span><small>Live blockers</small><strong>{runtimeAlerts.length}</strong></span>
+              </div>
+              {startupAlerts.length > 0 ? (
+                <div className="query-error" role="alert" style={{ marginBottom: 16 }}>
+                  <WarningCircle aria-hidden size={18} />
+                  <div>
+                    <strong>Fail-closed startup gate</strong>
+                    <span>
+                      Packaged production boot should stop until these startup checks are clean:{" "}
+                      {startupAlerts
+                        .map((component) =>
+                          component.remediation
+                            ? `${component.name}: ${component.detail} Remediation: ${component.remediation}`
+                            : `${component.name}: ${component.detail}`,
+                        )
+                        .join(" | ")}
+                    </span>
+                  </div>
+                </div>
+              ) : startupHealth ? (
+                <div className="toast" style={{ position: "static", marginBottom: 16 }}>
+                  <CheckCircle weight="fill" /> Static package startup contract is satisfied.
+                </div>
+              ) : null}
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <ShieldCheck aria-hidden size={18} />
+                  <strong>Startup contract</strong>
+                </div>
+                <p>
+                  These checks define whether a packaged production API should boot at all. They
+                  cover split-host configuration, public URLs, object storage, parser dependencies,
+                  accelerator expectations, and offline model-endpoint policy before live database
+                  or Ollama dependency checks begin.
+                </p>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th>Status</th>
+                    <th>Severity</th>
+                    <th>Detail</th>
+                    <th>Remediation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {startupHealth?.components.length ? (
+                    startupHealth.components.map((component) => (
+                      <tr key={component.name}>
+                        <td>{component.name}</td>
+                        <td>{component.status}</td>
+                        <td>{component.severity}</td>
+                        <td>{component.detail}</td>
+                        <td>{component.remediation ?? "—"}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={5}>Startup readiness is still loading.</td></tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="source-form-card" style={{ marginTop: 16, marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Live readiness</strong>
+                </div>
+                <p>
+                  These checks confirm the running package can actually serve and process work:
+                  PostgreSQL/pgvector connectivity, model endpoint reachability, object storage
+                  access, and other live runtime dependencies.
+                </p>
               </div>
               <table>
                 <thead>

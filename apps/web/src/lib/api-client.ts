@@ -241,6 +241,11 @@ export async function getRuntimeHealth(): Promise<RuntimeHealth> {
   return fetchJson<RuntimeHealth>("/health/ready");
 }
 
+/** Check the static package startup contract without touching live dependencies. */
+export async function getStartupHealth(): Promise<RuntimeHealth> {
+  return fetchJson<RuntimeHealth>("/health/startup");
+}
+
 /** Load the current source inventory shown in the developer operations surface. */
 export async function getSources(enterpriseId: string): Promise<SourceSummary[]> {
   return fetchJson<SourceSummary[]>(`/v1/sources?enterpriseId=${enterpriseId}`);

@@ -41,6 +41,8 @@ The console settings view now foregrounds:
 - live replacement-query contract metadata from the running API
 - one surface-deployment contract table that makes split-host isolation, startup policy,
   and replacement-query contract availability explicit in a single operator view
+- distinct startup-contract and live-readiness sections so operators can see whether
+  Cortex should fail closed during packaged boot or whether a dependency degraded after boot
 
 ## Required host split
 

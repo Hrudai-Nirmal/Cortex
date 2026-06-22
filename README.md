@@ -91,6 +91,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 - The console trace lane now also exposes ranked retrieved evidence rows so operators can inspect which source chunks actually drove a response without leaving the fixed console.
 - The console settings lane now surfaces the packaged model profile and identity profile directly, not only as rows in the readiness table.
 - The console settings lane now reads the live external query contract descriptor so operators can verify the exact third-party chat integration boundary from the running package.
+- The console settings lane now also separates the fail-closed startup contract from live runtime readiness, so operators can distinguish static package boot blockers from live dependency regressions without leaving the fixed console.
 - Supported source formats: PDF, DOCX, HTML, TXT/Markdown, and CSV.
 - Uploads are stored once by raw SHA-256 beneath `CORTEX_OBJECT_STORAGE_ROOT`, then ingested through durable jobs.
 - Single-page website ingestion is restricted to `CORTEX_WEBSITE_ALLOWLIST`.

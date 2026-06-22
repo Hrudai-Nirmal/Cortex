@@ -123,6 +123,9 @@ Those components now include the declared packaged model and identity profiles a
 the packaged Torch wheel/build profile, so operators can verify which generator,
 embedding model, required accelerator, auth mode, issuer, audience, and container build
 channel a deployment is advertising before they debug deeper runtime failures.
+The fixed console now consumes both `startup` and `ready` directly, which keeps
+fail-closed package boot checks distinct from live runtime dependency drift in the
+operator UI.
 If that identity profile is still `fixture` in a packaged production-style deployment,
 the runtime health payload surfaces it as a warning rather than silently treating it as
 production-ready authentication.
