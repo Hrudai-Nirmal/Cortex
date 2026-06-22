@@ -921,6 +921,8 @@ export interface components {
             availableAt: string;
             /** Lockedat */
             lockedAt: string | null;
+            /** Updatedat */
+            updatedAt: string;
             /** Lasterror */
             lastError: string | null;
             /** Documentid */

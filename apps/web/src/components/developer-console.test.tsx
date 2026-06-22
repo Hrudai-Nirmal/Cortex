@@ -91,6 +91,14 @@ describe("DeveloperConsole", () => {
             environment: "development",
             components: [
               {
+                name: "deployment-config",
+                status: "ready",
+                severity: "info",
+                detail:
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                remediation: null,
+              },
+              {
                 name: "model-profile",
                 status: "ready",
                 severity: "info",
@@ -278,10 +286,94 @@ describe("DeveloperConsole", () => {
     ).toHaveLength(2);
     expect(screen.getAllByText("authMode=fixture, oidcIssuer=https://cortex.local/oidc, oidcAudience=cortex")).toHaveLength(2);
     expect(screen.getByText("Surface routing")).toBeVisible();
+    expect(screen.getByText("Surface deployment contract")).toBeVisible();
+    expect(screen.getByText("Browser host split")).toBeVisible();
+    expect(screen.getByText("Startup policy")).toBeVisible();
+    expect(screen.getByText("Query contract handshake")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+  });
+
+  it("keeps the console usable when the external query contract endpoint is unavailable", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            name: "Enterprise evidence pipeline",
+            version: 3,
+            status: "active",
+            rerankTopK: 40,
+            nodes: [],
+            edges: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "ready",
+            environment: "production",
+            components: [
+              {
+                name: "deployment-config",
+                status: "ready",
+                severity: "info",
+                detail:
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                remediation: null,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(null), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Request failed with status 503" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            enterpriseId: "00000000-0000-0000-0000-000000000001",
+            actorId: "alex.rivera@example.com",
+            subject: "alex.rivera@example.com",
+            email: "alex.rivera@example.com",
+            displayName: "Alex Rivera",
+            groups: ["group:employees", "group:platform-admins"],
+            roles: ["admin", "builder"],
+            principalIds: ["group:employees", "group:platform-admins", "role:admin", "role:builder"],
+            isAdmin: true,
+            isBuilder: true,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+    render(<DeveloperConsole />);
+
+    expect(await screen.findByRole("heading", { name: "Enterprise evidence pipeline" })).toBeVisible();
+    expect(screen.getByText("Some operator data is unavailable: Query contract: Request failed with status 503")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Surface deployment contract")).toBeVisible();
+    expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
+    expect(screen.getByText("The live replacement-query contract descriptor is unavailable.")).toBeVisible();
   });
 });

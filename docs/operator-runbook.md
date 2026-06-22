@@ -39,6 +39,8 @@ The console settings view now foregrounds:
 - packaged build profile
 - packaged identity profile
 - live replacement-query contract metadata from the running API
+- one surface-deployment contract table that makes split-host isolation, startup policy,
+  and replacement-query contract availability explicit in a single operator view
 
 ## Required host split
 
@@ -164,6 +166,11 @@ examples wire that into their worker health signals.
 - `package:status` prints the current `startup` and `ready` component states for the console host,
   query host, routed surface identity, worker startup-check result, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
+
+The fixed console now mirrors that packaging story more directly: even if one settings-side
+endpoint such as `GET /v1/chat/contracts/v1` is temporarily unavailable, the operator surface
+still loads and surfaces the missing dependency as a degraded deployment-contract check instead
+of failing closed on the entire browser UI.
 
 ## Health endpoints
 

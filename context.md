@@ -28,6 +28,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - The developer console trace view now includes validated answer preview plus persisted claims, support status, and citation linkage instead of only stage counts and citation totals.
 - The developer console trace view now also exposes persisted retrieved-evidence rows with source, locator, and ranking scores so operators can inspect the actual chunks behind a response.
 - The developer console settings view now foregrounds packaged model and identity profiles so operators can confirm deployment intent without scanning the raw readiness table.
+- The developer console now tolerates partial settings-side API failures instead of blanking the whole surface, and its settings lane adds a first-class surface-deployment contract summary for split-host isolation, startup policy, and live query-contract availability.
 - Multi-image frontend packaging with separate console/query Vite builds, static frontend Docker images, edge Nginx host routing, and package/Kubernetes deployment manifests.
 - The Kubernetes package example now models client-owned domains, shared non-secret config, secret injection, and persistent object storage instead of baking in development hostnames.
 - External query-surface contract through an OpenAI-compatible `/v1/chat/completions` facade that derives access scope from authenticated identity and returns `x_cortex` evidence metadata, a stable contract version, an operator-oriented trace-events path, and trace-oriented response headers.
@@ -59,6 +60,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package bootstrap now prints Compose service state plus recent `api`/`worker`/`edge` logs when startup still fails after boot, which makes direct client-package debugging much less opaque.
 - The worker now also exposes a dedicated `--check-startup` probe path, and the shipped Compose/Kubernetes/ECS manifests use it so orchestrators can gate durable job execution on real runtime readiness instead of process existence alone.
 - Package operator tooling now also runs and reports that worker startup-check contract directly during `package:up`, `package:status`, and `package:verify`, so packaged job safety is visible alongside split-host/API readiness.
+- Durable job detail now exposes its persisted `updatedAt` timestamp through the API contract so the developer jobs lane can render a truthful last-updated value without type drift.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

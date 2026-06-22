@@ -59,6 +59,110 @@ const inspectorContent: Record<string, { title: string; type: string; detail: st
   abstain: { title: "Insufficient Evidence", type: "Answer policy", detail: "Return no answer when no independently supported claim passes its gate" },
 };
 
+interface SurfaceDeploymentCheck {
+  label: string;
+  status: "ready" | "degraded";
+  detail: string;
+  remediation: string;
+}
+
+function findRuntimeComponent(
+  runtimeHealth: RuntimeHealth | null,
+  componentName: string,
+) {
+  return runtimeHealth?.components.find((component) => component.name === componentName) ?? null;
+}
+
+function getUrlOrigin(urlValue: string): string | null {
+  try {
+    return new URL(urlValue).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isRootUrl(urlValue: string): boolean {
+  try {
+    const resolvedUrl = new URL(urlValue);
+    return resolvedUrl.pathname === "/" || resolvedUrl.pathname === "";
+  } catch {
+    return false;
+  }
+}
+
+function parseDeploymentConfig(
+  detail: string | undefined,
+): { consoleUrl: string | null; queryUrl: string | null; startupPolicy: string | null } {
+  if (!detail) {
+    return { consoleUrl: null, queryUrl: null, startupPolicy: null };
+  }
+  const consoleMatch = detail.match(/console=([^,]+), query=/);
+  const queryMatch = detail.match(/query=([^,]+), cors=/);
+  const startupPolicyMatch = detail.match(/startupPolicy=([^,]+)/);
+  return {
+    consoleUrl: consoleMatch?.[1] ?? null,
+    queryUrl: queryMatch?.[1] ?? null,
+    startupPolicy: startupPolicyMatch?.[1] ?? null,
+  };
+}
+
+function buildSurfaceDeploymentChecks(
+  environment: string | undefined,
+  consoleUrl: string,
+  queryUrl: string,
+  startupPolicy: string | null,
+  queryContract: ExternalQueryContractDescriptor | null,
+): SurfaceDeploymentCheck[] {
+  const consoleOrigin = getUrlOrigin(consoleUrl);
+  const queryOrigin = getUrlOrigin(queryUrl);
+  const hasDistinctOrigins =
+    Boolean(consoleOrigin) && Boolean(queryOrigin) && consoleOrigin !== queryOrigin;
+  const hasRootHosts = isRootUrl(consoleUrl) && isRootUrl(queryUrl);
+  const requiresFailClosed = environment === "production";
+
+  return [
+    {
+      label: "Browser host split",
+      status: hasDistinctOrigins && hasRootHosts ? "ready" : "degraded",
+      detail: hasDistinctOrigins
+        ? `Console ${consoleOrigin} and query ${queryOrigin} stay isolated as separate browser origins.`
+        : "Console and query surfaces are not isolated on distinct browser origins.",
+      remediation: hasDistinctOrigins && hasRootHosts
+        ? "Keep both browser surfaces routed at host roots so client DNS and ingress rules remain unambiguous."
+        : "Configure distinct root-host public URLs for the console and query images before shipping the client package.",
+    },
+    {
+      label: "Startup policy",
+      status:
+        !requiresFailClosed || startupPolicy === "fail-closed" ? "ready" : "degraded",
+      detail: startupPolicy
+        ? `Deployment startup policy is ${startupPolicy}.`
+        : "Deployment startup policy is not visible in runtime health.",
+      remediation:
+        !requiresFailClosed || startupPolicy === "fail-closed"
+          ? "Keep fail-closed startup enabled for packaged production rollouts and report-only for local development profiles."
+          : "Production packages must expose startupPolicy=fail-closed so degraded runtime dependencies stop boot instead of serving partial state.",
+    },
+    {
+      label: "Query contract handshake",
+      status: queryContract ? "ready" : "degraded",
+      detail: queryContract
+        ? `Contract ${queryContract.contractVersion} advertises ${queryContract.method} ${queryContract.endpointPath} with ${queryContract.authentication} authentication.`
+        : "The live replacement-query contract descriptor is unavailable.",
+      remediation: queryContract
+        ? "Replacement chat shells should validate the live contract descriptor before trusting the deployed query surface."
+        : "Restore GET /v1/chat/contracts/v1 so bundled and client-owned query UIs can verify the live Cortex contract before sending traffic.",
+    },
+  ];
+}
+
+function buildLoadWarnings(loadFailures: string[]): string | null {
+  if (loadFailures.length === 0) {
+    return null;
+  }
+  return `Some operator data is unavailable: ${loadFailures.join(" | ")}`;
+}
+
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
 export function DeveloperConsole() {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
@@ -81,18 +185,18 @@ export function DeveloperConsole() {
   const runtimeAlerts = runtimeHealth?.components.filter(
     (component) => component.status !== "ready",
   ) ?? [];
-  const modelProfile = runtimeHealth?.components.find((component) => component.name === "model-profile") ?? null;
-  const packageBuildProfile =
-    runtimeHealth?.components.find((component) => component.name === "package-build-profile") ?? null;
-  const identityProfile = runtimeHealth?.components.find((component) => component.name === "identity-profile") ?? null;
+  const modelProfile = findRuntimeComponent(runtimeHealth, "model-profile");
+  const packageBuildProfile = findRuntimeComponent(runtimeHealth, "package-build-profile");
+  const identityProfile = findRuntimeComponent(runtimeHealth, "identity-profile");
+  const deploymentConfig = findRuntimeComponent(runtimeHealth, "deployment-config");
   const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
   const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
   const activeVersion = pipelineVersions.find((version) => version.status === "active") ?? null;
 
   const loadConsole = useCallback(async (): Promise<void> => {
     try {
-      const [activePipeline, liveVersions, health, trace, contract, resolvedSession] =
-        await Promise.all([
+      const [activePipelineResult, versionsResult, healthResult, traceResult, contractResult, sessionResult] =
+        await Promise.allSettled([
         getActivePipeline(ENTERPRISE_ID),
         getPipelineVersions(ENTERPRISE_ID),
         getRuntimeHealth(),
@@ -100,13 +204,41 @@ export function DeveloperConsole() {
         getExternalQueryContract(),
         getSession(),
       ]);
-      setPipeline(activePipeline);
-      setPipelineVersions(liveVersions);
-      setRuntimeHealth(health);
-      setLatestTrace(trace);
-      setQueryContract(contract);
-      setSession(resolvedSession);
+      const loadFailures: string[] = [];
+      if (activePipelineResult.status === "fulfilled") {
+        setPipeline(activePipelineResult.value);
+      } else {
+        loadFailures.push(`Pipeline: ${activePipelineResult.reason instanceof Error ? activePipelineResult.reason.message : "load failed"}`);
+      }
+      if (versionsResult.status === "fulfilled") {
+        setPipelineVersions(versionsResult.value);
+      } else {
+        loadFailures.push(`Versions: ${versionsResult.reason instanceof Error ? versionsResult.reason.message : "load failed"}`);
+      }
+      if (healthResult.status === "fulfilled") {
+        setRuntimeHealth(healthResult.value);
+      } else {
+        loadFailures.push(`Runtime health: ${healthResult.reason instanceof Error ? healthResult.reason.message : "load failed"}`);
+      }
+      if (traceResult.status === "fulfilled") {
+        setLatestTrace(traceResult.value);
+      } else {
+        loadFailures.push(`Latest trace: ${traceResult.reason instanceof Error ? traceResult.reason.message : "load failed"}`);
+      }
+      if (contractResult.status === "fulfilled") {
+        setQueryContract(contractResult.value);
+      } else {
+        setQueryContract(null);
+        loadFailures.push(`Query contract: ${contractResult.reason instanceof Error ? contractResult.reason.message : "load failed"}`);
+      }
+      if (sessionResult.status === "fulfilled") {
+        setSession(sessionResult.value);
+      } else {
+        setSession(null);
+        loadFailures.push(`Session: ${sessionResult.reason instanceof Error ? sessionResult.reason.message : "load failed"}`);
+      }
       setTracePlayback([]);
+      setErrorMessage(buildLoadWarnings(loadFailures));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Developer console failed to load");
     }
@@ -205,6 +337,16 @@ export function DeveloperConsole() {
   const latestVersion = pipelineVersions[0] ?? null;
   const consolePublicUrl = getConsolePublicUrl();
   const queryPublicUrl = getQueryPublicUrl();
+  const deployedSurfaceConfig = parseDeploymentConfig(deploymentConfig?.detail);
+  const effectiveConsoleUrl = deployedSurfaceConfig.consoleUrl ?? consolePublicUrl;
+  const effectiveQueryUrl = deployedSurfaceConfig.queryUrl ?? queryPublicUrl;
+  const surfaceDeploymentChecks = buildSurfaceDeploymentChecks(
+    runtimeHealth?.environment,
+    effectiveConsoleUrl,
+    effectiveQueryUrl,
+    deployedSurfaceConfig.startupPolicy,
+    queryContract,
+  );
   const latestTraceEventsPath = latestTrace
     ? `/v1/query/${latestTrace.traceId}/events`
     : "/v1/query/{traceId}/events";
@@ -457,10 +599,36 @@ export function DeveloperConsole() {
                   <strong>Surface routing</strong>
                 </div>
                 <p>
-                  Console host: <code>{consolePublicUrl}</code><br />
-                  Query host: <code>{queryPublicUrl}</code><br />
+                  Console host: <code>{effectiveConsoleUrl}</code><br />
+                  Query host: <code>{effectiveQueryUrl}</code><br />
                   The console stays fixed; the bundled query UI is optional and may be replaced.
                 </p>
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <ShieldCheck aria-hidden size={18} />
+                  <strong>Surface deployment contract</strong>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Check</th>
+                      <th>Status</th>
+                      <th>Detail</th>
+                      <th>Remediation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surfaceDeploymentChecks.map((check) => (
+                      <tr key={check.label}>
+                        <td>{check.label}</td>
+                        <td>{check.status}</td>
+                        <td>{check.detail}</td>
+                        <td>{check.remediation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">

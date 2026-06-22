@@ -401,6 +401,7 @@ class SourceService:
             attempts=row["attempts"],
             availableAt=row["available_at"].astimezone(UTC).isoformat(),
             lockedAt=_formatTimestamp(row["locked_at"]),
+            updatedAt=row["updated_at"].astimezone(UTC).isoformat(),
             lastError=row["last_error"],
             documentId=_extractUuid(payload, "documentId"),
             documentVersionId=_extractUuid(payload, "versionId"),

@@ -394,6 +394,7 @@ class JobStatusResponse(BaseModel):
     attempts: int = Field(ge=0)
     availableAt: str
     lockedAt: str | None
+    updatedAt: str
     lastError: str | None
     documentId: UUID | None
     documentVersionId: UUID | None
