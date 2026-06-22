@@ -7,6 +7,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from cortex.config import getSettings
+from cortex.database_config import applyAlembicDatabaseUrl
 from cortex.models import Base
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -14,8 +15,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-if not config.get_main_option("sqlalchemy.url"):
-    config.set_main_option("sqlalchemy.url", getSettings().databaseUrl)
+applyAlembicDatabaseUrl(config, getSettings())
 target_metadata = Base.metadata
 
 

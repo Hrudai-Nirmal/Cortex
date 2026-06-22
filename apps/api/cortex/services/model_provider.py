@@ -12,6 +12,8 @@ import httpx
 from cortex.errors import InputValidationError, ProviderOperationError
 
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+STRUCTURED_GENERATION_MAX_TOKENS = 256
+STRUCTURED_GENERATION_REASONING_EFFORT = "none"
 
 
 class EmbeddingProvider(Protocol):
@@ -113,6 +115,8 @@ class OllamaModelProvider:
             "temperature": 0,
             "seed": 7,
             "stream": False,
+            "max_tokens": STRUCTURED_GENERATION_MAX_TOKENS,
+            "reasoning_effort": STRUCTURED_GENERATION_REASONING_EFFORT,
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {"name": "cortex_response", "schema": responseSchema},

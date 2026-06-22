@@ -33,8 +33,8 @@ set +a
 
 console_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
 query_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
-console_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
-query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
+console_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
+query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
 
 printf "%s" "$console_html" | grep -qi "<!doctype html"
 printf "%s" "$query_html" | grep -qi "<!doctype html"
@@ -67,9 +67,9 @@ if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
     -H "Content-Type: application/json" \
     -X POST "http://127.0.0.1:${CORTEX_EDGE_PORT}/v1/chat/completions" \
     -d '{"model":"cortex-bounded-rag","messages":[{"role":"user","content":"What are our retentin rules?"}],"stream":false,"cortex":{"showCitations":true}}')"
-  printf "%s" "$chat_response" | grep -q 'X-Cortex-Contract-Version: v1'
-  printf "%s" "$chat_response" | grep -q 'X-Cortex-Trace-Id:'
-  printf "%s" "$chat_response" | grep -q 'X-Cortex-Evidence-Status:'
+  printf "%s" "$chat_response" | grep -qi '^x-cortex-contract-version: v1'
+  printf "%s" "$chat_response" | grep -qi '^x-cortex-trace-id:'
+  printf "%s" "$chat_response" | grep -qi '^x-cortex-evidence-status:'
   printf "%s" "$chat_response" | grep -q '"object":"chat.completion"'
   printf "%s" "$chat_response" | grep -q '"x_cortex"'
   printf "%s" "$chat_response" | grep -q '"contractVersion":"v1"'

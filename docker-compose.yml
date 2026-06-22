@@ -15,7 +15,7 @@ services:
     volumes:
       - cortex-postgres:/var/lib/postgresql/data
   ollama:
-    image: ollama/ollama:0.9.6
+    image: ollama/ollama:0.30.10
     ports:
       - "11434:11434"
     volumes:

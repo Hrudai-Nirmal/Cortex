@@ -464,14 +464,14 @@ class QueryService:
             "properties": {
                 "claims": {
                     "type": "array",
-                    "maxItems": 4,
+                    "maxItems": 2,
                     "items": {
                         "type": "object",
                         "additionalProperties": False,
                         "required": ["chunkId", "text"],
                         "properties": {
                             "chunkId": {"type": "string"},
-                            "text": {"type": "string", "minLength": 1, "maxLength": 700},
+                            "text": {"type": "string", "minLength": 1, "maxLength": 240},
                         },
                     },
                 }
@@ -492,11 +492,14 @@ class QueryService:
             ]
         )
         systemPrompt = (
-            "Return only exact atomic claims copied verbatim from the provided evidence. "
+            "Return only short exact atomic claims copied verbatim from the provided evidence. "
             "Do not paraphrase, infer, or use outside knowledge. Return an empty claims array "
             "when the evidence is weak or conflicting."
         )
-        userPrompt = f"Evidence:\n{evidenceBlock}\n\nReturn up to 4 exact supported claims."
+        userPrompt = (
+            f"Evidence:\n{evidenceBlock}\n\n"
+            "Return up to 2 exact supported claims. Keep each claim under 240 characters."
+        )
         generatedClaims = await self.modelProvider.generateStructured(
             systemPrompt=systemPrompt,
             userPrompt=userPrompt,

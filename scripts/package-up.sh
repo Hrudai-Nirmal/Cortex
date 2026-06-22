@@ -62,7 +62,7 @@ wait_for_endpoint() {
 read_headers() {
   local host="$1"
   local path="$2"
-  curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+  curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
 }
 
 assert_surface_header() {

@@ -12,14 +12,28 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _toUpperSnakeCase(fieldName: str) -> str:
+    """Convert internal camelCase settings fields into stable environment aliases."""
+    if not fieldName:
+        raise ValueError("fieldName cannot be empty")
+    characters: list[str] = []
+    for index, character in enumerate(fieldName):
+        if character.isupper() and index > 0 and not fieldName[index - 1].isupper():
+            characters.append("_")
+        characters.append(character.upper())
+    return f"CORTEX_{''.join(characters)}"
+
+
 class Settings(BaseSettings):
     """Describe the deployable Cortex runtime profile."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_prefix="CORTEX_",
+        env_prefix="",
         case_sensitive=False,
         extra="ignore",
+        alias_generator=_toUpperSnakeCase,
+        populate_by_name=True,
     )
 
     environment: Literal["development", "test", "production"] = "development"
