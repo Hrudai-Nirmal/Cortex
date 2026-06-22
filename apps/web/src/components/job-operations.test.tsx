@@ -62,7 +62,9 @@ describe("JobOperations", () => {
     );
 
     expect(await screen.findByText("Retention Packet")).toBeVisible();
+    expect(screen.getByText("Operator attention")).toBeVisible();
     expect(screen.getByRole("columnheader", { name: "Attempts" })).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Updated" })).toBeVisible();
     expect(await screen.findByText("Selected job detail")).toBeVisible();
     expect(screen.getAllByText("Docling failed to parse source.pdf").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("40000000-0000-0000-0000-000000000001")).toBeVisible();

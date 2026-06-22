@@ -469,6 +469,10 @@ async def submitChatCompletion(
     httpResponse.headers["X-Cortex-Contract-Version"] = "v1"
     httpResponse.headers["X-Cortex-Trace-Id"] = str(queryResponse.traceId)
     httpResponse.headers["X-Cortex-Evidence-Status"] = queryResponse.evidenceStatus
+    httpResponse.headers["X-Cortex-Route"] = queryResponse.route
+    httpResponse.headers["X-Cortex-Abstained"] = (
+        "true" if queryResponse.evidenceStatus in {"insufficient", "conflict"} else "false"
+    )
     return ChatCompletionResponseSchema(
         id=f"cortex-{queryResponse.traceId}",
         object="chat.completion",
@@ -600,7 +604,12 @@ async def seedDevelopmentFixtures(
     )
     identity = await resolveIdentity(request, settings)
     try:
-        response = await seedFixtures(session, settings, buildModelProvider(settings))
+        response = await seedFixtures(
+            session,
+            settings,
+            buildModelProvider(settings),
+            includeSampleTraces=False,
+        )
         await persistControlPlaneAudit(
             session=session,
             settings=settings,

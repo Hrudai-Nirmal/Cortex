@@ -35,6 +35,13 @@ import { SourceOperations } from "./source-operations";
 
 const ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
 const EXTERNAL_QUERY_CONTRACT_VERSION = "v1";
+const EXTERNAL_QUERY_HEADER_NAMES = [
+  "X-Cortex-Contract-Version",
+  "X-Cortex-Trace-Id",
+  "X-Cortex-Evidence-Status",
+  "X-Cortex-Route",
+  "X-Cortex-Abstained",
+] as const;
 
 const inspectorContent: Record<string, { title: string; type: string; detail: string }> = {
   ingest: { title: "Ingest & Normalize", type: "Ingestion", detail: "Docling parser, deterministic chunking, metadata, versions" },
@@ -188,6 +195,9 @@ export function DeveloperConsole() {
   const latestVersion = pipelineVersions[0] ?? null;
   const consolePublicUrl = getConsolePublicUrl();
   const queryPublicUrl = getQueryPublicUrl();
+  const latestTraceEventsPath = latestTrace
+    ? `/v1/query/${latestTrace.traceId}/events`
+    : "/v1/query/{traceId}/events";
 
   return (
     <main className="developer-console">
@@ -442,6 +452,21 @@ export function DeveloperConsole() {
                   builder-grade trace replay and operator tooling.
                 </p>
               </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Clock aria-hidden size={18} />
+                  <strong>Contract headers</strong>
+                </div>
+                <p>
+                  Thin clients, gateways, and observability hooks can inspect stable response headers
+                  before parsing the JSON body:
+                </p>
+                <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+                  {EXTERNAL_QUERY_HEADER_NAMES.map((headerName) => (
+                    <li key={headerName}><code>{headerName}</code></li>
+                  ))}
+                </ul>
+              </div>
             </section>
           </div>
         ) : (
@@ -464,6 +489,21 @@ export function DeveloperConsole() {
               <strong>Validated answer preview</strong>
             </div>
             <p style={{ marginTop: 10 }}>{latestTrace.answer}</p>
+          </div>
+        ) : null}
+        {latestTrace ? (
+          <div className="source-form-card" style={{ marginTop: 12, marginBottom: 12 }}>
+            <div className="source-form-card__heading">
+              <ShieldCheck aria-hidden size={18} />
+              <strong>Operator correlation</strong>
+            </div>
+            <p>
+              Trace <code>{latestTrace.traceId}</code> can be handed to support workflows, client
+              feedback queues, or replacement query UIs as the durable correlation key.
+            </p>
+            <p style={{ marginTop: 8 }}>
+              Route <code>{latestTrace.route}</code> · trace events <code>{latestTraceEventsPath}</code>
+            </p>
           </div>
         ) : null}
         {latestTrace ? (

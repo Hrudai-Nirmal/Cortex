@@ -87,6 +87,8 @@ describe("SourceOperations", () => {
     );
 
     expect(await screen.findByText("Retention Packet")).toBeVisible();
+    expect(screen.getByText("Active")).toBeVisible();
+    expect(screen.getByText("Processing")).toBeVisible();
     expect(await screen.findByText(/2.x-pinned-at-install/)).toBeVisible();
     expect(screen.getByText(/quarantine clear/i)).toBeVisible();
     expect(screen.getByText("Latest version diagnostics")).toBeVisible();

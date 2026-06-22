@@ -159,6 +159,8 @@ async def seedFixtures(
     session: AsyncSession,
     settings: Settings,
     modelProvider: OllamaModelProvider,
+    *,
+    includeSampleTraces: bool = True,
 ) -> SeedFixturesResponse:
     """Seed the deterministic fixture corpus and produce a couple of developer traces."""
     ingestionService = IngestionService(
@@ -185,21 +187,22 @@ async def seedFixtures(
         )
         seededEnterpriseIds.add(seedDocument.enterpriseId or settings.enterpriseId)
     traceCount = 0
-    for queryText in (
-        "What are our retentin rules?",
-        "What is the total from the revenue worksheet values?",
-    ):
-        await queryService.answerQuery(
-            QueryRequest(
-                query=queryText,
-                accessScope=AccessScopeSchema(
-                    enterpriseId=settings.enterpriseId,
-                    actorId="maya.chen@example.com",
-                    principalIds=["group:employees"],
-                ),
+    if includeSampleTraces:
+        for queryText in (
+            "What are our retentin rules?",
+            "What is the total from the revenue worksheet values?",
+        ):
+            await queryService.answerQuery(
+                QueryRequest(
+                    query=queryText,
+                    accessScope=AccessScopeSchema(
+                        enterpriseId=settings.enterpriseId,
+                        actorId="maya.chen@example.com",
+                        principalIds=["group:employees"],
+                    ),
+                )
             )
-        )
-        traceCount += 1
+            traceCount += 1
     return SeedFixturesResponse(
         seededDocuments=len(buildSeedDocuments(settings)),
         enterprises=sorted(seededEnterpriseIds, key=str),

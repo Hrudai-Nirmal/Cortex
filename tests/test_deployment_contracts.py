@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
@@ -11,7 +13,7 @@ import cortex.services.runtime as runtimeModule
 from cortex.config import Settings
 from cortex.database import getDatabaseSession
 from cortex.main import createApp
-from cortex.schemas import QueryResponse, StageSchema
+from cortex.schemas import QueryResponse, SeedFixturesResponse, StageSchema
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.runtime import RuntimeHealthService
 
@@ -47,6 +49,15 @@ def testProductionSettingsRequireAbsoluteObjectStorageRoot() -> None:
     """Client package profiles should reject relative object-storage paths in production."""
     with pytest.raises(ValidationError):
         buildPackageSettings(objectStorageRoot=".cortex-data/object-storage")
+
+
+def testPackagedEdgeTemplateAllowsLongRunningApiResponses() -> None:
+    """The split-host edge proxy must tolerate cold local-model latency on packaged APIs."""
+    templateText = Path(
+        "/Users/hrudainirmal/Projects/Cortex/infra/nginx/edge.conf.template"
+    ).read_text(encoding="utf-8")
+    assert templateText.count("proxy_read_timeout 300s;") >= 2
+    assert templateText.count("proxy_send_timeout 300s;") >= 2
 
 
 @pytest.mark.asyncio
@@ -278,6 +289,52 @@ async def testExternalChatContractRejectsStreamingRequests() -> None:
 
 
 @pytest.mark.asyncio
+async def testDevelopmentSeedEndpointSkipsSampleTraceGeneration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Packaged verification seeding should stay fast by skipping model-backed sample traces."""
+    application = createApp(buildPackageSettings())
+
+    class StubSession:
+        """Provide the tiny session surface exercised by the seed endpoint."""
+
+        async def commit(self) -> None:
+            return None
+
+    async def overrideDatabaseSession():
+        yield StubSession()
+
+    async def fakeSeedFixtures(session, settings, modelProvider, *, includeSampleTraces: bool = True):
+        assert includeSampleTraces is False
+        return SeedFixturesResponse(
+            seededDocuments=9,
+            enterprises=[settings.enterpriseId],
+            traceCount=0,
+        )
+
+    async def fakePersistControlPlaneAudit(**_: object) -> None:
+        return None
+
+    application.dependency_overrides[getDatabaseSession] = overrideDatabaseSession
+    monkeypatch.setattr(routeModule, "seedFixtures", fakeSeedFixtures)
+    monkeypatch.setattr(routeModule, "persistControlPlaneAudit", fakePersistControlPlaneAudit)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/dev/seed",
+            headers={"Authorization": "Bearer fixture-admin"},
+        )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["seededDocuments"] == 9
+    assert payload["traceCount"] == 0
+
+
+@pytest.mark.asyncio
 async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -344,6 +401,8 @@ async def testExternalChatContractUsesLatestUserMessageAndReturnsEvidenceMetadat
     assert response.headers["x-cortex-contract-version"] == "v1"
     assert response.headers["x-cortex-trace-id"] == "4576b626-c27a-4409-9a51-600cf115ff4a"
     assert response.headers["x-cortex-evidence-status"] == "sufficient"
+    assert response.headers["x-cortex-route"] == "rag"
+    assert response.headers["x-cortex-abstained"] == "false"
     assert payload["x_cortex"]["contractVersion"] == "v1"
     assert payload["x_cortex"]["traceId"] == "4576b626-c27a-4409-9a51-600cf115ff4a"
     assert (
@@ -431,6 +490,8 @@ async def testExternalChatContractPreservesAbstentionAndCitationMetadata(
     assert response.status_code == 200
     assert response.headers["x-cortex-contract-version"] == "v1"
     assert response.headers["x-cortex-evidence-status"] == "conflict"
+    assert response.headers["x-cortex-route"] == "rag"
+    assert response.headers["x-cortex-abstained"] == "true"
     assert payload["x_cortex"]["abstained"] is True
     assert payload["x_cortex"]["claims"][0]["supportStatus"] == "conflict"
     assert payload["x_cortex"]["citations"][0]["documentTitle"] == "Security Handbook"

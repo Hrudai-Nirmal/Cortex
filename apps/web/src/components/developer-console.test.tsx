@@ -192,10 +192,14 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("maya.chen@example.com")).toBeVisible();
     expect(screen.getByText("degraded")).toBeVisible();
     expect(screen.getByText("Validated answer preview")).toBeVisible();
+    expect(screen.getByText("Operator correlation")).toBeVisible();
     expect(screen.getByText("Security Handbook")).toBeVisible();
     expect(screen.getByText("supported")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
+    expect(screen.getByText("Contract headers")).toBeVisible();
+    expect(screen.getByText("X-Cortex-Route")).toBeVisible();
+    expect(screen.getByText("X-Cortex-Abstained")).toBeVisible();
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
     expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);

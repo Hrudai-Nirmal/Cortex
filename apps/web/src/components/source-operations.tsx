@@ -108,6 +108,21 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
     () => selectedSource?.versions[0] ?? null,
     [selectedSource],
   );
+  const activeSourceCount = sources.filter(
+    (source) => source.latestIngestionStatus === "active",
+  ).length;
+  const processingSourceCount = sources.filter((source) =>
+    ["processing", "queued", "running"].includes(source.latestIngestionStatus ?? ""),
+  ).length;
+  const quarantinedSourceCount = sources.filter(
+    (source) => (source.latestQuarantineStatus ?? "").toLowerCase() !== "clear",
+  ).length;
+  const failedSourceCount = sources.filter((source) =>
+    ["failed", "quarantined"].includes(source.latestIngestionStatus ?? ""),
+  ).length;
+  const latestFailureVersion = selectedSource?.versions.find(
+    (version) => version.failureCode || version.failureDetail,
+  ) ?? null;
 
   async function handleUploadSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -308,6 +323,12 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
             <strong>Sources</strong>
             <span>{sources.length}</span>
           </div>
+          <div className="metric-strip" style={{ marginBottom: 16 }}>
+            <span><small>Active</small><strong>{activeSourceCount}</strong></span>
+            <span><small>Processing</small><strong>{processingSourceCount}</strong></span>
+            <span><small>Quarantined</small><strong>{quarantinedSourceCount}</strong></span>
+            <span><small>Failed</small><strong>{failedSourceCount}</strong></span>
+          </div>
           {isLoading ? (
             <div className="empty-tab">
               <Clock aria-hidden size={24} />
@@ -400,6 +421,21 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                   )}
                 </div>
               </div>
+              {latestFailureVersion ? (
+                <div className="query-error" role="alert" style={{ marginBottom: 16 }}>
+                  <WarningCircle aria-hidden size={18} />
+                  <div>
+                    <strong>Operator attention</strong>
+                    <span>
+                      Version {latestFailureVersion.versionLabel} reported{" "}
+                      {latestFailureVersion.failureCode ?? "a processing failure"}.
+                      {latestFailureVersion.failureDetail
+                        ? ` ${latestFailureVersion.failureDetail}`
+                        : " Review the diagnostics and related durable job before retrying."}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
               <div className="source-detail__versions">
                 <h3>Version history</h3>
                 {latestVersion.failureDetail ? (

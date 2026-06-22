@@ -10,6 +10,13 @@ their own chat shell. The supported integration boundary for those clients is:
 This route is intentionally OpenAI-compatible enough for standard chat UIs while adding
 the Cortex evidence metadata a governed RAG system needs.
 
+Contract stability rules:
+
+- The OpenAI-style response envelope remains the compatibility baseline.
+- Cortex-specific behavior is additive through `x_cortex` fields and `X-Cortex-*` headers.
+- Replacement UIs should gate feature assumptions on `contractVersion === "v1"`.
+- Trace replay remains an elevated operator/debug capability even when the query UI is fully replaced.
+
 ## Authentication and scope
 
 Replacement query shells must send the same bearer token they use for the employee user.
@@ -93,6 +100,8 @@ Response headers:
 - `X-Cortex-Contract-Version: v1`
 - `X-Cortex-Trace-Id: <trace UUID>`
 - `X-Cortex-Evidence-Status: sufficient|partial|insufficient|conflict`
+- `X-Cortex-Route: rag|compute|retrieve-then-compute`
+- `X-Cortex-Abstained: true|false`
 
 ## `x_cortex` fields
 
@@ -106,6 +115,26 @@ Response headers:
 - `claims`: validated atomic claims only
 - `citations`: exact evidence spans for validated claims
 - `stages`: summarized deterministic execution stages
+
+## Response interpretation
+
+- `choices[0].message.content` is always the displayable answer text, including abstentions.
+- `x_cortex.evidenceStatus` is the evidence verdict, not a transport verdict.
+- `x_cortex.abstained=true` means Cortex intentionally withheld a fully supported answer.
+- `X-Cortex-Abstained` duplicates that abstention signal in header form for gateways, observability, and thin clients that inspect headers before parsing the JSON body.
+- `X-Cortex-Route` exposes whether Cortex answered through RAG, deterministic compute, or retrieve-then-compute so operators can reconcile runtime behavior without inferring it from answer text.
+- `x_cortex.claims` and `x_cortex.citations` remain the source of truth for claim-level evidence rendering.
+
+## Error contract
+
+- `422` means the request shape is invalid for the stable facade, for example:
+  - empty final user query
+  - no `user` message
+  - `stream=true`
+- `403` means Cortex rejected the request because the authenticated identity or scope was not allowed.
+- `500` means Cortex itself failed while executing the deterministic pipeline.
+
+Replacement UIs should distinguish these cases from intentional abstention. Abstention is represented as a successful `200` response with evidence metadata, not as an exception path.
 
 ## Integration guidance
 
@@ -127,6 +156,7 @@ Response headers:
 - Render `x_cortex.citations` and `x_cortex.evidenceStatus` as the evidence boundary.
 - Treat `x_cortex.abstained=true` as an intentional no-answer outcome, not a transport failure.
 - Persist `x_cortex.traceId` anywhere the client captures user feedback or support tickets.
+- Preserve `X-Cortex-Route` and `X-Cortex-Abstained` in gateway or observability logs if the client stack records response headers.
 - Do not depend on direct access to `x_cortex.traceEventsPath` from the employee browser surface.
 
 ## Non-goals of this contract

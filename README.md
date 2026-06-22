@@ -43,6 +43,14 @@ assistant message in the standard `choices` envelope and adds `x_cortex` metadat
 - exact `citations`
 - stage summaries
 
+The response headers also carry:
+
+- `X-Cortex-Contract-Version`
+- `X-Cortex-Trace-Id`
+- `X-Cortex-Evidence-Status`
+- `X-Cortex-Route`
+- `X-Cortex-Abstained`
+
 See [external-query-contract.md](docs/external-query-contract.md) for the stable wire contract.
 
 ## Development
@@ -111,6 +119,7 @@ The package now includes:
 - an offline-capable model-endpoint policy check that flags unexpected remote model hosts
 - runtime health warns when the package is still using fixture auth so operators do not confuse evaluation identity with a real client auth rollout
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
+- package verification that checks query-contract route and abstention headers so third-party chat shells can rely on the packaged facade behavior
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:

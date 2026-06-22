@@ -130,7 +130,9 @@ The package also runs database migrations before `api` and `worker` proceed.
 - if fixture auth is enabled:
   - seed fixtures load
   - `POST /v1/chat/completions` returns the OpenAI-compatible Cortex contract, contract-version headers, and Cortex evidence metadata
+  - response headers include evidence status, route, and abstention signals for thin clients and gateway logging
   - contract identity includes `traceEventsPath` for persisted builder/operator trace replay
+  - the edge proxy allows up to 300 seconds for `/v1/` responses so cold local-model calls do not fail with a spurious `504 Gateway Timeout`
 
 ## What `package:status` and `package:logs` do
 
@@ -188,6 +190,7 @@ When clients use their own chat UI:
 - call `POST /v1/chat/completions`
 - render citations from `x_cortex.citations`
 - preserve `x_cortex.traceId` for feedback and support workflows
+- preserve `X-Cortex-Route` and `X-Cortex-Abstained` if your gateway, BFF, or observability layer logs response headers for support workflows
 - treat `x_cortex.traceEventsPath` as operator-only trace correlation unless the client intentionally runs an elevated builder/debug integration
 
 The custom query UI must not send raw access-scope principals from the browser. Cortex

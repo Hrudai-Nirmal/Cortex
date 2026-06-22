@@ -20,6 +20,8 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
   const queuedCount = jobs.filter((job) => job.status === "queued").length;
   const runningCount = jobs.filter((job) => job.status === "running").length;
   const failedCount = jobs.filter((job) => job.status === "failed").length;
+  const completedCount = jobs.filter((job) => job.status === "completed").length;
+  const attentionJob = jobs.find((job) => job.status === "failed") ?? jobs.find((job) => job.status === "running") ?? null;
 
   useEffect(() => {
     let isMounted = true;
@@ -93,8 +95,22 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
       <div className="metric-strip" style={{ marginBottom: 16 }}>
         <span><small>Queued</small><strong>{queuedCount}</strong></span>
         <span><small>Running</small><strong>{runningCount}</strong></span>
+        <span><small>Completed</small><strong>{completedCount}</strong></span>
         <span><small>Failed</small><strong>{failedCount}</strong></span>
       </div>
+      {attentionJob ? (
+        <div className="query-error" role="alert" style={{ marginBottom: 16 }}>
+          <WarningCircle aria-hidden size={18} />
+          <div>
+            <strong>Operator attention</strong>
+            <span>
+              {attentionJob.status === "failed"
+                ? `Job ${attentionJob.jobId.slice(0, 8)} failed${attentionJob.lastError ? `: ${attentionJob.lastError}` : "."}`
+                : `Job ${attentionJob.jobId.slice(0, 8)} is still running. Check lock time and source detail if throughput stalls.`}
+            </span>
+          </div>
+        </div>
+      ) : null}
       {errorMessage ? (
         <div className="query-error" role="alert">
           <WarningCircle aria-hidden size={18} />
@@ -158,6 +174,7 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
             <dl className="source-detail__facts">
               <div><dt>Available</dt><dd>{new Date(selectedJob.availableAt).toLocaleString()}</dd></div>
               <div><dt>Locked</dt><dd>{selectedJob.lockedAt ? new Date(selectedJob.lockedAt).toLocaleString() : "not locked"}</dd></div>
+              <div><dt>Updated</dt><dd>{new Date(selectedJob.updatedAt).toLocaleString()}</dd></div>
               <div><dt>Document</dt><dd>{selectedJob.documentId ?? "—"}</dd></div>
               <div><dt>Version</dt><dd>{selectedJob.documentVersionId ?? "—"}</dd></div>
               <div><dt>Source</dt><dd>{selectedJob.sourceDisplayName ?? "—"}</dd></div>
