@@ -26,6 +26,12 @@ Inside the fixed console, operators can now distinguish:
 - validated versions waiting activation
 - retired versions that remain eligible for explicit rollback
 
+The console trace timeline now also shows:
+
+- validated answer preview
+- persisted claim support status
+- claim-to-citation linkage beside stage evidence
+
 ## Required host split
 
 Operators must provide two distinct browser hosts:

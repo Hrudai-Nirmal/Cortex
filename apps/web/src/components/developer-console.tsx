@@ -435,6 +435,15 @@ export function DeveloperConsole() {
         {latestTrace?.correctedQuery && latestTrace.correctedQuery !== latestTrace.rawQuery ? (
           <div className="trace-query"><CheckCircle aria-hidden size={15} /> Corrected query: <strong>{latestTrace.correctedQuery}</strong></div>
         ) : null}
+        {latestTrace?.answer ? (
+          <div className="source-form-card" style={{ marginTop: 12, marginBottom: 12 }}>
+            <div className="source-form-card__heading">
+              <Play aria-hidden size={18} />
+              <strong>Validated answer preview</strong>
+            </div>
+            <p style={{ marginTop: 10 }}>{latestTrace.answer}</p>
+          </div>
+        ) : null}
         {latestTrace ? (
           <div className="metric-strip metric-strip--trace">
             <span><small>Actor</small><strong>{latestTrace.actorId}</strong></span>
@@ -442,6 +451,7 @@ export function DeveloperConsole() {
             <span><small>Route</small><strong>{latestTrace.route}</strong></span>
             <span><small>Evidence</small><strong>{latestTrace.evidenceStatus}</strong></span>
             <span><small>Stages</small><strong>{displayedEvents.length}</strong></span>
+            <span><small>Claims</small><strong>{latestTrace.claims.length}</strong></span>
             <span><small>Citations</small><strong>{latestTrace.citations.length}</strong></span>
             <span><small>Pipeline</small><strong>v{latestTrace.pipelineVersion ?? 0}</strong></span>
           </div>
@@ -460,6 +470,28 @@ export function DeveloperConsole() {
         ) : null}
         {errorMessage ? <div className="query-error" role="alert"><WarningCircle aria-hidden size={18} /><div><strong>Console warning</strong><span>{errorMessage}</span></div></div> : null}
         <table><thead><tr><th>Stage</th><th>Status</th><th>Duration</th><th>Detail</th><th>Evidence</th></tr></thead><tbody>{displayedEvents.length > 0 ? displayedEvents.map((row) => <tr key={`${row.position}-${row.stage}`}><td>{row.stage}</td><td><span className="table-success"><CheckCircle aria-hidden weight="fill" /> {row.status}</span></td><td>{row.durationMs}ms</td><td>{row.detail}</td><td>{latestTrace?.citations.length ?? 0} citations</td></tr>) : <tr><td colSpan={5}>No persisted execution trace yet.</td></tr>}</tbody></table>
+        {latestTrace?.claims.length ? (
+          <table style={{ marginTop: 12 }}>
+            <thead>
+              <tr>
+                <th>Claim</th>
+                <th>Support</th>
+                <th>Confidence</th>
+                <th>Citations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latestTrace.claims.map((claim) => (
+                <tr key={claim.claimId}>
+                  <td>{claim.text}</td>
+                  <td>{claim.supportStatus}</td>
+                  <td>{claim.confidence.toFixed(2)}</td>
+                  <td>{claim.citationIds.join(", ") || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
         {latestTrace?.citations.length ? (
           <table style={{ marginTop: 12 }}>
             <thead>

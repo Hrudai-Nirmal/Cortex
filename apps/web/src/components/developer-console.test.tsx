@@ -116,7 +116,26 @@ describe("DeveloperConsole", () => {
             answer: "Raw query and response content is retained for 30 days.",
             evidenceStatus: "sufficient",
             createdAt: "2026-06-21T00:00:00+00:00",
-            citations: [],
+            claims: [
+              {
+                claimId: "claim-1",
+                text: "Raw query and response content is retained for 30 days.",
+                confidence: 0.98,
+                citationIds: ["C1"],
+                supportStatus: "supported",
+              },
+            ],
+            citations: [
+              {
+                citationId: "C1",
+                documentTitle: "Security Handbook",
+                documentVersion: "v2",
+                chunkId: "abc123",
+                structuralLocator: "p.12",
+                exactSpan: "Raw query and response content is retained for 30 days.",
+                supportScore: 0.98,
+              },
+            ],
             stages: [],
             stageEvents: [
               {
@@ -158,6 +177,9 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("What are our retention rules?")).toBeVisible();
     expect(screen.getByText("maya.chen@example.com")).toBeVisible();
     expect(screen.getByText("degraded")).toBeVisible();
+    expect(screen.getByText("Validated answer preview")).toBeVisible();
+    expect(screen.getByText("Security Handbook")).toBeVisible();
+    expect(screen.getByText("supported")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
     expect(screen.getByText("Surface routing")).toBeVisible();

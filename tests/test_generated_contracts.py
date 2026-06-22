@@ -20,3 +20,5 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
     assert "ExternalQueryMetadataSchema" in generatedTypesText
     assert "contractVersion: \"v1\";" in generatedTypesText
     assert "traceEventsPath: string;" in generatedTypesText
+    assert "TraceSummaryResponse" in generatedTypesText
+    assert "claims: components[\"schemas\"][\"ClaimSchema\"][];" in generatedTypesText

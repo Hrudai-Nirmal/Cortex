@@ -1289,6 +1289,8 @@ export interface components {
             evidenceStatus: "sufficient" | "partial" | "insufficient" | "conflict";
             /** Createdat */
             createdAt: string;
+            /** Claims */
+            claims: components["schemas"]["ClaimSchema"][];
             /** Citations */
             citations: components["schemas"]["CitationSchema"][];
             /** Stages */

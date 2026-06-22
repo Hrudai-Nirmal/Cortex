@@ -763,6 +763,7 @@ class QueryService:
 
     def _rowToTraceSummary(self, row: Any) -> TraceSummaryResponse:
         payload = row["payload"] if isinstance(row["payload"], dict) else {}
+        claims = [ClaimSchema.model_validate(claim) for claim in payload.get("claims", [])]
         citations = [
             CitationSchema.model_validate(citation) for citation in payload.get("citations", [])
         ]
@@ -781,6 +782,7 @@ class QueryService:
             answer=row["raw_response"],
             evidenceStatus=payload.get("evidenceStatus", "insufficient"),
             createdAt=row["created_at"].astimezone(UTC).isoformat(),
+            claims=claims,
             citations=citations,
             stages=stages,
             stageEvents=stageEvents,

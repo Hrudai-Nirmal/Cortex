@@ -23,6 +23,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - React Flow developer console plus a separate friendly employee query surface with citation display control, live pipeline/health fetches, and persisted trace playback.
 - The developer console now surfaces focused durable-job detail plus persisted source hashes, extraction diagnostics, and accelerator reports for operator troubleshooting.
 - The developer console now distinguishes validated pipeline versions from the active release and exposes retired immutable versions as explicit rollback targets.
+- The developer console trace view now includes validated answer preview plus persisted claims, support status, and citation linkage instead of only stage counts and citation totals.
 - Multi-image frontend packaging with separate console/query Vite builds, static frontend Docker images, edge Nginx host routing, and package/Kubernetes deployment manifests.
 - The Kubernetes package example now models client-owned domains, shared non-secret config, secret injection, and persistent object storage instead of baking in development hostnames.
 - External query-surface contract through an OpenAI-compatible `/v1/chat/completions` facade that derives access scope from authenticated identity and returns `x_cortex` evidence metadata, a stable contract version, an operator-oriented trace-events path, and trace-oriented response headers.

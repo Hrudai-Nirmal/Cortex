@@ -128,6 +128,7 @@ class TraceSummaryResponse(BaseModel):
     answer: str | None
     evidenceStatus: Literal["sufficient", "partial", "insufficient", "conflict"]
     createdAt: str
+    claims: list[ClaimSchema]
     citations: list[CitationSchema]
     stages: list[StageSchema]
     stageEvents: list[QueryStageEventSchema]
