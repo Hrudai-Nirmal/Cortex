@@ -11,11 +11,20 @@ const RESERVED_DOCUMENTATION_HOST_SUFFIXES = [
   "example.test",
 ] as const;
 
+interface RuntimeCortexConfig {
+  consolePublicUrl?: string;
+  queryPublicUrl?: string;
+}
+
 function isReservedDocumentationHost(hostName: string): boolean {
   const normalizedHost = hostName.trim().toLowerCase();
   return RESERVED_DOCUMENTATION_HOST_SUFFIXES.some(
     (suffix) => normalizedHost === suffix || normalizedHost.endsWith(`.${suffix}`),
   );
+}
+
+function getRuntimeConfig(): RuntimeCortexConfig {
+  return globalThis.window?.__CORTEX_RUNTIME_CONFIG__ ?? {};
 }
 
 function validateSurfacePublicUrl(
@@ -70,7 +79,7 @@ export function resolveSurfacePublicUrl(
   if (!normalizedUrl) {
     if (isProductionBuild) {
       throw new Error(
-        `Production Cortex ${surfaceLabel} build is missing ${surfaceLabel === "console" ? "VITE_CORTEX_CONSOLE_PUBLIC_URL" : "VITE_CORTEX_QUERY_PUBLIC_URL"}.`,
+        `Production Cortex ${surfaceLabel} surface is missing ${surfaceLabel === "console" ? "CORTEX_CONSOLE_PUBLIC_URL" : "CORTEX_QUERY_PUBLIC_URL"} runtime config.`,
       );
     }
     return defaultUrl;
@@ -105,7 +114,7 @@ export function getActiveSurface(): Surface {
 /** Return the configured public query URL used for cross-surface navigation. */
 export function getQueryPublicUrl(): string {
   return resolveSurfacePublicUrl(
-    import.meta.env.VITE_CORTEX_QUERY_PUBLIC_URL,
+    getRuntimeConfig().queryPublicUrl ?? import.meta.env.VITE_CORTEX_QUERY_PUBLIC_URL,
     DEFAULT_QUERY_PUBLIC_URL,
     "query",
     Boolean(import.meta.env.PROD),
@@ -115,7 +124,7 @@ export function getQueryPublicUrl(): string {
 /** Return the configured public console URL used for operator access links. */
 export function getConsolePublicUrl(): string {
   return resolveSurfacePublicUrl(
-    import.meta.env.VITE_CORTEX_CONSOLE_PUBLIC_URL,
+    getRuntimeConfig().consolePublicUrl ?? import.meta.env.VITE_CORTEX_CONSOLE_PUBLIC_URL,
     DEFAULT_CONSOLE_PUBLIC_URL,
     "console",
     Boolean(import.meta.env.PROD),

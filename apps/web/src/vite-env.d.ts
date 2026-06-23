@@ -11,3 +11,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  __CORTEX_RUNTIME_CONFIG__?: {
+    consolePublicUrl?: string;
+    queryPublicUrl?: string;
+  };
+}

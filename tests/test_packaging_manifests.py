@@ -21,6 +21,8 @@ def testKubernetesPackageManifestUsesClientPlaceholdersAndSharedStorage() -> Non
     assert "mountPath: /var/lib/cortex/object-storage" in manifestText
     assert "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL: https://download.pytorch.org/whl/cpu" in manifestText
     assert 'CORTEX_PACKAGE_PYTORCH_PREINSTALL: "torch torchvision"' in manifestText
+    assert "envFrom:" in manifestText
+    assert "name: cortex-config" in manifestText
 
 
 def testKubernetesPackageManifestPreservesSplitHostRouting() -> None:
@@ -72,6 +74,8 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert composeText.count(
         "CORTEX_PACKAGE_PYTORCH_PREINSTALL: ${CORTEX_PACKAGE_PYTORCH_PREINSTALL:-torch torchvision}"
     ) >= 3
+    assert composeText.count("CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}") >= 4
+    assert composeText.count("CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}") >= 4
     assert 'test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in composeText
 
 
@@ -99,6 +103,32 @@ def testPackageDockerfilesPreinstallPyTorchFromAnExplicitWheelChannel() -> None:
         assert "RUN /usr/local/bin/install-python-package '.[dev,ingestion]'" in dockerfileText
     assert 'pip install --no-cache-dir --index-url "$torchWheelIndexUrl" $torchPreinstallPackages' in helperScript
     assert 'pip install --no-cache-dir --extra-index-url "$torchWheelIndexUrl" -e "$projectInstallTarget"' in helperScript
+
+
+def testFrontendPackageDockerfilesInjectRuntimePublicUrlConfig() -> None:
+    """Frontend package images should read client browser hosts at container startup, not build time."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    consoleDockerfile = (rootDirectory / "apps" / "web" / "Dockerfile.console").read_text(
+        encoding="utf-8"
+    )
+    queryDockerfile = (rootDirectory / "apps" / "web" / "Dockerfile.query").read_text(
+        encoding="utf-8"
+    )
+    runtimeConfigScript = (
+        rootDirectory / "apps" / "web" / "docker-entrypoint.d" / "40-cortex-runtime-config.sh"
+    ).read_text(encoding="utf-8")
+    publicRuntimeConfig = (
+        rootDirectory / "apps" / "web" / "public" / "cortex-runtime-config.js"
+    ).read_text(encoding="utf-8")
+    for dockerfileText in (consoleDockerfile, queryDockerfile):
+        assert "COPY apps/web/docker-entrypoint.d/40-cortex-runtime-config.sh /docker-entrypoint.d/40-cortex-runtime-config.sh" in dockerfileText
+        assert "RUN chmod +x /docker-entrypoint.d/40-cortex-runtime-config.sh" in dockerfileText
+        assert "ARG VITE_CORTEX_CONSOLE_PUBLIC_URL" not in dockerfileText
+        assert "ARG VITE_CORTEX_QUERY_PUBLIC_URL" not in dockerfileText
+    assert 'require_env CORTEX_CONSOLE_PUBLIC_URL' in runtimeConfigScript
+    assert 'require_env CORTEX_QUERY_PUBLIC_URL' in runtimeConfigScript
+    assert 'window.__CORTEX_RUNTIME_CONFIG__ = Object.freeze({' in runtimeConfigScript
+    assert "window.__CORTEX_RUNTIME_CONFIG__ = Object.freeze(window.__CORTEX_RUNTIME_CONFIG__ ?? {});" in publicRuntimeConfig
 
 
 def testOpenShiftRoutesPreserveSplitHostsThroughEdgeService() -> None:
@@ -131,6 +161,8 @@ def testEcsTaskFamilyIncludesSplitSurfacesAndSharedObjectStorage() -> None:
     assert '"CORTEX_DEV_MODE", "value": "false"' in taskDefinitionText
     assert '"CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com"' in taskDefinitionText
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in taskDefinitionText
+    assert taskDefinitionText.count('"CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com"') >= 3
+    assert taskDefinitionText.count('"CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com"') >= 3
     assert '"CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu"' in taskDefinitionText
     assert '"CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision"' in taskDefinitionText
     assert '"command": ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in taskDefinitionText

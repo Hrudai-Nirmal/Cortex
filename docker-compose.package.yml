@@ -119,9 +119,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile.console
-      args:
-        VITE_CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
-        VITE_CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
+    environment:
+      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
       interval: 10s
@@ -133,9 +133,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile.query
-      args:
-        VITE_CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
-        VITE_CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
+    environment:
+      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
+      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
       interval: 10s

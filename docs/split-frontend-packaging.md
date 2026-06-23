@@ -59,8 +59,6 @@ Domain values are deployment-critical and must be supplied by the operator:
 - `CORTEX_QUERY_HOST`
 - `CORTEX_CONSOLE_PUBLIC_URL`
 - `CORTEX_QUERY_PUBLIC_URL`
-- `VITE_CORTEX_CONSOLE_PUBLIC_URL`
-- `VITE_CORTEX_QUERY_PUBLIC_URL`
 
 Model-profile values are also deployment-critical in the packaged flow:
 
@@ -77,12 +75,14 @@ The package bootstrap now rejects unchanged `example.com` placeholders, and prod
 browser URLs must remain `https://` origins rooted directly at the host instead of a
 nested path such as `/chat` or `/console`.
 The browser surfaces now enforce the same expectation themselves: packaged production
-builds reject missing `VITE_CORTEX_*_PUBLIC_URL` values as well as localhost,
+containers reject missing `CORTEX_*_PUBLIC_URL` values as well as localhost,
 documentation-placeholder, non-HTTPS, or nested-path public URLs before operators follow
-bad cross-surface navigation inside the shipped UI.
+bad cross-surface navigation inside the shipped UI. Those values are injected into a
+runtime `cortex-runtime-config.js` file when the container starts, so the same packaged
+browser image can be reused across client domains without a rebuild.
 The fixed console also prefers the runtime `deployment-config` query URL from
 `GET /health/startup` for its cross-surface employee-view link, so the operator surface
-tracks the live package contract instead of relying only on baked frontend build args.
+tracks the live package contract instead of relying only on its local runtime file.
 
 The package images now force an explicit PyTorch wheel source before Docling installs its
 OCR/layout dependencies. The shipped local profile defaults to the CPU wheel channel:

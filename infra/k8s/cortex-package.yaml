@@ -167,6 +167,9 @@ spec:
       containers:
         - name: console-web
           image: cortex/console-web:local
+          envFrom:
+            - configMapRef:
+                name: cortex-config
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -199,6 +202,9 @@ spec:
       containers:
         - name: query-web
           image: cortex/query-web:local
+          envFrom:
+            - configMapRef:
+                name: cortex-config
           ports:
             - containerPort: 8080
           readinessProbe:

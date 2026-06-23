@@ -109,6 +109,10 @@
       "name": "console-web",
       "image": "cortex/console-web:local",
       "essential": true,
+      "environment": [
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" }
+      ],
       "portMappings": [
         {
           "containerPort": 8080,
@@ -127,6 +131,10 @@
       "name": "query-web",
       "image": "cortex/query-web:local",
       "essential": true,
+      "environment": [
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" }
+      ],
       "portMappings": [
         {
           "containerPort": 8080,

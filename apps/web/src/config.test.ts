@@ -1,7 +1,7 @@
 /** Surface configuration tests keep packaged frontend builds from silently shipping dev URLs. */
 
 import { describe, expect, it } from "vitest";
-import { resolveSurface, resolveSurfacePublicUrl } from "./config";
+import { getConsolePublicUrl, getQueryPublicUrl, resolveSurface, resolveSurfacePublicUrl } from "./config";
 
 describe("resolveSurfacePublicUrl", () => {
   it("keeps localhost defaults for development when no explicit public URL is set", () => {
@@ -13,7 +13,7 @@ describe("resolveSurfacePublicUrl", () => {
   it("rejects missing production public URLs", () => {
     expect(() =>
       resolveSurfacePublicUrl(undefined, "http://127.0.0.1:5174", "query", true),
-    ).toThrow("Production Cortex query build is missing VITE_CORTEX_QUERY_PUBLIC_URL.");
+    ).toThrow("Production Cortex query surface is missing CORTEX_QUERY_PUBLIC_URL runtime config.");
   });
 
   it("rejects localhost, placeholder, and nested-path production URLs", () => {
@@ -45,6 +45,16 @@ describe("resolveSurfacePublicUrl", () => {
         true,
       ),
     ).toBe("https://cortex-console.client.internal");
+  });
+
+  it("prefers runtime browser config over baked Vite defaults when present", () => {
+    window.__CORTEX_RUNTIME_CONFIG__ = {
+      consolePublicUrl: "https://cortex-console.client.internal",
+      queryPublicUrl: "https://cortex-app.client.internal",
+    };
+    expect(getConsolePublicUrl()).toBe("https://cortex-console.client.internal");
+    expect(getQueryPublicUrl()).toBe("https://cortex-app.client.internal");
+    delete window.__CORTEX_RUNTIME_CONFIG__;
   });
 });
 

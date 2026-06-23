@@ -18,6 +18,10 @@ host, not by path, so client deployments can use domains such as:
 - `cortex-console.company.com`
 - `cortex-app.company.com`
 
+Those browser images now take their public console/query URLs from runtime container
+environment, so the same packaged `console-web` and `query-web` images can be promoted
+across client domains without rebuilding just to retarget cross-surface navigation.
+
 The built-in query UI remains optional and replaceable. The console is the default
 operator surface and is not intended to be swapped out.
 
@@ -138,7 +142,8 @@ The package now includes:
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
 - package status now prints the live query-contract version, route set, abstention evidence states, and response headers from `GET /v1/chat/contracts/v1`
 - frontend surface config that keeps localhost defaults for development but rejects missing, placeholder, localhost, non-HTTPS, or nested-path public URLs inside packaged production browser builds
-- fixed-console cross-surface navigation that prefers the runtime deployment contract from `GET /health/startup`, so the “Open employee view” link follows the live packaged query host instead of stale baked URLs when operators rebuild unevenly
+- frontend runtime-config injection that reads `CORTEX_CONSOLE_PUBLIC_URL` and `CORTEX_QUERY_PUBLIC_URL` at container startup so browser-surface links stay aligned with the deployed client domains
+- fixed-console cross-surface navigation that prefers the runtime deployment contract from `GET /health/startup`, so the “Open employee view” link follows the live packaged query host instead of stale local browser assumptions when package state drifts
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - operator scripts:
   - `pnpm package:up`
