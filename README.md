@@ -141,6 +141,7 @@ The package now includes:
 - runtime health warns when the package is still using fixture auth so operators do not confuse evaluation identity with a real client auth rollout
 - package verification that checks split-surface identity headers, both routed health views, and query-contract identity headers
 - package verification that checks the browser `cortex-runtime-config.js` payload on both hosts so frontend runtime config matches the deployed client domains
+- package verification that now fails with named operator-readable routing, contract, runtime-config, and worker-startup errors instead of opaque shell `grep` exits
 - browser runtime-config delivery that serves `cortex-runtime-config.js` with `Cache-Control: no-store, no-cache, must-revalidate` so client-domain changes take effect immediately after a rollout instead of lingering in browser caches
 - package verification that also runs the worker startup check so durable job readiness is proven alongside API/browser readiness
 - package verification that checks query-contract route and abstention headers so third-party chat shells can rely on the packaged facade behavior

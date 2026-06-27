@@ -70,6 +70,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'require_docker_daemon' in verifyText
     assert 'docker info >/dev/null 2>&1' in verifyText
     assert "Docker is installed but the daemon is not reachable." in verifyText
+    assert 'assert_contains() {' in verifyText
+    assert 'Package verification failed: expected ${description}.' in verifyText
     assert "X-Cortex-Surface: console" in verifyText
     assert "X-Cortex-Surface: query" in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/live"' in verifyText
@@ -81,7 +83,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in verifyText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in verifyText
     assert 'read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in verifyText
-    assert '^Cache-Control: no-store, no-cache, must-revalidate' in verifyText
+    assert 'assert_contains "$console_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "console runtime-config cache policy"' in verifyText
+    assert 'assert_contains "$query_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "query runtime-config cache policy"' in verifyText
     assert 'consolePublicUrl: \\"${CORTEX_CONSOLE_PUBLIC_URL}\\"' in verifyText
     assert 'queryPublicUrl: \\"${CORTEX_QUERY_PUBLIC_URL}\\"' in verifyText
     assert '"contractVersion":"v1"' in verifyText
@@ -99,8 +102,15 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"code":"provider_unavailable"' in verifyText
     assert '"code":"internal_error"' in verifyText
     assert '"traceEventsPath"' in verifyText
+    assert 'assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"' in verifyText
+    assert 'assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"' in verifyText
+    assert 'assert_contains "$query_contract" \'"contractVersion":"v1"\' "query contract version"' in verifyText
+    assert 'assert_contains "$chat_response" \'"x_cortex"\' "chat response extension payload"' in verifyText
+    assert 'assert_worker_startup_check() {' in verifyText
+    assert 'Package verification failed: worker startup check is blocked.' in verifyText
+    assert 'echo "Run pnpm package:status for the current routed health and contract summary."' in verifyText
     assert 'docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \\' in verifyText
-    assert 'python -m cortex.worker --check-startup >/dev/null' in verifyText
+    assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in verifyText
 
 
 def testPackageUpPrintsStructuredStartupFailures() -> None:

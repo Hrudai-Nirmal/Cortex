@@ -23,6 +23,32 @@ require_docker_daemon() {
   exit 1
 }
 
+assert_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local description="$3"
+
+  if printf "%s" "$haystack" | grep -Fiq "$needle"; then
+    return 0
+  fi
+
+  echo "Package verification failed: expected ${description}." >&2
+  echo "Missing text: ${needle}" >&2
+  echo "Run pnpm package:status for the current routed health and contract summary." >&2
+  exit 1
+}
+
+assert_worker_startup_check() {
+  if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
+    python -m cortex.worker --check-startup >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "Package verification failed: worker startup check is blocked." >&2
+  echo "Run pnpm package:status for the current routed health and contract summary." >&2
+  exit 1
+}
+
 read_json() {
   local host="$1"
   local path="$2"
@@ -62,45 +88,44 @@ query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: $
 console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
 query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 
-printf "%s" "$console_html" | grep -qi "<!doctype html"
-printf "%s" "$query_html" | grep -qi "<!doctype html"
-printf "%s" "$console_headers" | grep -qi '^X-Cortex-Surface: console'
-printf "%s" "$query_headers" | grep -qi '^X-Cortex-Surface: query'
-printf "%s" "$console_runtime_config_headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate'
-printf "%s" "$query_runtime_config_headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate'
+assert_contains "$console_html" "<!doctype html" "console HTML shell"
+assert_contains "$query_html" "<!doctype html" "query HTML shell"
+assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"
+assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"
+assert_contains "$console_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "console runtime-config cache policy"
+assert_contains "$query_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "query runtime-config cache policy"
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
 query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
-printf "%s" "$console_runtime_config" | grep -q "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\""
-printf "%s" "$console_runtime_config" | grep -q "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\""
-printf "%s" "$query_runtime_config" | grep -q "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\""
-printf "%s" "$query_runtime_config" | grep -q "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\""
+assert_contains "$console_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "console runtime-config consolePublicUrl"
+assert_contains "$console_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "console runtime-config queryPublicUrl"
+assert_contains "$query_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "query runtime-config consolePublicUrl"
+assert_contains "$query_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "query runtime-config queryPublicUrl"
 
-read_json "$CORTEX_CONSOLE_HOST" "/health/live" | grep -q '"status"'
-read_json "$CORTEX_QUERY_HOST" "/health/live" | grep -q '"status"'
-read_json "$CORTEX_CONSOLE_HOST" "/health/startup" | grep -q '"components"'
-read_json "$CORTEX_QUERY_HOST" "/health/startup" | grep -q '"components"'
-read_json "$CORTEX_CONSOLE_HOST" "/health/ready" | grep -q '"status":"ready"'
-read_json "$CORTEX_QUERY_HOST" "/health/ready" | grep -q '"status":"ready"'
+assert_contains "$(read_json "$CORTEX_CONSOLE_HOST" "/health/live")" '"status"' "console live health payload"
+assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/live")" '"status"' "query live health payload"
+assert_contains "$(read_json "$CORTEX_CONSOLE_HOST" "/health/startup")" '"components"' "console startup health payload"
+assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/startup")" '"components"' "query startup health payload"
+assert_contains "$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")" '"status":"ready"' "console ready health status"
+assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/ready")" '"status":"ready"' "query ready health status"
 query_contract="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
-printf "%s" "$query_contract" | grep -q '"contractVersion":"v1"'
-printf "%s" "$query_contract" | grep -q '"endpointPath":"/v1/chat/completions"'
-printf "%s" "$query_contract" | grep -q '"authentication":"bearer-token"'
-printf "%s" "$query_contract" | grep -q '"requestOptions"'
-printf "%s" "$query_contract" | grep -q '"userMessageSelectionPolicy":"last-non-empty-user-message"'
-printf "%s" "$query_contract" | grep -q '"streamRequiredValue":false'
-printf "%s" "$query_contract" | grep -q '"supportsCitationToggle":true'
-printf "%s" "$query_contract" | grep -q '"traceEventsPathTemplate":"/v1/query/{traceId}/events"'
-printf "%s" "$query_contract" | grep -q '"responseHeaders"'
-printf "%s" "$query_contract" | grep -q '"extensionFields"'
-printf "%s" "$query_contract" | grep -q '"employeeSafeExtensionFields"'
-printf "%s" "$query_contract" | grep -q '"operatorOnlyExtensionFields"'
-printf "%s" "$query_contract" | grep -q '"errorStatuses"'
-printf "%s" "$query_contract" | grep -q '"code":"invalid_request"'
-printf "%s" "$query_contract" | grep -q '"code":"forbidden_scope"'
-printf "%s" "$query_contract" | grep -q '"code":"provider_unavailable"'
-printf "%s" "$query_contract" | grep -q '"code":"internal_error"'
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
-  python -m cortex.worker --check-startup >/dev/null
+assert_contains "$query_contract" '"contractVersion":"v1"' "query contract version"
+assert_contains "$query_contract" '"endpointPath":"/v1/chat/completions"' "query contract endpoint path"
+assert_contains "$query_contract" '"authentication":"bearer-token"' "query contract authentication mode"
+assert_contains "$query_contract" '"requestOptions"' "query contract request options"
+assert_contains "$query_contract" '"userMessageSelectionPolicy":"last-non-empty-user-message"' "query contract user-message selection policy"
+assert_contains "$query_contract" '"streamRequiredValue":false' "query contract stream requirement"
+assert_contains "$query_contract" '"supportsCitationToggle":true' "query contract citation toggle support"
+assert_contains "$query_contract" '"traceEventsPathTemplate":"/v1/query/{traceId}/events"' "query contract trace-events template"
+assert_contains "$query_contract" '"responseHeaders"' "query contract response headers"
+assert_contains "$query_contract" '"extensionFields"' "query contract extension fields"
+assert_contains "$query_contract" '"employeeSafeExtensionFields"' "query contract employee-safe fields"
+assert_contains "$query_contract" '"operatorOnlyExtensionFields"' "query contract operator-only fields"
+assert_contains "$query_contract" '"errorStatuses"' "query contract error statuses"
+assert_contains "$query_contract" '"code":"invalid_request"' "query contract invalid_request code"
+assert_contains "$query_contract" '"code":"forbidden_scope"' "query contract forbidden_scope code"
+assert_contains "$query_contract" '"code":"provider_unavailable"' "query contract provider_unavailable code"
+assert_contains "$query_contract" '"code":"internal_error"' "query contract internal_error code"
+assert_worker_startup_check
 
 if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
   curl \
@@ -121,16 +146,16 @@ if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
     -H "Content-Type: application/json" \
     -X POST "http://127.0.0.1:${CORTEX_EDGE_PORT}/v1/chat/completions" \
     -d '{"model":"cortex-bounded-rag","messages":[{"role":"user","content":"What are our retentin rules?"}],"stream":false,"cortex":{"showCitations":true}}')"
-  printf "%s" "$chat_response" | grep -qi '^x-cortex-contract-version: v1' # X-Cortex-Contract-Version: v1
-  printf "%s" "$chat_response" | grep -qi '^x-cortex-trace-id:' # X-Cortex-Trace-Id
-  printf "%s" "$chat_response" | grep -qi '^x-cortex-evidence-status:' # X-Cortex-Evidence-Status
-  printf "%s" "$chat_response" | grep -qi '^x-cortex-route:' # X-Cortex-Route
-  printf "%s" "$chat_response" | grep -qi '^x-cortex-abstained:' # X-Cortex-Abstained
-  printf "%s" "$chat_response" | grep -q '"object":"chat.completion"'
-  printf "%s" "$chat_response" | grep -q '"x_cortex"'
-  printf "%s" "$chat_response" | grep -q '"contractVersion":"v1"'
-  printf "%s" "$chat_response" | grep -q '"traceId"'
-  printf "%s" "$chat_response" | grep -q '"traceEventsPath"'
+  assert_contains "$chat_response" 'x-cortex-contract-version: v1' "chat response contract version header" # X-Cortex-Contract-Version: v1
+  assert_contains "$chat_response" 'x-cortex-trace-id:' "chat response trace header" # X-Cortex-Trace-Id
+  assert_contains "$chat_response" 'x-cortex-evidence-status:' "chat response evidence-status header" # X-Cortex-Evidence-Status
+  assert_contains "$chat_response" 'x-cortex-route:' "chat response route header" # X-Cortex-Route
+  assert_contains "$chat_response" 'x-cortex-abstained:' "chat response abstention header" # X-Cortex-Abstained
+  assert_contains "$chat_response" '"object":"chat.completion"' "chat response object type"
+  assert_contains "$chat_response" '"x_cortex"' "chat response extension payload"
+  assert_contains "$chat_response" '"contractVersion":"v1"' "chat response contract version"
+  assert_contains "$chat_response" '"traceId"' "chat response trace identifier"
+  assert_contains "$chat_response" '"traceEventsPath"' "chat response trace-events path"
 fi
 
 echo "Package verification passed for ${CORTEX_CONSOLE_HOST} and ${CORTEX_QUERY_HOST}."
