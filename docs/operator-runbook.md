@@ -208,6 +208,9 @@ The fixed console now mirrors that packaging story more directly: even if one se
 endpoint such as `GET /v1/chat/contracts/v1` is temporarily unavailable, the operator surface
 still loads and surfaces the missing dependency as a degraded deployment-contract check instead
 of failing closed on the entire browser UI.
+The source operations lane now follows the same operator-first pattern: failed, quarantined,
+processing, and stale-live-version onboarding states are grouped into an operator queue so
+builders can start with the next repair action instead of scanning raw version metadata.
 
 ## Health endpoints
 

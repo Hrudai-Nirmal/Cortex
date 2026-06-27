@@ -100,6 +100,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 - The console settings lane now reads the live external query contract descriptor so operators can verify the exact third-party chat integration boundary from the running package.
 - The console settings lane now also separates the fail-closed startup contract from live runtime readiness, so operators can distinguish static package boot blockers from live dependency regressions without leaving the fixed console.
 - The console settings lane now also builds an operator action queue from startup blockers, runtime degradations, and surface-contract failures so deployment troubleshooting starts with an explicit fix list instead of a table hunt.
+- The source operations lane now also builds an operator queue for failed, quarantined, processing, and stale-live-version onboarding states so source triage starts with actions instead of raw diagnostics.
 - Supported source formats: PDF, DOCX, HTML, TXT/Markdown, and CSV.
 - Uploads are stored once by raw SHA-256 beneath `CORTEX_OBJECT_STORAGE_ROOT`, then ingested through durable jobs.
 - Single-page website ingestion is restricted to `CORTEX_WEBSITE_ALLOWLIST`.

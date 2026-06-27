@@ -22,6 +22,11 @@ interface SourceOperationsProps {
   onJobQueued: (jobId: string) => void;
 }
 
+interface SourceAttentionItem {
+  title: string;
+  detail: string;
+}
+
 function isVersionRetrievable(sourceVersion: SourceDetail["versions"][number]): boolean {
   return (
     sourceVersion.ingestionStatus === "active"
@@ -62,6 +67,59 @@ function buildRetrievalStatusSummary(
 
 function getSourceFingerprint(sourceDetail: SourceDetail): string {
   return (sourceDetail as SourceDetail & { sourceFingerprint: string }).sourceFingerprint;
+}
+
+function buildSourceAttentionItems(
+  sources: SourceSummary[],
+  latestVersion: SourceDetail["versions"][number] | null,
+  activeVersion: SourceDetail["versions"][number] | null,
+  selectedSource: SourceDetail | null,
+): SourceAttentionItem[] {
+  const attentionItems: SourceAttentionItem[] = [];
+  const failedSourceCount = sources.filter((source) =>
+    ["failed", "quarantined"].includes(source.latestIngestionStatus ?? ""),
+  ).length;
+  const quarantinedSourceCount = sources.filter(
+    (source) => (source.latestQuarantineStatus ?? "").toLowerCase() !== "clear",
+  ).length;
+  const processingSourceCount = sources.filter((source) =>
+    ["processing", "queued", "running"].includes(source.latestIngestionStatus ?? ""),
+  ).length;
+
+  if (failedSourceCount > 0) {
+    attentionItems.push({
+      title: "Repair failed sources",
+      detail: "Sources need retry or quarantine review before the latest versions can be trusted.",
+    });
+  }
+  if (quarantinedSourceCount > 0) {
+    attentionItems.push({
+      title: "Clear quarantined content",
+      detail: "Quarantined versions stay outside retrieval until malware and quarantine reviews are cleared.",
+    });
+  }
+  if (processingSourceCount > 0) {
+    attentionItems.push({
+      title: "Watch processing backlog",
+      detail: "Queued and running sources are not retrievable yet, so operators should track them until activation completes.",
+    });
+  }
+
+  if (selectedSource && latestVersion && !isVersionRetrievable(latestVersion)) {
+    if (activeVersion && isVersionRetrievable(activeVersion)) {
+      attentionItems.push({
+        title: "Selected source is serving an older live version",
+        detail: `${selectedSource.displayName} latest version ${latestVersion.versionLabel} is not retrievable, so Cortex still serves ${activeVersion.versionLabel} until onboarding is repaired.`,
+      });
+    } else {
+      attentionItems.push({
+        title: "Selected source has no live retrieval version",
+        detail: `${selectedSource.displayName} has no clean activated version, so queries should abstain until onboarding succeeds.`,
+      });
+    }
+  }
+
+  return attentionItems;
 }
 
 /** Render the developer source inventory, onboarding forms, and version diagnostics. */
@@ -181,6 +239,10 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
   const quarantinedVersionCount = selectedSource?.versions.filter(
     (version) => version.quarantineStatus.toLowerCase() !== "clear",
   ).length ?? 0;
+  const attentionItems = useMemo(
+    () => buildSourceAttentionItems(sources, latestVersion, activeVersion, selectedSource),
+    [activeVersion, latestVersion, selectedSource, sources],
+  );
 
   async function handleUploadSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -458,6 +520,26 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                 <span><small>Quarantined</small><strong>{quarantinedVersionCount}</strong></span>
                 <span><small>ACL principals</small><strong>{latestVersion.principalIds.length}</strong></span>
                 <span><small>Active label</small><strong>{activeVersion?.versionLabel ?? "inactive"}</strong></span>
+              </div>
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <WarningCircle aria-hidden size={18} />
+                  <strong>Operator queue</strong>
+                </div>
+                {attentionItems.length > 0 ? (
+                  <div className="source-list">
+                    {attentionItems.map((attentionItem) => (
+                      <div className="source-list__item" key={attentionItem.title}>
+                        <div>
+                          <strong>{attentionItem.title}</strong>
+                          <small>{attentionItem.detail}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No source onboarding actions are blocking retrieval right now.</p>
+                )}
               </div>
               <div className="source-form-card" style={{ marginBottom: 16 }}>
                 <div className="source-form-card__heading">

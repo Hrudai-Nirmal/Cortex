@@ -104,6 +104,8 @@ describe("SourceOperations", () => {
     expect(screen.getByText(/12/)).toBeVisible();
     expect(screen.getByText(/Accelerator reports/)).toBeVisible();
     expect(screen.getByText(/mps/)).toBeVisible();
+    expect(await screen.findByText("Operator queue")).toBeVisible();
+    expect(screen.getByText("No source onboarding actions are blocking retrieval right now.")).toBeVisible();
     expect(screen.getByRole("region", { name: "Source detail" })).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
@@ -203,11 +205,14 @@ describe("SourceOperations", () => {
     );
 
     expect(await screen.findByText("Security Handbook")).toBeVisible();
-    expect(screen.getByText("Latest version is not retrievable")).toBeVisible();
+    expect(await screen.findByText("Latest version is not retrievable")).toBeVisible();
     expect(screen.getByText(/version 2.0 is failed/i)).toBeVisible();
     expect(screen.getByText(/active version 1.9 remains the live retrieval candidate/i)).toBeVisible();
     expect(screen.getByText("Retrievable active version")).toBeVisible();
     expect(screen.getAllByText("Not retrievable").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Operator queue")).toBeVisible();
+    expect(screen.getByText(/Sources need retry or quarantine review before the latest versions can be trusted./i)).toBeVisible();
+    expect(screen.getByText(/Security Handbook latest version 2.0 is not retrievable, so Cortex still serves 1.9 until onboarding is repaired./i)).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });
