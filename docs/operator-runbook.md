@@ -197,6 +197,8 @@ examples wire that into their worker health signals.
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
   query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including request semantics, employee-safe versus operator-only fields, stable error meanings, severity, and remediation guidance for every non-ready component
+- when the live query-contract endpoint itself is unavailable, `package:status` now keeps the rest
+  of the package summary readable and prints that contract fetch failure as a degraded detail
 - `package:logs` tails compose logs for the whole package or one named service
 
 The fixed console now mirrors that packaging story more directly: even if one settings-side

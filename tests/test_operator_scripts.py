@@ -173,6 +173,9 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_runtime_config_summary "query" "$query_runtime_config"' in scriptText
     assert 'print_cache_header_summary "console" "$console_runtime_config_headers"' in scriptText
     assert 'print_cache_header_summary "query" "$query_runtime_config_headers"' in scriptText
+    assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
+    assert 'query contract: unavailable' in scriptText
+    assert "query contract detail:" in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
     assert 'request semantics' in scriptText
     assert 'employee-safe fields' in scriptText

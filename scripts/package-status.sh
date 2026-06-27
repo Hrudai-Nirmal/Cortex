@@ -29,6 +29,12 @@ read_json() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+try_read_json() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" 2>/tmp/cortex-package-status-error.$$ || return 1
+}
+
 read_headers() {
   local host="$1"
   local path="$2"
@@ -79,6 +85,10 @@ PY
 
 print_contract_summary() {
   local payload="$1"
+  if [ -z "$payload" ]; then
+    echo "query contract: unavailable"
+    return 0
+  fi
   if command -v python3 >/dev/null 2>&1; then
     CONTRACT_PAYLOAD="$payload" python3 - <<'PY'
 import json
@@ -120,6 +130,13 @@ print(f"  - error statuses: {errorStatusSummary}")
 PY
   else
     printf "query contract: %s\n" "$payload"
+  fi
+}
+
+print_contract_fetch_error() {
+  local error_detail="$1"
+  if [ -n "$error_detail" ]; then
+    echo "query contract detail: ${error_detail}"
   fi
 }
 
@@ -186,7 +203,14 @@ startup_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/startup")"
 ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
-query_contract_payload="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
+query_contract_payload=""
+query_contract_error=""
+if query_contract_payload="$(try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"; then
+  :
+else
+  query_contract_error="$(cat /tmp/cortex-package-status-error.$$ 2>/dev/null || true)"
+fi
+rm -f /tmp/cortex-package-status-error.$$ 2>/dev/null || true
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
 query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
@@ -209,4 +233,5 @@ print_runtime_config_summary "query" "$query_runtime_config"
 print_cache_header_summary "console" "$console_runtime_config_headers"
 print_cache_header_summary "query" "$query_runtime_config_headers"
 print_contract_summary "$query_contract_payload"
+print_contract_fetch_error "$query_contract_error"
 print_worker_status
