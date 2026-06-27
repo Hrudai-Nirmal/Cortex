@@ -46,6 +46,8 @@ Replacement query shells may cache this descriptor at startup to confirm they ar
 integrating with a compatible Cortex deployment before issuing real user queries.
 The shipped `query-web` surface now does exactly this, which keeps the bundled employee UI
 honest as one more consumer of the public contract rather than a bypass around it.
+`pnpm package:verify` now checks the same live descriptor semantics at the package boundary, so
+operators can prove the shipped deployment still advertises the full replacement-query contract.
 
 The descriptor now also formalizes the split between what an employee-facing UI may depend
 on and what should remain reserved for elevated debugging:
@@ -56,6 +58,8 @@ on and what should remain reserved for elevated debugging:
 - `operatorOnlyExtensionFields` identifies fields that should remain correlation/debug aids.
 - `errorStatuses` publishes the stable non-abstention error meanings a replacement UI should
   distinguish from a successful answer contract.
+- `responseHeaders`, `evidenceStatuses`, `routes`, and `abstentionEvidenceStatuses` are also part
+  of the live semantic contract and should be validated before trusting the deployed package.
 
 ## Authentication and scope
 
@@ -105,6 +109,9 @@ Notes:
 - Replacement UIs should also validate `requestOptions` before enabling traffic so they fail
   closed if the deployment no longer guarantees `stream=false`, the last-user-message
   selection rule, or the citation toggle contract they expect.
+- Replacement UIs should also validate `responseHeaders`, `evidenceStatuses`, `routes`,
+  `abstentionEvidenceStatuses`, and `errorStatuses` so semantic contract drift fails closed
+  before employee traffic starts flowing.
 
 ## Response
 
@@ -202,6 +209,8 @@ Replacement UIs should distinguish these cases from intentional abstention. Abst
 
 - Treat `choices[0].message.content` as display text.
 - Read and validate `requestOptions` before sending traffic from a replacement UI.
+- Read and validate the descriptor’s `responseHeaders`, `evidenceStatuses`, `routes`,
+  `abstentionEvidenceStatuses`, and `errorStatuses` before enabling traffic from a replacement UI.
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.
 - Treat `x_cortex.evidenceStatus` and `x_cortex.abstained` as answer-governance signals.
 - Treat `x_cortex.claims[*].supportStatus` as the atomic support verdict for each claim,

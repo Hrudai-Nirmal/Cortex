@@ -33,6 +33,27 @@ const REQUIRED_QUERY_EXTENSION_FIELDS = [
   "stages",
 ] as const;
 const REQUIRED_OPERATOR_ONLY_EXTENSION_FIELDS = ["traceEventsPath"] as const;
+const REQUIRED_QUERY_RESPONSE_HEADERS = [
+  "X-Cortex-Contract-Version",
+  "X-Cortex-Trace-Id",
+  "X-Cortex-Evidence-Status",
+  "X-Cortex-Route",
+  "X-Cortex-Abstained",
+] as const;
+const REQUIRED_QUERY_ERROR_CODES = [
+  "invalid_request",
+  "forbidden_scope",
+  "provider_unavailable",
+  "internal_error",
+] as const;
+const REQUIRED_QUERY_EVIDENCE_STATUSES = [
+  "sufficient",
+  "partial",
+  "insufficient",
+  "conflict",
+] as const;
+const REQUIRED_QUERY_ROUTES = ["rag", "compute", "retrieve-then-compute"] as const;
+const REQUIRED_QUERY_ABSTENTION_EVIDENCE_STATUSES = ["insufficient", "conflict"] as const;
 
 function getDefaultFixtureToken(): string {
   return getActiveSurface() === "query" ? "fixture-employee" : "fixture-admin";
@@ -112,6 +133,33 @@ function validateExternalQueryContractDescriptor(
   for (const operatorOnlyField of REQUIRED_OPERATOR_ONLY_EXTENSION_FIELDS) {
     if (!descriptor.operatorOnlyExtensionFields.includes(operatorOnlyField)) {
       throw buildContractCompatibilityError(`Missing required operator-only Cortex field: ${operatorOnlyField}.`);
+    }
+  }
+  for (const requiredHeader of REQUIRED_QUERY_RESPONSE_HEADERS) {
+    if (!descriptor.responseHeaders.includes(requiredHeader)) {
+      throw buildContractCompatibilityError(`Missing required Cortex response header: ${requiredHeader}.`);
+    }
+  }
+  for (const requiredCode of REQUIRED_QUERY_ERROR_CODES) {
+    if (!descriptor.errorStatuses.some((errorStatus) => errorStatus.code === requiredCode)) {
+      throw buildContractCompatibilityError(`Missing required Cortex error contract entry: ${requiredCode}.`);
+    }
+  }
+  for (const requiredEvidenceStatus of REQUIRED_QUERY_EVIDENCE_STATUSES) {
+    if (!descriptor.evidenceStatuses.includes(requiredEvidenceStatus)) {
+      throw buildContractCompatibilityError(`Missing required Cortex evidence status: ${requiredEvidenceStatus}.`);
+    }
+  }
+  for (const requiredRoute of REQUIRED_QUERY_ROUTES) {
+    if (!descriptor.routes.includes(requiredRoute)) {
+      throw buildContractCompatibilityError(`Missing required Cortex route: ${requiredRoute}.`);
+    }
+  }
+  for (const requiredAbstentionStatus of REQUIRED_QUERY_ABSTENTION_EVIDENCE_STATUSES) {
+    if (!descriptor.abstentionEvidenceStatuses.includes(requiredAbstentionStatus)) {
+      throw buildContractCompatibilityError(
+        `Missing required Cortex abstention evidence status: ${requiredAbstentionStatus}.`,
+      );
     }
   }
   return descriptor;

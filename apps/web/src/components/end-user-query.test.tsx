@@ -286,6 +286,36 @@ function mockIncompatibleContract(): void {
   );
 }
 
+function mockSemanticallyIncompatibleContract(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...contractResponse,
+            responseHeaders: ["X-Cortex-Contract-Version", "X-Cortex-Trace-Id"],
+            errorStatuses: contractResponse.errorStatuses.filter(
+              (errorStatus) => errorStatus.code !== "provider_unavailable",
+            ),
+            abstentionEvidenceStatuses: ["insufficient"],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      ),
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -367,6 +397,14 @@ describe("EndUserQuery", () => {
 
   it("fails safely when the deployed package advertises an incompatible query contract", async () => {
     mockIncompatibleContract();
+    render(<EndUserQuery />);
+
+    expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Submit question" })).toBeDisabled();
+  });
+
+  it("fails safely when the deployed package drifts from the expected evidence and error contract", async () => {
+    mockSemanticallyIncompatibleContract();
     render(<EndUserQuery />);
 
     expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();

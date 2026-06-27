@@ -63,6 +63,10 @@ UI builders can discover the exact stable contract metadata from the running dep
 That live descriptor now also publishes the stable request semantics, employee-safe versus
 operator-only `x_cortex` fields, and machine-readable error meanings so third-party chat
 shells can integrate against the running package without reverse-engineering the bundled UI.
+The bundled `query-web` surface and `pnpm package:verify` now also validate the live
+response-header set, evidence-status enums, route enums, abstention enums, and required
+error meanings so Cortex treats its own shipped employee UI and package tooling as strict
+consumers of that same replacement-query contract.
 
 See [external-query-contract.md](docs/external-query-contract.md) for the stable wire contract.
 

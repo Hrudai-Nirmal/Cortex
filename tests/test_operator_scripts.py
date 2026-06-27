@@ -97,10 +97,18 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"employeeSafeExtensionFields"' in verifyText
     assert '"operatorOnlyExtensionFields"' in verifyText
     assert '"errorStatuses"' in verifyText
+    assert '"evidenceStatuses"' in verifyText
+    assert '"routes"' in verifyText
+    assert '"abstentionEvidenceStatuses"' in verifyText
     assert '"code":"invalid_request"' in verifyText
     assert '"code":"forbidden_scope"' in verifyText
     assert '"code":"provider_unavailable"' in verifyText
     assert '"code":"internal_error"' in verifyText
+    assert '"sufficient"' in verifyText
+    assert '"partial"' in verifyText
+    assert '"insufficient"' in verifyText
+    assert '"conflict"' in verifyText
+    assert '"retrieve-then-compute"' in verifyText
     assert '"traceEventsPath"' in verifyText
     assert 'assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"' in verifyText
     assert 'assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"' in verifyText

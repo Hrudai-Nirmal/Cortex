@@ -121,10 +121,18 @@ assert_contains "$query_contract" '"extensionFields"' "query contract extension 
 assert_contains "$query_contract" '"employeeSafeExtensionFields"' "query contract employee-safe fields"
 assert_contains "$query_contract" '"operatorOnlyExtensionFields"' "query contract operator-only fields"
 assert_contains "$query_contract" '"errorStatuses"' "query contract error statuses"
+assert_contains "$query_contract" '"evidenceStatuses"' "query contract evidence statuses"
+assert_contains "$query_contract" '"routes"' "query contract routes"
+assert_contains "$query_contract" '"abstentionEvidenceStatuses"' "query contract abstention evidence statuses"
 assert_contains "$query_contract" '"code":"invalid_request"' "query contract invalid_request code"
 assert_contains "$query_contract" '"code":"forbidden_scope"' "query contract forbidden_scope code"
 assert_contains "$query_contract" '"code":"provider_unavailable"' "query contract provider_unavailable code"
 assert_contains "$query_contract" '"code":"internal_error"' "query contract internal_error code"
+assert_contains "$query_contract" '"sufficient"' "query contract sufficient evidence status"
+assert_contains "$query_contract" '"partial"' "query contract partial evidence status"
+assert_contains "$query_contract" '"insufficient"' "query contract insufficient evidence status"
+assert_contains "$query_contract" '"conflict"' "query contract conflict evidence status"
+assert_contains "$query_contract" '"retrieve-then-compute"' "query contract retrieve-then-compute route"
 assert_worker_startup_check
 
 if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then
