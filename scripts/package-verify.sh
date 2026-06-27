@@ -26,6 +26,12 @@ read_text() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+read_headers() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
+}
+
 require_command curl
 require_command docker
 
@@ -43,11 +49,15 @@ console_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_CONSOLE_HOS
 query_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
 console_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
 query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
+console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
+query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 
 printf "%s" "$console_html" | grep -qi "<!doctype html"
 printf "%s" "$query_html" | grep -qi "<!doctype html"
 printf "%s" "$console_headers" | grep -qi '^X-Cortex-Surface: console'
 printf "%s" "$query_headers" | grep -qi '^X-Cortex-Surface: query'
+printf "%s" "$console_runtime_config_headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate'
+printf "%s" "$query_runtime_config_headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate'
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
 query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 printf "%s" "$console_runtime_config" | grep -q "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\""

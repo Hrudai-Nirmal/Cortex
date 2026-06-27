@@ -115,6 +115,19 @@ PY
   fi
 }
 
+print_cache_header_summary() {
+  local label="$1"
+  local headers="$2"
+  local cache_control_line=""
+
+  cache_control_line="$(printf "%s\n" "$headers" | grep -i '^Cache-Control:' | tail -n 1 | tr -d '\r')"
+  if [ -n "$cache_control_line" ]; then
+    echo "${label} runtime-config cache: ${cache_control_line#Cache-Control: }"
+  else
+    echo "${label} runtime-config cache: missing"
+  fi
+}
+
 print_worker_status() {
   if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
     python -m cortex.worker --check-startup >/dev/null 2>&1; then
@@ -145,6 +158,8 @@ query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
 query_contract_payload="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
 query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
+query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 console_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/")"
 query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
 
@@ -160,5 +175,7 @@ print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
 print_runtime_config_summary "console" "$console_runtime_config"
 print_runtime_config_summary "query" "$query_runtime_config"
+print_cache_header_summary "console" "$console_runtime_config_headers"
+print_cache_header_summary "query" "$query_runtime_config_headers"
 print_contract_summary "$query_contract_payload"
 print_worker_status

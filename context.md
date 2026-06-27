@@ -66,6 +66,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - The browser images now generate a runtime `cortex-runtime-config.js` from `CORTEX_CONSOLE_PUBLIC_URL` and `CORTEX_QUERY_PUBLIC_URL` when the container starts, so split-host client domains can change without rebuilding `console-web` or `query-web`.
 - The fixed console navigation now prefers the runtime `deployment-config` public query URL from `GET /health/startup` over baked frontend assumptions, so operator links continue to target the right employee host when package/browser images and deployment env drift.
 - Package operator tooling now also inspects the frontend `cortex-runtime-config.js` payload on both hosts, so `package:status` and `package:verify` can catch browser-runtime split-host drift directly instead of inferring it only from API health.
+- The packaged browser hosts now serve `cortex-runtime-config.js` with an explicit no-store cache policy, so client-domain changes propagate immediately after rollouts instead of sticking behind cached runtime host mappings.
 - Automated domain/security tests, component tests, type checking, production bundling, and optional live PostgreSQL/model integration tests.
 - Deployment-health regression coverage now explicitly pins production storage-path validation, remote-model override behavior, object-storage write failures, and accelerator-mismatch reporting.
 

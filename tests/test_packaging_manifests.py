@@ -131,6 +131,17 @@ def testFrontendPackageDockerfilesInjectRuntimePublicUrlConfig() -> None:
     assert "window.__CORTEX_RUNTIME_CONFIG__ = Object.freeze(window.__CORTEX_RUNTIME_CONFIG__ ?? {});" in publicRuntimeConfig
 
 
+def testFrontendNginxDisablesCachingForRuntimeConfig() -> None:
+    """Runtime public-host config should never be cached across client rollouts."""
+    nginxConfigText = (
+        Path(__file__).resolve().parents[1] / "apps" / "web" / "nginx.static.conf"
+    ).read_text(encoding="utf-8")
+    assert "location = /cortex-runtime-config.js" in nginxConfigText
+    assert 'add_header Cache-Control "no-store, no-cache, must-revalidate" always;' in nginxConfigText
+    assert 'add_header Pragma "no-cache" always;' in nginxConfigText
+    assert 'add_header Expires "0" always;' in nginxConfigText
+
+
 def testOpenShiftRoutesPreserveSplitHostsThroughEdgeService() -> None:
     """OpenShift examples should keep the console/query host split intact."""
     routeManifestText = (

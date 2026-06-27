@@ -166,6 +166,7 @@ examples wire that into their worker health signals.
 - both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
 - both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
+- both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - the worker startup check passes from inside the running package
 - if fixture auth is enabled:
