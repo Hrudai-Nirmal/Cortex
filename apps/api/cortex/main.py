@@ -31,6 +31,12 @@ def buildApiModelProvider(settings: Settings) -> OllamaModelProvider:
     )
 
 
+def buildStartupExceptionMessage(prefix: str, error: Exception) -> str:
+    """Preserve the underlying startup exception text for operator troubleshooting."""
+    normalizedDetail = str(error).strip() or error.__class__.__name__
+    return f"{prefix}: {normalizedDetail}"
+
+
 def createApp(settingsOverride: Settings | None = None) -> FastAPI:
     """Create the Cortex API without performing network operations at import time."""
     configureLogging()
@@ -49,11 +55,20 @@ def createApp(settingsOverride: Settings | None = None) -> FastAPI:
             ollamaBaseUrl=activeSettings.ollamaBaseUrl,
             corsOrigins=list(activeSettings.getCorsOrigins()),
         )
-        startupHealth = await RuntimeHealthService(
-            session=None,
-            settings=activeSettings,
-            modelProvider=buildApiModelProvider(activeSettings),
-        ).getStartupReadiness()
+        try:
+            startupHealth = await RuntimeHealthService(
+                session=None,
+                settings=activeSettings,
+                modelProvider=buildApiModelProvider(activeSettings),
+            ).getStartupReadiness()
+        except Exception as error:
+            logger.error("api_startup_health_error", error=str(error))
+            raise RuntimeError(
+                buildStartupExceptionMessage(
+                    "api startup could not collect startup readiness",
+                    error,
+                )
+            ) from error
         logger.info(
             "api_startup_health",
             status=startupHealth.status,

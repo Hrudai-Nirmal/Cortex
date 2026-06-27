@@ -95,3 +95,26 @@ async def testDevelopmentApiStartupLogsButAllowsDegradedStaticHealth(
 
     async with application.router.lifespan_context(application):
         pass
+
+
+@pytest.mark.asyncio
+async def testProductionApiStartupPreservesStartupReadinessExceptionContext(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Packaged production APIs should preserve the underlying startup-check exception clue."""
+
+    async def stubStartupReadiness(self) -> RuntimeHealthResponse:
+        raise RuntimeError("model endpoint handshake timed out")
+
+    monkeypatch.setattr(mainModule.RuntimeHealthService, "getStartupReadiness", stubStartupReadiness)
+
+    application = createApp(buildSettings())
+
+    with pytest.raises(
+        RuntimeError,
+        match="model endpoint handshake timed out",
+    ) as errorInfo:
+        async with application.router.lifespan_context(application):
+            pass
+
+    assert "api startup could not collect startup readiness" in str(errorInfo.value)
