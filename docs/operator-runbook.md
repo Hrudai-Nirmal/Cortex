@@ -171,6 +171,13 @@ examples wire that into their worker health signals.
 - both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
 - both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- that contract descriptor still declares the expected request semantics for replacement UIs:
+  `userMessageSelectionPolicy=last-non-empty-user-message`, `streamRequiredValue=false`,
+  and `supportsCitationToggle=true`
+- that contract descriptor still separates employee-safe `x_cortex` fields from
+  operator-only trace correlation fields
+- that contract descriptor still publishes stable machine-readable error meanings for
+  `invalid_request`, `forbidden_scope`, `provider_unavailable`, and `internal_error`
 - the worker startup check passes from inside the running package
 - if fixture auth is enabled:
   - seed fixtures load
@@ -182,7 +189,7 @@ examples wire that into their worker health signals.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
+  query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including request semantics, employee-safe versus operator-only fields, stable error meanings, severity, and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 The fixed console now mirrors that packaging story more directly: even if one settings-side

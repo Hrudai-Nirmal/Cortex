@@ -96,6 +96,27 @@ print(f"  - trace events: {payload.get('traceEventsPathTemplate')}")
 print(f"  - routes: {', '.join(payload.get('routes', []))}")
 print(f"  - abstention evidence: {', '.join(payload.get('abstentionEvidenceStatuses', []))}")
 print(f"  - response headers: {', '.join(payload.get('responseHeaders', []))}")
+requestOptions = payload.get("requestOptions", {})
+print(
+    "  - request semantics: "
+    f"userMessageSelectionPolicy={requestOptions.get('userMessageSelectionPolicy')} :: "
+    f"streamRequiredValue={requestOptions.get('streamRequiredValue')} :: "
+    f"supportsCitationToggle={requestOptions.get('supportsCitationToggle')}"
+)
+print(
+    "  - employee-safe fields: "
+    f"{', '.join(payload.get('employeeSafeExtensionFields', []))}"
+)
+print(
+    "  - operator-only fields: "
+    f"{', '.join(payload.get('operatorOnlyExtensionFields', []))}"
+)
+errorStatuses = payload.get("errorStatuses", [])
+errorStatusSummary = ", ".join(
+    f"{errorStatus.get('statusCode')}:{errorStatus.get('code')}:{errorStatus.get('retryable')}"
+    for errorStatus in errorStatuses
+)
+print(f"  - error statuses: {errorStatusSummary}")
 PY
   else
     printf "query contract: %s\n" "$payload"

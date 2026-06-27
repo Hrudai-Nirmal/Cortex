@@ -155,6 +155,8 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:verify` confirms both browser hosts expose the expected runtime `cortex-runtime-config.js` values for console/query public URLs
 - `package:verify` confirms both browser hosts serve `cortex-runtime-config.js` with a `no-store` cache policy
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- `package:verify` confirms that live contract still advertises the expected request semantics,
+  employee-safe versus operator-only field boundary, and stable machine-readable error meanings
 - `package:verify` confirms the worker startup-check contract passes inside the running package
 - `package:verify` confirms the replacement-query facade emits stable Cortex contract headers for trace, evidence status, route, and abstention
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`

@@ -85,9 +85,20 @@ query_contract="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
 printf "%s" "$query_contract" | grep -q '"contractVersion":"v1"'
 printf "%s" "$query_contract" | grep -q '"endpointPath":"/v1/chat/completions"'
 printf "%s" "$query_contract" | grep -q '"authentication":"bearer-token"'
+printf "%s" "$query_contract" | grep -q '"requestOptions"'
+printf "%s" "$query_contract" | grep -q '"userMessageSelectionPolicy":"last-non-empty-user-message"'
+printf "%s" "$query_contract" | grep -q '"streamRequiredValue":false'
+printf "%s" "$query_contract" | grep -q '"supportsCitationToggle":true'
 printf "%s" "$query_contract" | grep -q '"traceEventsPathTemplate":"/v1/query/{traceId}/events"'
 printf "%s" "$query_contract" | grep -q '"responseHeaders"'
 printf "%s" "$query_contract" | grep -q '"extensionFields"'
+printf "%s" "$query_contract" | grep -q '"employeeSafeExtensionFields"'
+printf "%s" "$query_contract" | grep -q '"operatorOnlyExtensionFields"'
+printf "%s" "$query_contract" | grep -q '"errorStatuses"'
+printf "%s" "$query_contract" | grep -q '"code":"invalid_request"'
+printf "%s" "$query_contract" | grep -q '"code":"forbidden_scope"'
+printf "%s" "$query_contract" | grep -q '"code":"provider_unavailable"'
+printf "%s" "$query_contract" | grep -q '"code":"internal_error"'
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
   python -m cortex.worker --check-startup >/dev/null
 

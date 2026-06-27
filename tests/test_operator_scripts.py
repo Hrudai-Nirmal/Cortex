@@ -64,7 +64,7 @@ def testPackageEnvExampleDefaultsToOfflineCapableModelPolicy() -> None:
 
 
 def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
-    """Operator verification should validate split-surface, runtime-config, and contract headers."""
+    """Operator verification should validate split-surface, runtime-config, and rich contract semantics."""
     rootDirectory = Path(__file__).resolve().parents[1]
     verifyText = (rootDirectory / "scripts" / "package-verify.sh").read_text(encoding="utf-8")
     assert 'require_docker_daemon' in verifyText
@@ -87,6 +87,17 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"contractVersion":"v1"' in verifyText
     assert '"endpointPath":"/v1/chat/completions"' in verifyText
     assert '"authentication":"bearer-token"' in verifyText
+    assert '"requestOptions"' in verifyText
+    assert '"userMessageSelectionPolicy":"last-non-empty-user-message"' in verifyText
+    assert '"streamRequiredValue":false' in verifyText
+    assert '"supportsCitationToggle":true' in verifyText
+    assert '"employeeSafeExtensionFields"' in verifyText
+    assert '"operatorOnlyExtensionFields"' in verifyText
+    assert '"errorStatuses"' in verifyText
+    assert '"code":"invalid_request"' in verifyText
+    assert '"code":"forbidden_scope"' in verifyText
+    assert '"code":"provider_unavailable"' in verifyText
+    assert '"code":"internal_error"' in verifyText
     assert '"traceEventsPath"' in verifyText
     assert 'docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \\' in verifyText
     assert 'python -m cortex.worker --check-startup >/dev/null' in verifyText
@@ -137,7 +148,7 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
 
 
 def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
-    """Package status should show routed surface identity, health, and runtime-config headers."""
+    """Package status should show routed surface identity plus the rich replacement-UI contract."""
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-status.sh").read_text(encoding="utf-8")
     assert 'require_docker_daemon' in scriptText
@@ -159,6 +170,10 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_cache_header_summary "console" "$console_runtime_config_headers"' in scriptText
     assert 'print_cache_header_summary "query" "$query_runtime_config_headers"' in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
+    assert 'request semantics' in scriptText
+    assert 'employee-safe fields' in scriptText
+    assert 'operator-only fields' in scriptText
+    assert 'error statuses' in scriptText
     assert 'print_worker_status' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
     assert 'echo "worker startup: ready"' in scriptText
