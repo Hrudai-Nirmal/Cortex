@@ -67,6 +67,12 @@ interface SurfaceDeploymentCheck {
   remediation: string;
 }
 
+interface OperatorActionItem {
+  label: string;
+  detail: string;
+  remediation: string;
+}
+
 function findRuntimeComponent(
   runtimeHealth: RuntimeHealth | null,
   componentName: string,
@@ -166,6 +172,31 @@ function buildLoadWarnings(loadFailures: string[]): string | null {
 
 function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
   return runtimeHealth?.components.filter((component) => component.status !== "ready") ?? [];
+}
+
+function buildOperatorActionItems(
+  startupAlerts: RuntimeHealth["components"],
+  runtimeAlerts: RuntimeHealth["components"],
+  surfaceDeploymentChecks: SurfaceDeploymentCheck[],
+): OperatorActionItem[] {
+  const startupItems = startupAlerts.map((component) => ({
+    label: `Startup gate · ${component.name}`,
+    detail: component.detail,
+    remediation: component.remediation ?? "Clear this startup blocker before shipping the package.",
+  }));
+  const runtimeItems = runtimeAlerts.map((component) => ({
+    label: `Runtime alert · ${component.name}`,
+    detail: component.detail,
+    remediation: component.remediation ?? "Clear this runtime degradation before trusting the package in production.",
+  }));
+  const surfaceItems = surfaceDeploymentChecks
+    .filter((check) => check.status !== "ready")
+    .map((check) => ({
+      label: check.label,
+      detail: check.detail,
+      remediation: check.remediation,
+    }));
+  return [...startupItems, ...runtimeItems, ...surfaceItems];
 }
 
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
@@ -367,6 +398,11 @@ export function DeveloperConsole() {
     effectiveQueryUrl,
     deployedSurfaceConfig.startupPolicy,
     queryContract,
+  );
+  const operatorActionItems = buildOperatorActionItems(
+    startupAlerts,
+    runtimeAlerts,
+    surfaceDeploymentChecks,
   );
   const packageReadinessStatus = startupHealth?.status ?? "loading";
   const liveReadinessStatus = runtimeHealth?.status ?? "loading";
@@ -730,6 +766,36 @@ export function DeveloperConsole() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <WarningCircle aria-hidden size={18} />
+                  <strong>Operator action queue</strong>
+                </div>
+                {operatorActionItems.length > 0 ? (
+                  <table style={{ marginTop: 10 }}>
+                    <thead>
+                      <tr>
+                        <th>Action</th>
+                        <th>Detail</th>
+                        <th>Remediation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {operatorActionItems.map((item) => (
+                        <tr key={item.label}>
+                          <td>{item.label}</td>
+                          <td>{item.detail}</td>
+                          <td>{item.remediation}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ marginTop: 10 }}>
+                    No startup, runtime, or surface-contract actions are blocking operators right now.
+                  </p>
+                )}
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">

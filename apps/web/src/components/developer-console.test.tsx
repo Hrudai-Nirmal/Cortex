@@ -352,6 +352,9 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getByText("Live readiness")).toBeVisible();
     expect(screen.getByText("Static package startup contract is satisfied.")).toBeVisible();
+    expect(screen.getByText("Operator action queue")).toBeVisible();
+    expect(screen.getByText("Runtime alert · model-endpoint-policy")).toBeVisible();
+    expect(screen.getAllByText("Point CORTEX_OLLAMA_BASE_URL at a local endpoint.").length).toBeGreaterThan(0);
     expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);
     expect(
       screen.getAllByText(
@@ -476,6 +479,10 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
     expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
-    expect(screen.getByText("The live replacement-query contract descriptor is unavailable.")).toBeVisible();
+    expect(screen.getByText("Operator action queue")).toBeVisible();
+    expect(screen.getByText("Startup gate · object-storage")).toBeVisible();
+    expect(screen.getAllByText("Query contract handshake").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Restore GET /v1/chat/contracts/v1 so bundled and client-owned query UIs can verify the live Cortex contract before sending traffic.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("The live replacement-query contract descriptor is unavailable.").length).toBeGreaterThan(0);
   });
 });
