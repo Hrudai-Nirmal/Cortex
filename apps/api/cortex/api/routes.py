@@ -174,6 +174,8 @@ def buildExternalQueryContractDescriptor() -> ExternalQueryContractDescriptorSch
             "streamRequiredValue": False,
             "supportsCitationToggle": True,
         },
+        querySurfaceMode=settings.querySurfaceMode,
+        bundledQueryUiAvailable=settings.querySurfaceMode == "bundled",
         traceEventsPathTemplate="/v1/query/{traceId}/events",
         operatorConsolePath="/developer",
         responseHeaders=EXTERNAL_QUERY_CONTRACT_RESPONSE_HEADERS,

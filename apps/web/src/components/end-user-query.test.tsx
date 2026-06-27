@@ -28,6 +28,8 @@ const contractResponse = {
     streamRequiredValue: false,
     supportsCitationToggle: true,
   },
+  querySurfaceMode: "bundled",
+  bundledQueryUiAvailable: true,
   traceEventsPathTemplate: "/v1/query/{traceId}/events",
   operatorConsolePath: "/developer",
   responseHeaders: [

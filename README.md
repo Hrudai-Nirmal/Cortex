@@ -60,6 +60,10 @@ The response headers also carry:
 
 The live package also publishes `GET /v1/chat/contracts/v1` so operators and replacement
 UI builders can discover the exact stable contract metadata from the running deployment.
+That descriptor now also states whether the deployment ships the bundled employee shell
+(`querySurfaceMode=bundled`, `bundledQueryUiAvailable=true`) or exposes the query host as
+an API-only contract for a client-owned chat UI (`querySurfaceMode=external`,
+`bundledQueryUiAvailable=false`).
 That live descriptor now also publishes the stable request semantics, employee-safe versus
 operator-only `x_cortex` fields, and machine-readable error meanings so third-party chat
 shells can integrate against the running package without reverse-engineering the bundled UI.

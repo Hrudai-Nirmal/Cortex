@@ -262,6 +262,8 @@ class ExternalQueryContractDescriptorSchema(BaseModel):
     authentication: Literal["bearer-token"]
     supportsStreaming: bool
     requestOptions: ExternalQueryRequestOptionsSchema
+    querySurfaceMode: Literal["bundled", "external"]
+    bundledQueryUiAvailable: bool
     traceEventsPathTemplate: str
     operatorConsolePath: str
     responseHeaders: list[str] = Field(min_length=1)

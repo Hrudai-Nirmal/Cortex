@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "test", "production"] = "development"
     authMode: Literal["fixture"] = "fixture"
+    querySurfaceMode: Literal["bundled", "external"] = "bundled"
     databaseUrl: str = "postgresql+asyncpg://cortex:cortex@127.0.0.1:5432/cortex"
     enterpriseId: UUID = UUID("00000000-0000-0000-0000-000000000001")
     devMode: bool = True

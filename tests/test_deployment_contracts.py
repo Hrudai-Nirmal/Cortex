@@ -32,6 +32,7 @@ def buildPackageSettings(**overrides: object) -> Settings:
         "queryHost": "cortex-app.client.internal",
         "consolePublicUrl": "https://cortex-console.client.internal",
         "queryPublicUrl": "https://cortex-app.client.internal",
+        "querySurfaceMode": "bundled",
     }
     baseValues.update(overrides)
     return Settings(**baseValues)
@@ -199,6 +200,29 @@ async def testStartupHealthReportsDeploymentStartupPolicy() -> None:
     )
     assert deploymentComponent.status == "ready"
     assert "startupPolicy=fail-closed" in deploymentComponent.detail
+    assert "querySurfaceMode=bundled" in deploymentComponent.detail
+
+
+@pytest.mark.asyncio
+async def testStartupHealthReportsExternalQuerySurfaceMode() -> None:
+    """Operators should be able to see when the employee chat shell is client-owned."""
+    settings = buildPackageSettings(querySurfaceMode="external")
+    runtimeHealth = await RuntimeHealthService(
+        session=None,
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    ).getStartupReadiness()
+    deploymentComponent = next(
+        component
+        for component in runtimeHealth.components
+        if component.name == "deployment-config"
+    )
+    assert deploymentComponent.status == "ready"
+    assert "querySurfaceMode=external" in deploymentComponent.detail
 
 
 @pytest.mark.asyncio
@@ -411,6 +435,8 @@ async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata(
         "streamRequiredValue": False,
         "supportsCitationToggle": True,
     }
+    assert payload["querySurfaceMode"] == "bundled"
+    assert payload["bundledQueryUiAvailable"] is True
     assert payload["traceEventsPathTemplate"] == "/v1/query/{traceId}/events"
     assert payload["operatorConsolePath"] == "/developer"
     assert payload["responseHeaders"] == [
@@ -461,6 +487,23 @@ async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata(
     ]
     assert payload["abstentionEvidenceStatuses"] == ["insufficient", "conflict"]
     assert "Do not send raw enterprise scope" in payload["notes"][1]
+
+
+@pytest.mark.asyncio
+async def testExternalQueryContractDescriptorReportsClientOwnedQueryShell() -> None:
+    """Replacement UIs should be able to discover whether the bundled employee shell ships."""
+    application = createApp(buildPackageSettings(querySurfaceMode="external"))
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.get("/v1/chat/contracts/v1")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["querySurfaceMode"] == "external"
+    assert payload["bundledQueryUiAvailable"] is False
 
 
 @pytest.mark.asyncio

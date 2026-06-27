@@ -755,6 +755,13 @@ export interface components {
             /** Supportsstreaming */
             supportsStreaming: boolean;
             requestOptions: components["schemas"]["ExternalQueryRequestOptionsSchema"];
+            /**
+             * Querysurfacemode
+             * @enum {string}
+             */
+            querySurfaceMode: "bundled" | "external";
+            /** Bundledqueryuiavailable */
+            bundledQueryUiAvailable: boolean;
             /** Traceeventspathtemplate */
             traceEventsPathTemplate: string;
             /** Operatorconsolepath */

@@ -122,6 +122,15 @@ function validateExternalQueryContractDescriptor(
   if (!descriptor.requestOptions.supportsCitationToggle) {
     throw buildContractCompatibilityError("The deployed query contract does not preserve the citation display toggle.");
   }
+  if (!["bundled", "external"].includes(descriptor.querySurfaceMode)) {
+    throw buildContractCompatibilityError("The deployed query-surface mode is unsupported.");
+  }
+  if (descriptor.querySurfaceMode === "bundled" && !descriptor.bundledQueryUiAvailable) {
+    throw buildContractCompatibilityError("The deployed package reports a bundled query UI mismatch.");
+  }
+  if (descriptor.querySurfaceMode === "external" && descriptor.bundledQueryUiAvailable) {
+    throw buildContractCompatibilityError("The deployed package reports an external query mode mismatch.");
+  }
   for (const requiredField of REQUIRED_QUERY_EXTENSION_FIELDS) {
     if (!descriptor.employeeSafeExtensionFields.includes(requiredField)) {
       throw buildContractCompatibilityError(`Missing required employee-safe Cortex field: ${requiredField}.`);

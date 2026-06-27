@@ -133,6 +133,8 @@ assert_contains "$query_contract" '"contractVersion":"v1"' "query contract versi
 assert_contains "$query_contract" '"endpointPath":"/v1/chat/completions"' "query contract endpoint path"
 assert_contains "$query_contract" '"authentication":"bearer-token"' "query contract authentication mode"
 assert_contains "$query_contract" '"requestOptions"' "query contract request options"
+assert_contains "$query_contract" '"querySurfaceMode":"' "query contract surface mode"
+assert_contains "$query_contract" '"bundledQueryUiAvailable":' "query contract bundled query-ui availability"
 assert_contains "$query_contract" '"userMessageSelectionPolicy":"last-non-empty-user-message"' "query contract user-message selection policy"
 assert_contains "$query_contract" '"streamRequiredValue":false' "query contract stream requirement"
 assert_contains "$query_contract" '"supportsCitationToggle":true' "query contract citation toggle support"
@@ -154,6 +156,13 @@ assert_contains "$query_contract" '"partial"' "query contract partial evidence s
 assert_contains "$query_contract" '"insufficient"' "query contract insufficient evidence status"
 assert_contains "$query_contract" '"conflict"' "query contract conflict evidence status"
 assert_contains "$query_contract" '"retrieve-then-compute"' "query contract retrieve-then-compute route"
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
+  assert_contains "$query_contract" '"querySurfaceMode":"bundled"' "bundled query-surface mode"
+  assert_contains "$query_contract" '"bundledQueryUiAvailable":true' "bundled query-ui availability"
+else
+  assert_contains "$query_contract" '"querySurfaceMode":"external"' "external query-surface mode"
+  assert_contains "$query_contract" '"bundledQueryUiAvailable":false' "external query-ui availability"
+fi
 assert_worker_startup_check
 
 if [ "${CORTEX_AUTH_MODE:-fixture}" = "fixture" ]; then

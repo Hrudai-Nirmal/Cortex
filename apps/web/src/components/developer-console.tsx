@@ -104,17 +104,30 @@ function isRootUrl(urlValue: string): boolean {
 
 function parseDeploymentConfig(
   detail: string | undefined,
-): { consoleUrl: string | null; queryUrl: string | null; startupPolicy: string | null } {
+): {
+  consoleUrl: string | null;
+  queryUrl: string | null;
+  startupPolicy: string | null;
+  querySurfaceMode: "bundled" | "external" | null;
+} {
   if (!detail) {
-    return { consoleUrl: null, queryUrl: null, startupPolicy: null };
+    return {
+      consoleUrl: null,
+      queryUrl: null,
+      startupPolicy: null,
+      querySurfaceMode: null,
+    };
   }
   const consoleMatch = detail.match(/console=([^,]+), query=/);
   const queryMatch = detail.match(/query=([^,]+), cors=/);
   const startupPolicyMatch = detail.match(/startupPolicy=([^,]+)/);
+  const querySurfaceModeMatch = detail.match(/querySurfaceMode=(bundled|external)/);
   return {
     consoleUrl: consoleMatch?.[1] ?? null,
     queryUrl: queryMatch?.[1] ?? null,
     startupPolicy: startupPolicyMatch?.[1] ?? null,
+    querySurfaceMode:
+      (querySurfaceModeMatch?.[1] as "bundled" | "external" | undefined) ?? null,
   };
 }
 
@@ -123,6 +136,7 @@ function buildSurfaceDeploymentChecks(
   consoleUrl: string,
   queryUrl: string,
   startupPolicy: string | null,
+  querySurfaceMode: "bundled" | "external" | null,
   queryContract: ExternalQueryContractDescriptor | null,
 ): SurfaceDeploymentCheck[] {
   const consoleOrigin = getUrlOrigin(consoleUrl);
@@ -131,6 +145,15 @@ function buildSurfaceDeploymentChecks(
     Boolean(consoleOrigin) && Boolean(queryOrigin) && consoleOrigin !== queryOrigin;
   const hasRootHosts = isRootUrl(consoleUrl) && isRootUrl(queryUrl);
   const requiresFailClosed = environment === "production";
+  const hasKnownSurfaceMode = querySurfaceMode === "bundled" || querySurfaceMode === "external";
+  const contractSurfaceModeMatches =
+    queryContract == null
+    || querySurfaceMode == null
+    || queryContract.querySurfaceMode === querySurfaceMode;
+  const bundledAvailabilityMatches =
+    queryContract == null
+    || querySurfaceMode == null
+    || queryContract.bundledQueryUiAvailable === (querySurfaceMode === "bundled");
 
   return [
     {
@@ -156,10 +179,27 @@ function buildSurfaceDeploymentChecks(
           : "Production packages must expose startupPolicy=fail-closed so degraded runtime dependencies stop boot instead of serving partial state.",
     },
     {
+      label: "Query surface mode",
+      status:
+        hasKnownSurfaceMode && contractSurfaceModeMatches && bundledAvailabilityMatches
+          ? "ready"
+          : "degraded",
+      detail:
+        querySurfaceMode === "bundled"
+          ? "This package ships the built-in query-web employee UI."
+          : querySurfaceMode === "external"
+            ? "This package exposes the query host as an API-only surface for a client-owned employee UI."
+            : "The running package does not declare whether the employee query surface is bundled or client-owned.",
+      remediation:
+        hasKnownSurfaceMode && contractSurfaceModeMatches && bundledAvailabilityMatches
+          ? "Keep the startup health payload and live query contract aligned so operators and replacement UIs see the same employee-surface mode."
+          : "Publish the same query-surface mode through startup health and GET /v1/chat/contracts/v1 so operators can distinguish intentional client-owned shells from packaged-surface drift.",
+    },
+    {
       label: "Query contract handshake",
       status: queryContract ? "ready" : "degraded",
       detail: queryContract
-        ? `Contract ${queryContract.contractVersion} advertises ${queryContract.method} ${queryContract.endpointPath} with ${queryContract.authentication} authentication.`
+        ? `Contract ${queryContract.contractVersion} advertises ${queryContract.method} ${queryContract.endpointPath} with ${queryContract.authentication} authentication for ${queryContract.querySurfaceMode} query mode.`
         : "The live replacement-query contract descriptor is unavailable.",
       remediation: queryContract
         ? "Replacement chat shells should validate the live contract descriptor before trusting the deployed query surface."
@@ -433,11 +473,14 @@ export function DeveloperConsole() {
   const deployedSurfaceConfig = parseDeploymentConfig(deploymentConfig?.detail);
   const effectiveConsoleUrl = deployedSurfaceConfig.consoleUrl ?? consolePublicUrl;
   const effectiveQueryUrl = deployedSurfaceConfig.queryUrl ?? queryPublicUrl;
+  const displayedQuerySurfaceMode =
+    queryContract?.querySurfaceMode ?? deployedSurfaceConfig.querySurfaceMode ?? "bundled";
   const surfaceDeploymentChecks = buildSurfaceDeploymentChecks(
     startupHealth?.environment ?? runtimeHealth?.environment,
     effectiveConsoleUrl,
     effectiveQueryUrl,
     deployedSurfaceConfig.startupPolicy,
+    deployedSurfaceConfig.querySurfaceMode,
     queryContract,
   );
   const operatorActionItems = buildOperatorActionItems(
@@ -881,6 +924,18 @@ export function DeveloperConsole() {
                   </code>, and the fixed console lives at{" "}
                   <code>{queryContract?.operatorConsolePath ?? "/developer"}</code>.
                 </p>
+                <div style={{ marginTop: 12 }}>
+                  <strong>
+                    {displayedQuerySurfaceMode === "external"
+                      ? "External client-owned employee shell"
+                      : "Bundled employee shell"}
+                  </strong>
+                  <p style={{ marginTop: 6 }}>
+                    {displayedQuerySurfaceMode === "external"
+                      ? "This package exposes the query host as an API-only surface for a client-owned employee UI."
+                      : "This package ships the built-in query-web employee UI."}
+                  </p>
+                </div>
                 {queryContract ? (
                   <div style={{ marginTop: 12 }}>
                     <strong>Request behavior</strong>

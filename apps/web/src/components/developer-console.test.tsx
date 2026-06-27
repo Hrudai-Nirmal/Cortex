@@ -95,7 +95,7 @@ describe("DeveloperConsole", () => {
                 status: "ready",
                 severity: "info",
                 detail:
-                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed, querySurfaceMode=bundled",
                 remediation: null,
               },
               {
@@ -225,6 +225,8 @@ describe("DeveloperConsole", () => {
               streamRequiredValue: false,
               supportsCitationToggle: true,
             },
+            querySurfaceMode: "bundled",
+            bundledQueryUiAvailable: true,
             traceEventsPathTemplate: "/v1/query/{traceId}/events",
             operatorConsolePath: "/developer",
             responseHeaders: [
@@ -334,6 +336,8 @@ describe("DeveloperConsole", () => {
     ).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
+    expect(screen.getByText("Bundled employee shell")).toBeVisible();
+    expect(screen.getAllByText("This package ships the built-in query-web employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Contract headers")).toBeVisible();
     expect(screen.getByText("Request behavior")).toBeVisible();
     expect(screen.getByText("Employee-safe fields")).toBeVisible();
@@ -411,7 +415,7 @@ describe("DeveloperConsole", () => {
                 status: "ready",
                 severity: "info",
                 detail:
-                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed, querySurfaceMode=external",
                 remediation: null,
               },
               {
@@ -437,7 +441,7 @@ describe("DeveloperConsole", () => {
                 status: "ready",
                 severity: "info",
                 detail:
-                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed",
+                  "console=https://cortex-console.hrudainirmal.in, query=https://cortex-app.hrudainirmal.in, cors=https://cortex-console.hrudainirmal.in, https://cortex-app.hrudainirmal.in, startupPolicy=fail-closed, querySurfaceMode=external",
                 remediation: null,
               },
             ],
@@ -481,6 +485,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Some operator data is unavailable: Query contract: Request failed with status 503")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Surface deployment contract")).toBeVisible();
+    expect(screen.getByText("External client-owned employee shell")).toBeVisible();
+    expect(screen.getAllByText("This package exposes the query host as an API-only surface for a client-owned employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
     expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);

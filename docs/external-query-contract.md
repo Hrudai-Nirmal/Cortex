@@ -30,6 +30,8 @@ descriptor for the replacement-query contract. It publishes:
 - `authentication`
 - `supportsStreaming`
 - `requestOptions`
+- `querySurfaceMode`
+- `bundledQueryUiAvailable`
 - `traceEventsPathTemplate`
 - `operatorConsolePath`
 - `responseHeaders`
@@ -53,6 +55,10 @@ The descriptor now also formalizes the split between what an employee-facing UI 
 on and what should remain reserved for elevated debugging:
 
 - `requestOptions` documents the stable request semantics replacement UIs must follow.
+- `querySurfaceMode` tells clients whether Cortex currently ships the bundled employee shell
+  or exposes the query host as an API-only contract for a client-owned UI.
+- `bundledQueryUiAvailable` is the matching capability flag for gateways or SDK layers that
+  prefer a direct boolean instead of interpreting the surface-mode enum.
 - `employeeSafeExtensionFields` identifies the `x_cortex` fields a standard employee UI may
   safely use.
 - `operatorOnlyExtensionFields` identifies fields that should remain correlation/debug aids.
@@ -104,6 +110,8 @@ Notes:
 - `GET /v1/query/{traceId}/events` is a builder/operator trace surface, not an employee-client browser API.
 - Replacement employee chat shells should use the returned `traceId` for correlation, feedback, and support escalation rather than attempting to replay trace events directly.
 - The live discovery descriptor always points back to this request shape through `endpointPath` and `method`.
+- Replacement UIs should also verify `querySurfaceMode` and `bundledQueryUiAvailable` so they
+  know whether they are replacing the employee shell or running alongside the shipped one.
 - The bundled `query-web` surface now validates the response headers (`X-Cortex-*`) against the
   `x_cortex` payload so contract drift is detected early.
 - Replacement UIs should also validate `requestOptions` before enabling traffic so they fail

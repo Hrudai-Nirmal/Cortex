@@ -92,6 +92,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"endpointPath":"/v1/chat/completions"' in verifyText
     assert '"authentication":"bearer-token"' in verifyText
     assert '"requestOptions"' in verifyText
+    assert '"querySurfaceMode"' in verifyText
+    assert '"bundledQueryUiAvailable"' in verifyText
     assert '"userMessageSelectionPolicy":"last-non-empty-user-message"' in verifyText
     assert '"streamRequiredValue":false' in verifyText
     assert '"supportsCitationToggle":true' in verifyText

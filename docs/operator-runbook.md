@@ -39,6 +39,7 @@ The console settings view now foregrounds:
 - packaged model profile
 - packaged build profile
 - packaged identity profile
+- packaged query-surface mode (`bundled` or `external`)
 - live replacement-query contract metadata from the running API
 - one surface-deployment contract table that makes split-host isolation, startup policy,
   and replacement-query contract availability explicit in a single operator view
@@ -189,6 +190,9 @@ examples wire that into their worker health signals.
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- that contract descriptor now also publishes `querySurfaceMode` plus
+  `bundledQueryUiAvailable`, so operators can verify whether the package ships the
+  employee shell or expects a client-owned one
 - that contract descriptor still declares the expected request semantics for replacement UIs:
   `userMessageSelectionPolicy=last-non-empty-user-message`, `streamRequiredValue=false`,
   and `supportsCitationToggle=true`

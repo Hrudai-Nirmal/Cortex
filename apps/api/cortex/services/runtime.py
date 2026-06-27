@@ -173,7 +173,8 @@ class RuntimeHealthService:
         detail = (
             f"console={self.settings.consolePublicUrl}, query={self.settings.queryPublicUrl}, "
             f"cors={', '.join(self.settings.getCorsOrigins())}, "
-            f"startupPolicy={startupPolicy}"
+            f"startupPolicy={startupPolicy}, "
+            f"querySurfaceMode={self.settings.querySurfaceMode}"
         )
         return self._buildComponent(
             name="deployment-config",

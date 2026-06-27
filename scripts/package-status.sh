@@ -104,6 +104,11 @@ print(
     f"auth={payload.get('authentication')} :: "
     f"streaming={payload.get('supportsStreaming')}"
 )
+print(
+    "  - surface mode: "
+    f"{payload.get('querySurfaceMode')} :: "
+    f"bundledQueryUiAvailable={payload.get('bundledQueryUiAvailable')}"
+)
 print(f"  - trace events: {payload.get('traceEventsPathTemplate')}")
 print(f"  - routes: {', '.join(payload.get('routes', []))}")
 print(f"  - abstention evidence: {', '.join(payload.get('abstentionEvidenceStatuses', []))}")
