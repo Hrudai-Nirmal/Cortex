@@ -215,3 +215,42 @@ def testEcsExternalQueryTaskFamilySupportsClientOwnedChatUis() -> None:
     assert '"CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com"' in taskDefinitionText
     assert '"CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com"' in taskDefinitionText
     assert '"command": ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in taskDefinitionText
+
+
+def testKubernetesExternalQueryManifestSupportsClientOwnedChatUis() -> None:
+    """Kubernetes examples should also ship an API-only package mode for client-owned query shells."""
+    manifestText = (
+        Path(__file__).resolve().parents[1]
+        / "infra"
+        / "k8s"
+        / "cortex-package-external-query.yaml"
+    ).read_text(encoding="utf-8")
+    assert "name: cortex-api" in manifestText
+    assert "name: cortex-worker" in manifestText
+    assert "name: cortex-console-web" in manifestText
+    assert "name: cortex-query-web" not in manifestText
+    assert "claimName: cortex-object-storage" in manifestText
+    assert "mountPath: /var/lib/cortex/object-storage" in manifestText
+    assert "CORTEX_CONSOLE_PUBLIC_URL: https://cortex-console.example.com" in manifestText
+    assert "CORTEX_QUERY_PUBLIC_URL: https://cortex-app.example.com" in manifestText
+    assert 'command: ["python", "-m", "cortex.worker", "--check-startup"]' in manifestText
+
+
+def testOpenShiftExternalQueryRoutesSupportClientOwnedChatUis() -> None:
+    """OpenShift examples should ship a console-plus-API route set for client-owned query shells."""
+    routeManifestText = (
+        Path(__file__).resolve().parents[1]
+        / "infra"
+        / "openshift"
+        / "cortex-package-external-query-routes.yaml"
+    ).read_text(encoding="utf-8")
+    assert "kind: Route" in routeManifestText
+    assert "host: cortex-console.example.com" in routeManifestText
+    assert "host: cortex-app.example.com" in routeManifestText
+    assert "name: cortex-api" in routeManifestText
+    assert "name: cortex-console-web" in routeManifestText
+    assert "name: cortex-query-web" not in routeManifestText
+    routePathMatches = re.findall(r"(?m)^  path: (/.*)$", routeManifestText)
+    assert routePathMatches.count("/v1") == 2
+    assert routePathMatches.count("/health") == 2
+    assert routePathMatches.count("/") == 1

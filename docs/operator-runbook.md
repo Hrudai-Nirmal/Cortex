@@ -314,6 +314,7 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 - keep the worker exec probes that run `python -m cortex.worker --check-startup`; they are the packaged signal that database/model/object-storage readiness is safe for durable jobs
 - run the migration job before promoting the API and worker deployments
 - replace the example `.example.com` hosts in `infra/k8s/cortex-package.yaml` with the client-owned console and app domains before deployment
+- use `infra/k8s/cortex-package-external-query.yaml` instead when the client keeps its own employee chat shell and only Cortex console/API/worker ship inside the package
 - keep the ConfigMap public URLs rooted at the host and HTTPS once the real client domains are substituted
 - populate `cortex-secrets` with database and model endpoint values while keeping shared non-secret package settings in `cortex-config`
 - mount persistent storage for `/var/lib/cortex/object-storage` so uploads, website snapshots, and parsed source blobs survive pod restarts
@@ -325,6 +326,8 @@ only immutable versions and keeps audit evidence for both forward promotion and 
 - `infra/openshift/cortex-package-routes.yaml` provides a ready-to-edit Route example
   that maps `/v1` and `/health` to `cortex-api` while routing `/` to the correct
   console or query frontend service for each host
+- `infra/openshift/cortex-package-external-query-routes.yaml` provides the matching
+  API-only Route example for client-owned employee chat shells
 - ensure any SecurityContext constraints still allow the object-storage mount path and
   nginx/http serving model you choose
 - treat schema migration as a Job or pre-deploy hook rather than an ad hoc shell step

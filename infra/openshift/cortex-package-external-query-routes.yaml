@@ -1,0 +1,75 @@
+# Route the API-only Cortex package through OpenShift Routes for client-owned query shells.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-console-api
+spec:
+  host: cortex-console.example.com
+  path: /v1
+  to:
+    kind: Service
+    name: cortex-api
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-console-health
+spec:
+  host: cortex-console.example.com
+  path: /health
+  to:
+    kind: Service
+    name: cortex-api
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-console-web
+spec:
+  host: cortex-console.example.com
+  path: /
+  to:
+    kind: Service
+    name: cortex-console-web
+  port:
+    targetPort: 80
+  tls:
+    termination: edge
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-query-api
+spec:
+  host: cortex-app.example.com
+  path: /v1
+  to:
+    kind: Service
+    name: cortex-api
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: cortex-query-health
+spec:
+  host: cortex-app.example.com
+  path: /health
+  to:
+    kind: Service
+    name: cortex-api
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge

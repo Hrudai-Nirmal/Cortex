@@ -37,10 +37,14 @@ surface isolation.
 
 For Kubernetes environments such as EKS, AKS, GKE, OpenShift, and RKE2, the same host
 split is expressed through ingress rules in `infra/k8s/cortex-package.yaml`.
+For clients who keep their own employee chat UI, `infra/k8s/cortex-package-external-query.yaml`
+ships the API-only Cortex package mode that preserves `console-web`, `api`, and `worker`
+while leaving the query shell outside the package.
 
 Adjacent platform examples now ship as well:
 
 - `infra/openshift/cortex-package-routes.yaml` maps `/v1` and `/health` to `cortex-api` and `/` to the correct frontend service per host
+- `infra/openshift/cortex-package-external-query-routes.yaml` maps the same API paths for both hosts while routing `/` only for the fixed console host when the employee query shell is client-owned
 - `infra/ecs/cortex-task-family.json` shows an ECS task-family baseline with split-host environment variables and shared object storage
 - `infra/ecs/cortex-migrate-task.json` keeps ECS schema rollout as a separate one-shot task
 - `infra/ecs/cortex-task-family-external-query.json` shows the API-only Cortex package mode for client-owned query shells, keeping `console-web`, `api`, and `worker` while leaving the employee chat UI outside the shipped task family
