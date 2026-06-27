@@ -1274,6 +1274,8 @@ export interface components {
             createdBy: string;
             /** Updatedat */
             updatedAt: string;
+            /** Sourcefingerprint */
+            sourceFingerprint: string;
             /** Versions */
             versions: components["schemas"]["SourceVersionResponse"][];
         };

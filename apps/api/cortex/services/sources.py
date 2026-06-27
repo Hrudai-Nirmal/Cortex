@@ -255,7 +255,7 @@ class SourceService:
         documentResult = await self.session.execute(
             text(
                 """
-                SELECT id, display_name, source_type, source_uri, created_by, updated_at
+                SELECT id, display_name, source_type, source_uri, created_by, updated_at, source_fingerprint
                 FROM document
                 WHERE enterprise_id = :enterprise_id AND id = :document_id
                 """
@@ -330,6 +330,7 @@ class SourceService:
             sourceUri=documentRow["source_uri"],
             createdBy=documentRow["created_by"],
             updatedAt=documentRow["updated_at"].astimezone(UTC).isoformat(),
+            sourceFingerprint=bytes(documentRow["source_fingerprint"]).hex(),
             versions=versions,
         )
 

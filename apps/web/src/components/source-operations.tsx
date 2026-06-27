@@ -22,6 +22,48 @@ interface SourceOperationsProps {
   onJobQueued: (jobId: string) => void;
 }
 
+function isVersionRetrievable(sourceVersion: SourceDetail["versions"][number]): boolean {
+  return (
+    sourceVersion.ingestionStatus === "active"
+    && sourceVersion.activatedAt !== null
+    && sourceVersion.quarantineStatus.toLowerCase() === "clear"
+    && sourceVersion.malwareStatus.toLowerCase() === "clean"
+  );
+}
+
+function buildRetrievalStatusSummary(
+  latestVersion: SourceDetail["versions"][number],
+  activeVersion: SourceDetail["versions"][number] | null,
+): {
+  title: string;
+  detail: string;
+  liveVersionLabel: string;
+} {
+  if (isVersionRetrievable(latestVersion)) {
+    return {
+      title: "Retrievable now",
+      detail: `Latest version ${latestVersion.versionLabel} is active, clean, and available for retrieval.`,
+      liveVersionLabel: latestVersion.versionLabel,
+    };
+  }
+  if (activeVersion && isVersionRetrievable(activeVersion)) {
+    return {
+      title: "Latest version is not retrievable",
+      detail: `Latest version ${latestVersion.versionLabel} is ${latestVersion.ingestionStatus}. Active version ${activeVersion.versionLabel} remains the live retrieval candidate until onboarding is repaired.`,
+      liveVersionLabel: activeVersion.versionLabel,
+    };
+  }
+  return {
+    title: "No retrievable version",
+    detail: `Latest version ${latestVersion.versionLabel} is ${latestVersion.ingestionStatus} and no clean activated version is available for retrieval.`,
+    liveVersionLabel: "none",
+  };
+}
+
+function getSourceFingerprint(sourceDetail: SourceDetail): string {
+  return (sourceDetail as SourceDetail & { sourceFingerprint: string }).sourceFingerprint;
+}
+
 /** Render the developer source inventory, onboarding forms, and version diagnostics. */
 export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperationsProps) {
   const [sources, setSources] = useState<SourceSummary[]>([]);
@@ -126,6 +168,9 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
   const activeVersion = selectedSource?.versions.find(
     (version) => version.ingestionStatus === "active" && version.activatedAt,
   ) ?? null;
+  const retrievalStatus = latestVersion
+    ? buildRetrievalStatusSummary(latestVersion, activeVersion)
+    : null;
   const sourceVersionCount = selectedSource?.versions.length ?? 0;
   const activeVersionCount = selectedSource?.versions.filter(
     (version) => version.ingestionStatus === "active" && version.activatedAt,
@@ -416,10 +461,26 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
               </div>
               <div className="source-form-card" style={{ marginBottom: 16 }}>
                 <div className="source-form-card__heading">
+                  <CheckCircle aria-hidden size={18} />
+                  <strong>Retrieval status</strong>
+                </div>
+                <dl className="source-detail__facts">
+                  <div><dt>Status</dt><dd>{retrievalStatus?.title ?? "unknown"}</dd></div>
+                  <div><dt>Retrievable active version</dt><dd>{retrievalStatus?.liveVersionLabel ?? "none"}</dd></div>
+                  <div><dt>Latest version</dt><dd>{latestVersion.versionLabel}</dd></div>
+                  <div><dt>Latest ingestion</dt><dd>{latestVersion.ingestionStatus}</dd></div>
+                  <div><dt>Latest quarantine</dt><dd>{latestVersion.quarantineStatus}</dd></div>
+                  <div><dt>Latest malware</dt><dd>{latestVersion.malwareStatus}</dd></div>
+                </dl>
+                <p style={{ marginTop: 12 }}>{retrievalStatus?.detail}</p>
+              </div>
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
                   <Database aria-hidden size={18} />
                   <strong>Latest version diagnostics</strong>
                 </div>
                 <dl className="source-detail__facts">
+                  <div><dt>Source fingerprint</dt><dd><code>{getSourceFingerprint(selectedSource)}</code></dd></div>
                   <div><dt>Object key</dt><dd><code>{latestVersion.objectKey ?? "—"}</code></dd></div>
                   <div><dt>Raw SHA-256</dt><dd><code>{latestVersion.rawSha256}</code></dd></div>
                   <div><dt>Canonical SHA-256</dt><dd><code>{latestVersion.canonicalContentSha256}</code></dd></div>
@@ -476,6 +537,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                       <th>MIME</th>
                       <th>Quarantine</th>
                       <th>Malware</th>
+                      <th>Retrievable</th>
                       <th>Raw SHA-256</th>
                       <th>Activated</th>
                       <th>Failure</th>
@@ -489,6 +551,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
                         <td>{version.mimeType ?? "unknown"}</td>
                         <td>{version.quarantineStatus}</td>
                         <td>{version.malwareStatus}</td>
+                        <td>{isVersionRetrievable(version) ? "Retrievable" : "Not retrievable"}</td>
                         <td><code>{version.rawSha256.slice(0, 16)}</code></td>
                         <td>{version.activatedAt ? new Date(version.activatedAt).toLocaleDateString() : "—"}</td>
                         <td>{version.failureCode ?? "—"}</td>

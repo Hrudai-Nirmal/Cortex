@@ -402,6 +402,7 @@ class SourceDetailResponse(BaseModel):
     sourceUri: str
     createdBy: str
     updatedAt: str
+    sourceFingerprint: str
     versions: list[SourceVersionResponse]
 
 

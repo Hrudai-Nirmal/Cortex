@@ -92,7 +92,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 
 - Developer source operations live in the console surface on the console host in the `Sources` and `Jobs` tabs.
 - The console now exposes persisted source hashes, extraction diagnostics, accelerator reports, and focused durable job detail for operator troubleshooting.
-- The source-detail lane now surfaces per-document version counts, active vs failed/quarantined history, and the currently active version label so operators can see whether a bad retry actually displaced the live source.
+- The source-detail lane now surfaces per-document version counts, active vs failed/quarantined history, the stable source fingerprint, and retrieval-status guidance that distinguishes the newest onboarded version from the version that is actually live for retrieval.
 - The console version lane now distinguishes active, validated, and retired immutable pipeline versions so operators can see promotable releases and explicit rollback targets.
 - The console trace lane now shows validated answer preview, claim support status, citation linkage, and stage evidence together for faster operator review.
 - The console trace lane now also exposes ranked retrieved evidence rows so operators can inspect which source chunks actually drove a response without leaving the fixed console.

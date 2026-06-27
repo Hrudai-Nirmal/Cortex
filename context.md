@@ -23,7 +23,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Deterministic seed fixtures covering multi-tenant scope, ACL differences, version activation, freshness conflicts, and retrieve-then-compute examples.
 - React Flow developer console plus a separate friendly employee query surface with citation display control, live pipeline/health fetches, and persisted trace playback.
 - The developer console now surfaces focused durable-job detail plus persisted source hashes, extraction diagnostics, and accelerator reports for operator troubleshooting.
-- The source-detail lane now also surfaces active/failed/quarantined version counts plus the currently active version label so operators can tell whether the latest onboarding attempt actually changed the live corpus.
+- The source-detail lane now also surfaces active/failed/quarantined version counts, the stable source fingerprint, and retrieval-status guidance that tells operators whether the newest onboarding attempt is actually retrievable or whether an older active version still serves the live corpus.
 - The developer console now distinguishes validated pipeline versions from the active release and exposes retired immutable versions as explicit rollback targets.
 - The developer console trace view now includes validated answer preview plus persisted claims, support status, and citation linkage instead of only stage counts and citation totals.
 - The developer console trace view now also exposes persisted retrieved-evidence rows with source, locator, and ranking scores so operators can inspect the actual chunks behind a response.
