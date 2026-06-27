@@ -1,0 +1,131 @@
+{
+  "family": "cortex-package-external-query",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "4096",
+  "memory": "8192",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/cortexTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/cortexTaskRole",
+  "volumes": [
+    {
+      "name": "cortex-object-storage",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-12345678",
+        "rootDirectory": "/cortex/object-storage",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "cortex/api:local",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "CORTEX_ENVIRONMENT", "value": "production" },
+        { "name": "CORTEX_DEV_MODE", "value": "false" },
+        { "name": "CORTEX_AUTH_MODE", "value": "fixture" },
+        { "name": "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT", "value": "false" },
+        { "name": "CORTEX_REQUIRED_ACCELERATOR", "value": "cpu" },
+        { "name": "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu" },
+        { "name": "CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision" },
+        { "name": "CORTEX_OBJECT_STORAGE_ROOT", "value": "/var/lib/cortex/object-storage" },
+        { "name": "CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_HOST", "value": "cortex-app.example.com" },
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" },
+        { "name": "CORTEX_GENERATOR_MODEL", "value": "qwen3:14b" },
+        { "name": "CORTEX_EMBEDDING_MODEL", "value": "qwen3-embedding:0.6b" }
+      ],
+      "secrets": [
+        { "name": "CORTEX_DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/database-url" },
+        { "name": "CORTEX_OLLAMA_BASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/ollama-base-url" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "cortex-object-storage",
+          "containerPath": "/var/lib/cortex/object-storage",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=5).read()\""],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 5,
+        "startPeriod": 30
+      }
+    },
+    {
+      "name": "worker",
+      "image": "cortex/worker:local",
+      "essential": true,
+      "command": ["python", "-m", "cortex.worker"],
+      "environment": [
+        { "name": "CORTEX_ENVIRONMENT", "value": "production" },
+        { "name": "CORTEX_DEV_MODE", "value": "false" },
+        { "name": "CORTEX_AUTH_MODE", "value": "fixture" },
+        { "name": "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT", "value": "false" },
+        { "name": "CORTEX_REQUIRED_ACCELERATOR", "value": "cpu" },
+        { "name": "CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu" },
+        { "name": "CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision" },
+        { "name": "CORTEX_OBJECT_STORAGE_ROOT", "value": "/var/lib/cortex/object-storage" },
+        { "name": "CORTEX_CONSOLE_HOST", "value": "cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_HOST", "value": "cortex-app.example.com" },
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" },
+        { "name": "CORTEX_GENERATOR_MODEL", "value": "qwen3:14b" },
+        { "name": "CORTEX_EMBEDDING_MODEL", "value": "qwen3-embedding:0.6b" }
+      ],
+      "secrets": [
+        { "name": "CORTEX_DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/database-url" },
+        { "name": "CORTEX_OLLAMA_BASE_URL", "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:cortex/ollama-base-url" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "cortex-object-storage",
+          "containerPath": "/var/lib/cortex/object-storage",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "python -m cortex.worker --check-startup"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "dependsOn": [
+        { "containerName": "api", "condition": "HEALTHY" }
+      ]
+    },
+    {
+      "name": "console-web",
+      "image": "cortex/console-web:local",
+      "essential": true,
+      "environment": [
+        { "name": "CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com" },
+        { "name": "CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com" }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 5,
+        "startPeriod": 10
+      }
+    }
+  ]
+}

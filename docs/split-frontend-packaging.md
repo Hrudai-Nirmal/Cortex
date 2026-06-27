@@ -43,6 +43,7 @@ Adjacent platform examples now ship as well:
 - `infra/openshift/cortex-package-routes.yaml` maps `/v1` and `/health` to `cortex-api` and `/` to the correct frontend service per host
 - `infra/ecs/cortex-task-family.json` shows an ECS task-family baseline with split-host environment variables and shared object storage
 - `infra/ecs/cortex-migrate-task.json` keeps ECS schema rollout as a separate one-shot task
+- `infra/ecs/cortex-task-family-external-query.json` shows the API-only Cortex package mode for client-owned query shells, keeping `console-web`, `api`, and `worker` while leaving the employee chat UI outside the shipped task family
 
 The Kubernetes package example now separates non-secret runtime settings into a
 `cortex-config` ConfigMap, expects client-specific secrets through `cortex-secrets`,

@@ -341,6 +341,8 @@ only immutable versions and keeps audit evidence for both forward promotion and 
   separate packaged services, EFS-backed object storage, and the split-host environment contract
 - `infra/ecs/cortex-migrate-task.json` provides the matching one-shot migration task so
   schema rollout stays explicit instead of being hidden inside service startup
+- `infra/ecs/cortex-task-family-external-query.json` provides the API-only Cortex package mode
+  for clients who keep the fixed console and Cortex APIs but supply their own employee chat UI
 
 ## Failure hints
 

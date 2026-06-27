@@ -193,3 +193,25 @@ def testEcsMigrationTaskUsesTheSameDeploymentContract() -> None:
     assert '"CORTEX_QUERY_HOST", "value": "cortex-app.example.com"' in migrationTaskText
     assert '"CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL", "value": "https://download.pytorch.org/whl/cpu"' in migrationTaskText
     assert '"CORTEX_PACKAGE_PYTORCH_PREINSTALL", "value": "torch torchvision"' in migrationTaskText
+
+
+def testEcsExternalQueryTaskFamilySupportsClientOwnedChatUis() -> None:
+    """ECS examples should also ship an API-only package mode for client-owned query shells."""
+    taskDefinitionText = (
+        Path(__file__).resolve().parents[1]
+        / "infra"
+        / "ecs"
+        / "cortex-task-family-external-query.json"
+    ).read_text(encoding="utf-8")
+    assert '"name": "api"' in taskDefinitionText
+    assert '"name": "worker"' in taskDefinitionText
+    assert '"name": "console-web"' in taskDefinitionText
+    assert '"name": "query-web"' not in taskDefinitionText
+    assert '"name": "edge"' not in taskDefinitionText
+    assert '"sourceVolume": "cortex-object-storage"' in taskDefinitionText
+    assert '"containerPath": "/var/lib/cortex/object-storage"' in taskDefinitionText
+    assert '"CORTEX_ENVIRONMENT", "value": "production"' in taskDefinitionText
+    assert '"CORTEX_DEV_MODE", "value": "false"' in taskDefinitionText
+    assert '"CORTEX_CONSOLE_PUBLIC_URL", "value": "https://cortex-console.example.com"' in taskDefinitionText
+    assert '"CORTEX_QUERY_PUBLIC_URL", "value": "https://cortex-app.example.com"' in taskDefinitionText
+    assert '"command": ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in taskDefinitionText

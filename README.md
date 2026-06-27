@@ -160,6 +160,7 @@ The package now includes:
 - frontend runtime-config injection that reads `CORTEX_CONSOLE_PUBLIC_URL` and `CORTEX_QUERY_PUBLIC_URL` at container startup so browser-surface links stay aligned with the deployed client domains
 - fixed-console cross-surface navigation that prefers the runtime deployment contract from `GET /health/startup`, so the “Open employee view” link follows the live packaged query host instead of stale local browser assumptions when package state drifts
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
+- an additional ECS task-family example for client-owned query UIs that keeps the fixed console, API, and worker while leaving the employee chat shell outside the Cortex package
 - operator scripts:
   - `pnpm package:up`
   - `pnpm package:status`
