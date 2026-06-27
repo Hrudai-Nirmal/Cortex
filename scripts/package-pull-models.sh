@@ -14,6 +14,15 @@ require_command() {
   fi
 }
 
+require_docker_daemon() {
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Docker is installed but the daemon is not reachable." >&2
+  echo "Start Docker Desktop or the target container runtime before running package commands." >&2
+  exit 1
+}
+
 require_env() {
   local name="$1"
   if [ -z "${!name:-}" ]; then
@@ -23,6 +32,7 @@ require_env() {
 }
 
 require_command docker
+require_docker_daemon
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Package env file not found: $ENV_FILE" >&2

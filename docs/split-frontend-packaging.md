@@ -142,6 +142,8 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` waits for `startup` and `ready` on both browser hosts
 - `package:up` confirms that the console host emits `X-Cortex-Surface: console`
   and the query host emits `X-Cortex-Surface: query`
+- package helper scripts now fail early with a clear operator message when Docker is
+  installed but the daemon/runtime is not reachable
 - `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints
 - `package:up` prints `docker compose ps` plus recent `api`/`worker`/`edge` logs when the package still fails to reach a healthy state
 - `package:up` also waits for the worker startup-check contract to pass before declaring the package ready

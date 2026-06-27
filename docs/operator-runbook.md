@@ -89,6 +89,9 @@ and its local model/runtime dependencies into the API and worker images.
 The package also preinstalls PyTorch from `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL`
 before Docling resolves its model/runtime stack so the default CPU verification profile
 does not silently pull CUDA-heavy Linux artifacts.
+If Docker is installed but the daemon is not reachable, the package scripts now fail fast
+with an operator-facing message that tells you to start Docker Desktop or the target
+container runtime before continuing.
 
 6. Verify the running package:
 

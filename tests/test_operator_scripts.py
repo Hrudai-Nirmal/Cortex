@@ -67,6 +67,9 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     """Operator verification should validate split-surface, runtime-config, and contract headers."""
     rootDirectory = Path(__file__).resolve().parents[1]
     verifyText = (rootDirectory / "scripts" / "package-verify.sh").read_text(encoding="utf-8")
+    assert 'require_docker_daemon' in verifyText
+    assert 'docker info >/dev/null 2>&1' in verifyText
+    assert "Docker is installed but the daemon is not reachable." in verifyText
     assert "X-Cortex-Surface: console" in verifyText
     assert "X-Cortex-Surface: query" in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/live"' in verifyText
@@ -93,6 +96,9 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     """Package bootstrap should surface failing health components instead of a generic timeout."""
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-up.sh").read_text(encoding="utf-8")
+    assert 'require_docker_daemon' in scriptText
+    assert 'docker info >/dev/null 2>&1' in scriptText
+    assert "Start Docker Desktop or the target container runtime before running package commands." in scriptText
     assert 'require_env CORTEX_ENVIRONMENT' in scriptText
     assert 'require_env CORTEX_DEV_MODE' in scriptText
     assert 'require_env CORTEX_AUTH_MODE' in scriptText
@@ -134,6 +140,8 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     """Package status should show routed surface identity, health, and runtime-config headers."""
     rootDirectory = Path(__file__).resolve().parents[1]
     scriptText = (rootDirectory / "scripts" / "package-status.sh").read_text(encoding="utf-8")
+    assert 'require_docker_daemon' in scriptText
+    assert 'docker info >/dev/null 2>&1' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
@@ -154,3 +162,13 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_worker_status' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
     assert 'echo "worker startup: ready"' in scriptText
+
+
+def testSupportingPackageScriptsAlsoCheckDockerDaemon() -> None:
+    """Every package helper script should fail fast when the Docker daemon is unavailable."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    for scriptName in ("package-down.sh", "package-logs.sh", "package-pull-models.sh"):
+        scriptText = (rootDirectory / "scripts" / scriptName).read_text(encoding="utf-8")
+        assert 'require_docker_daemon' in scriptText
+        assert 'docker info >/dev/null 2>&1' in scriptText
+        assert "Docker is installed but the daemon is not reachable." in scriptText
