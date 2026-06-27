@@ -26,6 +26,12 @@ read_headers() {
   curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
 }
 
+read_text() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 print_surface_identity() {
   local host="$1"
   local headers="$2"
@@ -87,6 +93,28 @@ PY
   fi
 }
 
+print_runtime_config_summary() {
+  local label="$1"
+  local payload="$2"
+  if command -v python3 >/dev/null 2>&1; then
+    RUNTIME_CONFIG_LABEL="$label" RUNTIME_CONFIG_PAYLOAD="$payload" python3 - <<'PY'
+import os
+import re
+
+label = os.environ["RUNTIME_CONFIG_LABEL"]
+payload = os.environ["RUNTIME_CONFIG_PAYLOAD"]
+
+console_match = re.search(r'consolePublicUrl: "([^"]+)"', payload)
+query_match = re.search(r'queryPublicUrl: "([^"]+)"', payload)
+print(f"{label} runtime config:")
+print(f"  - console: {console_match.group(1) if console_match else 'missing'}")
+print(f"  - query: {query_match.group(1) if query_match else 'missing'}")
+PY
+  else
+    printf "%s runtime config: %s\n" "$label" "$payload"
+  fi
+}
+
 print_worker_status() {
   if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
     python -m cortex.worker --check-startup >/dev/null 2>&1; then
@@ -115,6 +143,8 @@ ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
 query_contract_payload="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"
+console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
+query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 console_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/")"
 query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
 
@@ -128,5 +158,7 @@ print_health "console startup" "$startup_payload"
 print_health "console ready" "$ready_payload"
 print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
+print_runtime_config_summary "console" "$console_runtime_config"
+print_runtime_config_summary "query" "$query_runtime_config"
 print_contract_summary "$query_contract_payload"
 print_worker_status

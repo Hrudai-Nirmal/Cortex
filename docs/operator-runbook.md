@@ -165,6 +165,7 @@ examples wire that into their worker health signals.
 - query host routes to the employee frontend
 - both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
+- both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - the worker startup check passes from inside the running package
 - if fixture auth is enabled:
@@ -177,7 +178,7 @@ examples wire that into their worker health signals.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  query host, routed surface identity, worker startup-check result, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
+  query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including severity and remediation guidance for every non-ready component
 - `package:logs` tails compose logs for the whole package or one named service
 
 The fixed console now mirrors that packaging story more directly: even if one settings-side

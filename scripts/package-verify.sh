@@ -20,6 +20,12 @@ read_json() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+read_text() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 require_command curl
 require_command docker
 
@@ -42,6 +48,12 @@ printf "%s" "$console_html" | grep -qi "<!doctype html"
 printf "%s" "$query_html" | grep -qi "<!doctype html"
 printf "%s" "$console_headers" | grep -qi '^X-Cortex-Surface: console'
 printf "%s" "$query_headers" | grep -qi '^X-Cortex-Surface: query'
+console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
+query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+printf "%s" "$console_runtime_config" | grep -q "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\""
+printf "%s" "$console_runtime_config" | grep -q "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\""
+printf "%s" "$query_runtime_config" | grep -q "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\""
+printf "%s" "$query_runtime_config" | grep -q "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\""
 
 read_json "$CORTEX_CONSOLE_HOST" "/health/live" | grep -q '"status"'
 read_json "$CORTEX_QUERY_HOST" "/health/live" | grep -q '"status"'

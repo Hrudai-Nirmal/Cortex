@@ -74,6 +74,10 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in verifyText
     assert "X-Cortex-Contract-Version: v1" in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in verifyText
+    assert 'read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in verifyText
+    assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in verifyText
+    assert 'consolePublicUrl: \\"${CORTEX_CONSOLE_PUBLIC_URL}\\"' in verifyText
+    assert 'queryPublicUrl: \\"${CORTEX_QUERY_PUBLIC_URL}\\"' in verifyText
     assert '"contractVersion":"v1"' in verifyText
     assert '"endpointPath":"/v1/chat/completions"' in verifyText
     assert '"authentication":"bearer-token"' in verifyText
@@ -130,11 +134,15 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
+    assert 'read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in scriptText
+    assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/"' in scriptText
     assert 'read_headers "$CORTEX_QUERY_HOST" "/"' in scriptText
     assert 'echo "Surface routing:"' in scriptText
     assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
     assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
+    assert 'print_runtime_config_summary "console" "$console_runtime_config"' in scriptText
+    assert 'print_runtime_config_summary "query" "$query_runtime_config"' in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
     assert 'print_worker_status' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
