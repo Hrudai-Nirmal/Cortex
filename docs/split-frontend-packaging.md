@@ -176,6 +176,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:verify` confirms both browser hosts expose the expected runtime `cortex-runtime-config.js` values for console/query public URLs
 - `package:verify` confirms both browser hosts serve `cortex-runtime-config.js` with a `no-store` cache policy
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- `package:verify` now also confirms the startup-health `deployment-config` detail still
+  matches the shipped console/query public URLs, `startupPolicy=fail-closed`, and
+  declared `querySurfaceMode`
 - `package:verify` now also confirms the live contract advertises the expected
   `querySurfaceMode` and `bundledQueryUiAvailable` values for the chosen package mode
 - `package:verify` confirms that live contract still advertises the expected request semantics,

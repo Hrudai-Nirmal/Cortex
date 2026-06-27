@@ -208,6 +208,9 @@ examples wire that into their worker health signals.
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, query host routes to the employee frontend
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
+- the `startup` payload still advertises the shipped `deployment-config` contract:
+  console/query public URLs, `startupPolicy=fail-closed`, and the declared
+  `querySurfaceMode`
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery

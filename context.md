@@ -80,6 +80,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package operator tooling now also treats `GET /v1/chat/contracts/v1` as a richer deployment boundary: `package:verify` asserts the live request semantics, employee-safe versus operator-only field split, and stable machine-readable error meanings, while `package:status` prints those same contract details for operators without making them inspect raw JSON.
 - `package:status` now degrades gracefully when the live query-contract endpoint is unavailable, so operators still get the rest of the split-host/runtime summary instead of losing the entire status view to one missing dependency.
 - `package:verify` now labels split-host, runtime-config, worker-startup, and query-contract failures with explicit operator-readable descriptions and points operators back to `pnpm package:status`, so packaged contract drift no longer dies behind an unlabeled `grep` failure.
+- `package:verify` now also asserts the live startup-health `deployment-config` detail
+  matches the shipped console/query public URLs, fail-closed startup policy, and
+  declared query-surface mode, so package readiness cannot drift behind a generic green
+  health status.
 - The package scripts now keep those same query-contract checks active even when the employee chat shell is client-owned: in `external` query-surface mode they skip bundled `query-web` HTML/runtime-config assertions, switch the edge proxy to the API-only template, and report `external-query-ui (not bundled)` so operators can tell intentional surface omission from an actual packaging failure.
 - The fixed console now also falls back to startup-health deployment metadata when the contract endpoint is unavailable, so operators can still see whether the intended query-surface mode is bundled or client-owned during partial outages.
 - The shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`

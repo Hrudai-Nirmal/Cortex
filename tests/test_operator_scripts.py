@@ -94,6 +94,17 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"requestOptions"' in verifyText
     assert '"querySurfaceMode"' in verifyText
     assert '"bundledQueryUiAvailable"' in verifyText
+    assert "console_startup=" in verifyText
+    assert "query_startup=" in verifyText
+    assert '"startupPolicy":"fail-closed"' not in verifyText
+    assert 'assert_contains "$console_startup" "startupPolicy=fail-closed"' in verifyText
+    assert 'assert_contains "$query_startup" "startupPolicy=fail-closed"' in verifyText
+    assert 'assert_contains "$console_startup" "console=${CORTEX_CONSOLE_PUBLIC_URL}"' in verifyText
+    assert 'assert_contains "$console_startup" "query=${CORTEX_QUERY_PUBLIC_URL}"' in verifyText
+    assert 'assert_contains "$query_startup" "console=${CORTEX_CONSOLE_PUBLIC_URL}"' in verifyText
+    assert 'assert_contains "$query_startup" "query=${CORTEX_QUERY_PUBLIC_URL}"' in verifyText
+    assert 'assert_contains "$console_startup" "querySurfaceMode=${CORTEX_QUERY_SURFACE_MODE}"' in verifyText
+    assert 'assert_contains "$query_startup" "querySurfaceMode=${CORTEX_QUERY_SURFACE_MODE}"' in verifyText
     assert '"userMessageSelectionPolicy":"last-non-empty-user-message"' in verifyText
     assert '"streamRequiredValue":false' in verifyText
     assert '"supportsCitationToggle":true' in verifyText
