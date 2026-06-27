@@ -165,6 +165,11 @@ Treat that as part of the deployment contract, not an optional override, because
 controls whether the employee host is a bundled `query-web` surface or a client-owned
 API-only integration boundary.
 
+When a packaged runtime still starts with invalid environment values, the API/worker now
+collapse Pydantic settings validation into a single operator-facing
+`invalid Cortex settings: ...` error string. That keeps bad public URLs, host mismatches,
+or relative storage paths from disappearing into a generic Python traceback.
+
 After startup, it waits for:
 
 - `GET /health/startup` through both console and query hosts

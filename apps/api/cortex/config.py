@@ -8,7 +8,7 @@ from typing import Literal
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -232,4 +232,16 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def getSettings() -> Settings:
     """Return one validated settings object per process."""
-    return Settings()
+    try:
+        return Settings()
+    except ValidationError as error:
+        formattedErrors = []
+        for validationIssue in error.errors():
+            location = ".".join(str(part) for part in validationIssue.get("loc", ()) if part)
+            message = validationIssue.get("msg", "invalid configuration")
+            if location:
+                formattedErrors.append(f"{location}: {message}")
+            else:
+                formattedErrors.append(str(message))
+        detail = "; ".join(formattedErrors) if formattedErrors else str(error)
+        raise RuntimeError(f"invalid Cortex settings: {detail}") from error

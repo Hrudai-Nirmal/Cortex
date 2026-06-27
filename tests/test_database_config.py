@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from alembic.config import Config
+import pytest
 
 from cortex.config import Settings
+from cortex.config import getSettings
 from cortex.database_config import applyAlembicDatabaseUrl
 
 
@@ -56,3 +58,26 @@ def testSettingsReadSnakeCaseEnvironmentVariables(monkeypatch) -> None:
     assert settings.databaseUrl == "postgresql+asyncpg://cortex:cortex@postgres:5432/cortex"
     assert settings.consoleHost == "cortex-console.client.internal"
     assert settings.queryHost == "cortex-app.client.internal"
+
+
+def testGetSettingsRaisesOperatorFriendlyConfigurationError(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Runtime settings loading should collapse validation details into one operator-facing error."""
+    monkeypatch.setenv("CORTEX_ENVIRONMENT", "production")
+    monkeypatch.setenv("CORTEX_DEV_MODE", "false")
+    monkeypatch.setenv("CORTEX_DATABASE_URL", "postgresql+asyncpg://cortex:cortex@postgres:5432/cortex")
+    monkeypatch.setenv("CORTEX_OLLAMA_BASE_URL", "http://ollama:11434")
+    monkeypatch.setenv("CORTEX_OBJECT_STORAGE_ROOT", "relative/path")
+    monkeypatch.setenv("CORTEX_REQUIRED_ACCELERATOR", "cpu")
+    monkeypatch.setenv("CORTEX_CONSOLE_HOST", "cortex-console.client.internal")
+    monkeypatch.setenv("CORTEX_QUERY_HOST", "cortex-app.client.internal")
+    monkeypatch.setenv("CORTEX_CONSOLE_PUBLIC_URL", "https://cortex-console.client.internal")
+    monkeypatch.setenv("CORTEX_QUERY_PUBLIC_URL", "https://cortex-app.client.internal")
+    getSettings.cache_clear()
+
+    with pytest.raises(RuntimeError, match="invalid Cortex settings") as errorInfo:
+        getSettings()
+
+    assert "production objectStorageRoot must be an absolute path" in str(errorInfo.value)
+    getSettings.cache_clear()
