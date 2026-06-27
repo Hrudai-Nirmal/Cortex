@@ -38,7 +38,7 @@ services:
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}
       CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}
-      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-bundled}
+      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-external}
       CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
       CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
       CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}
@@ -83,7 +83,7 @@ services:
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}
       CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}
-      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-bundled}
+      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-external}
       CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
       CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
       CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}
@@ -130,20 +130,6 @@ services:
       timeout: 5s
       retries: 20
 
-  query-web:
-    image: cortex-query-web:latest
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile.query
-    environment:
-      CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}
-      CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
   edge:
     image: cortex-edge:latest
     build:
@@ -152,7 +138,7 @@ services:
     environment:
       CORTEX_CONSOLE_HOST: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}
       CORTEX_QUERY_HOST: ${CORTEX_QUERY_HOST:-cortex-app.hrudainirmal.in}
-      CORTEX_EDGE_TEMPLATE_PATH: ${CORTEX_EDGE_TEMPLATE_PATH:-/etc/nginx/templates/edge.conf.template}
+      CORTEX_EDGE_TEMPLATE_PATH: /etc/nginx/templates/edge.external-query.conf.template
     depends_on:
       api:
         condition: service_healthy
@@ -178,7 +164,7 @@ services:
     environment:
       CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}
       CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}
-      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-bundled}
+      CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-external}
       CORTEX_DATABASE_URL: ${CORTEX_DATABASE_URL:-postgresql+asyncpg://cortex:cortex@postgres:5432/cortex}
       CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}
       CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}

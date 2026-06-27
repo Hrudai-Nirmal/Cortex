@@ -5,7 +5,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+EXTERNAL_QUERY_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.external-query.yml"
+COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -199,6 +201,12 @@ set -a
 . "$ENV_FILE"
 set +a
 
+CORTEX_QUERY_SURFACE_MODE="${CORTEX_QUERY_SURFACE_MODE:-bundled}"
+
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "external" ]; then
+  COMPOSE_FILE="$EXTERNAL_QUERY_COMPOSE_FILE"
+fi
+
 startup_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/startup")"
 ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
@@ -212,26 +220,33 @@ else
 fi
 rm -f /tmp/cortex-package-status-error.$$ 2>/dev/null || true
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
-query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
-query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 console_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/")"
-query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
 
 echo "Console host: ${CORTEX_CONSOLE_HOST}"
 echo "Query host:   ${CORTEX_QUERY_HOST}"
 echo "Edge port:    ${CORTEX_EDGE_PORT}"
+echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"
 echo "Surface routing:"
 print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"
-print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
+  query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+  query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+  query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
+  print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"
+else
+  echo "  ${CORTEX_QUERY_HOST} -> external-query-ui (not bundled)"
+fi
 print_health "console startup" "$startup_payload"
 print_health "console ready" "$ready_payload"
 print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
 print_runtime_config_summary "console" "$console_runtime_config"
-print_runtime_config_summary "query" "$query_runtime_config"
 print_cache_header_summary "console" "$console_runtime_config_headers"
-print_cache_header_summary "query" "$query_runtime_config_headers"
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
+  print_runtime_config_summary "query" "$query_runtime_config"
+  print_cache_header_summary "query" "$query_runtime_config_headers"
+fi
 print_contract_summary "$query_contract_payload"
 print_contract_fetch_error "$query_contract_error"
 print_worker_status

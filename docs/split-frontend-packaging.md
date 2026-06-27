@@ -35,6 +35,13 @@ host-based routing:
 This keeps each browser surface same-origin with the API that it calls while preserving
 surface isolation.
 
+When the client keeps its own employee chat UI, set
+`CORTEX_QUERY_SURFACE_MODE=external`. The package scripts then switch from
+`docker-compose.package.yml` to `docker-compose.package.external-query.yml`, and the
+edge proxy uses `infra/nginx/edge.external-query.conf.template` so the console host
+still serves the fixed operator UI while the query host exposes only `/v1` and `/health`
+for the client-owned chat shell.
+
 For Kubernetes environments such as EKS, AKS, GKE, OpenShift, and RKE2, the same host
 split is expressed through ingress rules in `infra/k8s/cortex-package.yaml`.
 For clients who keep their own employee chat UI, `infra/k8s/cortex-package-external-query.yaml`
@@ -69,6 +76,7 @@ Model-profile values are also deployment-critical in the packaged flow:
 
 - `CORTEX_ENVIRONMENT=production`
 - `CORTEX_DEV_MODE=false`
+- `CORTEX_QUERY_SURFACE_MODE=bundled|external`
 - `CORTEX_GENERATOR_MODEL`
 - `CORTEX_EMBEDDING_MODEL`
 - `CORTEX_REQUIRED_ACCELERATOR`
@@ -167,6 +175,11 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:verify` confirms the worker startup-check contract passes inside the running package
 - `package:verify` confirms the replacement-query facade emits stable Cortex contract headers for trace, evidence status, route, and abstention
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`
+
+In `external` query-surface mode, those operator scripts keep the API/contract checks on
+the query host but intentionally skip `query-web` HTML/runtime-config assertions. The
+package reports that mode explicitly so operators can tell “client-owned employee shell”
+from “broken bundled employee shell” without inspecting compose files by hand.
 
 ## Development Defaults
 

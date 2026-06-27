@@ -59,6 +59,20 @@ def testEdgeRouterAdvertisesSplitSurfaceIdentity() -> None:
     assert "add_header X-Cortex-Surface query always;" in edgeTemplateText
 
 
+def testExternalQueryEdgeRouterOmitsBundledQueryUpstream() -> None:
+    """The API-only package mode should not require a bundled query-web service."""
+    externalEdgeTemplateText = (
+        Path(__file__).resolve().parents[1]
+        / "infra"
+        / "nginx"
+        / "edge.external-query.conf.template"
+    ).read_text(encoding="utf-8")
+    assert "server api:8000;" in externalEdgeTemplateText
+    assert "server console-web:8080;" in externalEdgeTemplateText
+    assert "server query-web:8080;" not in externalEdgeTemplateText
+    assert 'return 404;' in externalEdgeTemplateText
+
+
 def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     """Compose defaults should keep Cortex pointed at the local model service by default."""
     composeText = (
@@ -66,6 +80,7 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     ).read_text(encoding="utf-8")
     assert composeText.count("CORTEX_ENVIRONMENT: ${CORTEX_ENVIRONMENT:-production}") >= 3
     assert composeText.count("CORTEX_DEV_MODE: ${CORTEX_DEV_MODE:-false}") >= 3
+    assert "CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-bundled}" in composeText
     assert "CORTEX_OLLAMA_BASE_URL: ${CORTEX_OLLAMA_BASE_URL:-http://ollama:11434}" in composeText
     assert composeText.count("CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT: ${CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT:-false}") >= 3
     assert composeText.count(
@@ -77,6 +92,19 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert composeText.count("CORTEX_CONSOLE_PUBLIC_URL: ${CORTEX_CONSOLE_PUBLIC_URL:-https://cortex-console.hrudainirmal.in}") >= 4
     assert composeText.count("CORTEX_QUERY_PUBLIC_URL: ${CORTEX_QUERY_PUBLIC_URL:-https://cortex-app.hrudainirmal.in}") >= 4
     assert 'test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in composeText
+
+
+def testExternalQueryComposeOverrideDisablesBundledQueryWeb() -> None:
+    """Compose should also ship an API-only package mode for client-owned query shells."""
+    composeOverrideText = (
+        Path(__file__).resolve().parents[1] / "docker-compose.package.external-query.yml"
+    ).read_text(encoding="utf-8")
+    assert "query-web:" not in composeOverrideText
+    assert "console-web:" in composeOverrideText
+    assert "edge:" in composeOverrideText
+    assert "CORTEX_QUERY_SURFACE_MODE: ${CORTEX_QUERY_SURFACE_MODE:-external}" in composeOverrideText
+    assert "CORTEX_EDGE_TEMPLATE_PATH: /etc/nginx/templates/edge.external-query.conf.template" in composeOverrideText
+    assert "query-web:" not in composeOverrideText.split("depends_on:")[-1]
 
 
 def testPackageDockerfilesPreinstallPyTorchFromAnExplicitWheelChannel() -> None:

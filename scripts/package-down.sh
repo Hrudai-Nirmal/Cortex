@@ -4,7 +4,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+EXTERNAL_QUERY_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.external-query.yml"
+COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
 REMOVE_VOLUMES="${2:-}"
 
@@ -28,8 +30,26 @@ require_command docker
 require_docker_daemon
 
 if [ ! -f "$ENV_FILE" ]; then
+  if [ "$ENV_FILE" = "--volumes" ]; then
+    ENV_FILE="$ROOT_DIR/.env.package"
+  else
+    echo "Package env file not found: $ENV_FILE" >&2
+    exit 1
+  fi
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
   echo "Package env file not found: $ENV_FILE" >&2
   exit 1
+fi
+
+set -a
+# shellcheck disable=SC1090
+. "$ENV_FILE"
+set +a
+
+if [ "${CORTEX_QUERY_SURFACE_MODE:-bundled}" = "external" ]; then
+  COMPOSE_FILE="$EXTERNAL_QUERY_COMPOSE_FILE"
 fi
 
 if [ "$REMOVE_VOLUMES" = "--volumes" ] || [ "$ENV_FILE" = "--volumes" ]; then

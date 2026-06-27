@@ -4,7 +4,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+EXTERNAL_QUERY_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.external-query.yml"
+COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
 
 require_command() {
@@ -43,6 +45,10 @@ set -a
 # shellcheck disable=SC1090
 . "$ENV_FILE"
 set +a
+
+if [ "${CORTEX_QUERY_SURFACE_MODE:-bundled}" = "external" ]; then
+  COMPOSE_FILE="$EXTERNAL_QUERY_COMPOSE_FILE"
+fi
 
 require_env CORTEX_GENERATOR_MODEL
 require_env CORTEX_EMBEDDING_MODEL

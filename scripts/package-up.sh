@@ -4,7 +4,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+EXTERNAL_QUERY_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.external-query.yml"
+COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
 
 require_command() {
@@ -293,6 +295,10 @@ wait_for_worker_startup_check() {
   exit 1
 }
 
+wait_for_query_contract() {
+  wait_for_endpoint "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1" '"contractVersion":"v1"' 40
+}
+
 require_command docker
 require_command curl
 require_docker_daemon
@@ -314,6 +320,7 @@ require_env CORTEX_CONSOLE_PUBLIC_URL
 require_env CORTEX_QUERY_PUBLIC_URL
 require_env CORTEX_ENVIRONMENT
 require_env CORTEX_DEV_MODE
+require_env CORTEX_QUERY_SURFACE_MODE
 require_env CORTEX_AUTH_MODE
 require_env CORTEX_DATABASE_URL
 require_env CORTEX_OBJECT_STORAGE_ROOT
@@ -327,6 +334,7 @@ require_env CORTEX_EDGE_PORT
 
 require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production
 require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false
+require_one_of "$CORTEX_QUERY_SURFACE_MODE" "CORTEX_QUERY_SURFACE_MODE" bundled external
 require_one_of "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" true false
 require_one_of "$CORTEX_REQUIRED_ACCELERATOR" "CORTEX_REQUIRED_ACCELERATOR" cpu mps cuda
 validate_torch_build_profile "$CORTEX_REQUIRED_ACCELERATOR" "$CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL"
@@ -356,23 +364,34 @@ if [ "$(extract_url_host "$CORTEX_QUERY_PUBLIC_URL")" != "$CORTEX_QUERY_HOST" ];
   exit 1
 fi
 
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "external" ]; then
+  COMPOSE_FILE="$EXTERNAL_QUERY_COMPOSE_FILE"
+fi
+
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
 echo "Package PyTorch wheel source: ${CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL}"
+echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"
-wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"
 wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40
-wait_for_endpoint "$CORTEX_QUERY_HOST" "/" "<!doctype html" 40
 assert_surface_header "$CORTEX_CONSOLE_HOST" "console"
-assert_surface_header "$CORTEX_QUERY_HOST" "query"
 assert_runtime_config "$CORTEX_CONSOLE_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"
-assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"
 assert_runtime_config_cache_header "$CORTEX_CONSOLE_HOST"
-assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"
-wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
+  wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"
+  wait_for_endpoint "$CORTEX_QUERY_HOST" "/" "<!doctype html" 40
+  assert_surface_header "$CORTEX_QUERY_HOST" "query"
+  assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"
+  assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"
+  wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"
+else
+  wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"
+  wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"
+fi
+wait_for_query_contract
 wait_for_worker_startup_check
 
 echo "Package is up."

@@ -162,6 +162,7 @@ The package now includes:
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - an additional ECS task-family example for client-owned query UIs that keeps the fixed console, API, and worker while leaving the employee chat shell outside the Cortex package
 - additional Kubernetes and OpenShift external-query examples that keep the fixed console, API, and worker while leaving the employee chat shell outside the Cortex package
+- an explicit `CORTEX_QUERY_SURFACE_MODE` package switch plus a dedicated `docker-compose.package.external-query.yml` flow so operators can boot the fixed console/API/worker bundle without pretending the client-owned employee chat shell is still shipped inside Cortex
 - operator scripts:
   - `pnpm package:up`
   - `pnpm package:status`

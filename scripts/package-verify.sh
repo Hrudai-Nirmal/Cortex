@@ -5,7 +5,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${1:-$ROOT_DIR/.env.package}"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.yml"
+EXTERNAL_QUERY_COMPOSE_FILE="$ROOT_DIR/docker-compose.package.external-query.yml"
+COMPOSE_FILE="$DEFAULT_COMPOSE_FILE"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -81,25 +83,44 @@ set -a
 . "$ENV_FILE"
 set +a
 
+require_env() {
+  local name="$1"
+  if [ -z "${!name:-}" ]; then
+    echo "Missing required environment value: $name" >&2
+    exit 1
+  fi
+}
+
+require_env CORTEX_QUERY_SURFACE_MODE
+
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "external" ]; then
+  COMPOSE_FILE="$EXTERNAL_QUERY_COMPOSE_FILE"
+fi
+
 console_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
-query_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
 console_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_CONSOLE_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
-query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
 console_runtime_config_headers="$(read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
-query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 
 assert_contains "$console_html" "<!doctype html" "console HTML shell"
-assert_contains "$query_html" "<!doctype html" "query HTML shell"
 assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"
-assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"
 assert_contains "$console_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "console runtime-config cache policy"
-assert_contains "$query_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "query runtime-config cache policy"
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
-query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
 assert_contains "$console_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "console runtime-config consolePublicUrl"
 assert_contains "$console_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "console runtime-config queryPublicUrl"
-assert_contains "$query_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "query runtime-config consolePublicUrl"
-assert_contains "$query_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "query runtime-config queryPublicUrl"
+
+if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
+  query_html="$(curl --silent --show-error --fail -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/")"
+  query_headers="$(curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${CORTEX_QUERY_HOST}" "http://127.0.0.1:${CORTEX_EDGE_PORT}/" | tr -d '\r')"
+  query_runtime_config_headers="$(read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+  query_runtime_config="$(read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js")"
+  assert_contains "$query_html" "<!doctype html" "query HTML shell"
+  assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"
+  assert_contains "$query_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "query runtime-config cache policy"
+  assert_contains "$query_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "query runtime-config consolePublicUrl"
+  assert_contains "$query_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "query runtime-config queryPublicUrl"
+else
+  echo "Package verification: query host is running in external-query mode; skipping bundled query-web shell checks."
+fi
 
 assert_contains "$(read_json "$CORTEX_CONSOLE_HOST" "/health/live")" '"status"' "console live health payload"
 assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/live")" '"status"' "query live health payload"

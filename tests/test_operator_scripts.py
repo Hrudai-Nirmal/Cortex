@@ -33,6 +33,7 @@ def testPackageEnvExampleDeclaresSplitHostVariables() -> None:
     for requiredName in (
         "CORTEX_ENVIRONMENT",
         "CORTEX_DEV_MODE",
+        "CORTEX_QUERY_SURFACE_MODE",
         "CORTEX_AUTH_MODE",
         "CORTEX_CONSOLE_HOST",
         "CORTEX_QUERY_HOST",
@@ -130,9 +131,11 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert "Start Docker Desktop or the target container runtime before running package commands." in scriptText
     assert 'require_env CORTEX_ENVIRONMENT' in scriptText
     assert 'require_env CORTEX_DEV_MODE' in scriptText
+    assert 'require_env CORTEX_QUERY_SURFACE_MODE' in scriptText
     assert 'require_env CORTEX_AUTH_MODE' in scriptText
     assert 'require_one_of "$CORTEX_ENVIRONMENT" "CORTEX_ENVIRONMENT" production' in scriptText
     assert 'require_one_of "$CORTEX_DEV_MODE" "CORTEX_DEV_MODE" false' in scriptText
+    assert 'require_one_of "$CORTEX_QUERY_SURFACE_MODE" "CORTEX_QUERY_SURFACE_MODE" bundled external' in scriptText
     assert 'require_env CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT' in scriptText
     assert 'require_one_of "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" "CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" true false' in scriptText
     assert 'require_env CORTEX_GENERATOR_MODEL' in scriptText
@@ -149,16 +152,21 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'is_reserved_placeholder_host' in scriptText
     assert "must be replaced with the client's real domains" in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/startup" "startup validation"' in scriptText
-    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
     assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
     assert 'assert_surface_header "$CORTEX_CONSOLE_HOST" "console"' in scriptText
-    assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
     assert 'assert_runtime_config "$CORTEX_CONSOLE_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"' in scriptText
-    assert 'assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"' in scriptText
     assert 'assert_runtime_config_cache_header "$CORTEX_CONSOLE_HOST"' in scriptText
-    assert 'assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"' in scriptText
+    assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host startup validation"' in scriptText
+    assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
+    assert 'assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"' in scriptText
+    assert 'assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
+    assert 'else' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"' in scriptText
+    assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"' in scriptText
+    assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'wait_for_worker_startup_check' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
     assert 'echo "Package ${label} failed."' in scriptText
@@ -179,22 +187,25 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
     assert 'read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in scriptText
-    assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in scriptText
-    assert 'read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/"' in scriptText
-    assert 'read_headers "$CORTEX_QUERY_HOST" "/"' in scriptText
     assert 'echo "Surface routing:"' in scriptText
     assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
-    assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
     assert 'print_runtime_config_summary "console" "$console_runtime_config"' in scriptText
-    assert 'print_runtime_config_summary "query" "$query_runtime_config"' in scriptText
     assert 'print_cache_header_summary "console" "$console_runtime_config_headers"' in scriptText
-    assert 'print_cache_header_summary "query" "$query_runtime_config_headers"' in scriptText
     assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
     assert 'query contract: unavailable' in scriptText
     assert "query contract detail:" in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
+    assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
+    assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in scriptText
+    assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
+    assert 'read_headers "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
+    assert 'read_headers "$CORTEX_QUERY_HOST" "/"' in scriptText
+    assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
+    assert 'print_runtime_config_summary "query" "$query_runtime_config"' in scriptText
+    assert 'print_cache_header_summary "query" "$query_runtime_config_headers"' in scriptText
+    assert 'echo "  ${CORTEX_QUERY_HOST} -> external-query-ui (not bundled)"' in scriptText
     assert 'request semantics' in scriptText
     assert 'employee-safe fields' in scriptText
     assert 'operator-only fields' in scriptText
@@ -225,3 +236,20 @@ def testPackagePullModelsRejectsRemoteModelProfiles() -> None:
     assert 'if [ "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" = "true" ]; then' in scriptText
     assert "package:pull-models only manages the bundled local Ollama service." in scriptText
     assert "Disable CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT or pull the required models into the remote provider directly." in scriptText
+
+
+def testPackageVerifySupportsExternalQueryUiMode() -> None:
+    """Package verification should keep the query API contract checks even when query-web is not bundled."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    verifyText = (rootDirectory / "scripts" / "package-verify.sh").read_text(encoding="utf-8")
+    assert 'require_env CORTEX_QUERY_SURFACE_MODE' in verifyText
+    assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in verifyText
+    assert 'assert_contains "$query_html" "<!doctype html" "query HTML shell"' in verifyText
+    assert 'assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"' in verifyText
+    assert 'assert_contains "$query_runtime_config_headers" "Cache-Control: no-store, no-cache, must-revalidate" "query runtime-config cache policy"' in verifyText
+    assert 'assert_contains "$query_runtime_config" "consolePublicUrl: \\"${CORTEX_CONSOLE_PUBLIC_URL}\\"" "query runtime-config consolePublicUrl"' in verifyText
+    assert 'assert_contains "$query_runtime_config" "queryPublicUrl: \\"${CORTEX_QUERY_PUBLIC_URL}\\"" "query runtime-config queryPublicUrl"' in verifyText
+    assert 'else' in verifyText
+    assert 'echo "Package verification: query host is running in external-query mode; skipping bundled query-web shell checks."' in verifyText
+    assert 'assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/live")" \'"status"\' "query live health payload"' in verifyText
+    assert 'query_contract="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"' in verifyText

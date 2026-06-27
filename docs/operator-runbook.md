@@ -76,10 +76,13 @@ URLs through startup health.
 
 1. Copy `.env.package.example` to `.env.package`
 2. Replace the example domains with the real client domains
-3. Review model endpoint, database, and object-storage values
-4. Keep the public URLs rooted at the host itself, for example `https://cortex-app.company.com`
+3. Choose the employee surface packaging mode:
+   - keep `CORTEX_QUERY_SURFACE_MODE=bundled` when Cortex ships the built-in `query-web`
+   - switch to `CORTEX_QUERY_SURFACE_MODE=external` when the client keeps its own employee chat shell and Cortex should ship only the fixed console plus API/worker package
+4. Review model endpoint, database, and object-storage values
+5. Keep the public URLs rooted at the host itself, for example `https://cortex-app.company.com`
    instead of `https://cortex-app.company.com/chat`
-5. Start the package:
+6. Start the package:
 
 ```bash
 pnpm package:up
@@ -94,13 +97,13 @@ If Docker is installed but the daemon is not reachable, the package scripts now 
 with an operator-facing message that tells you to start Docker Desktop or the target
 container runtime before continuing.
 
-6. Verify the running package:
+7. Verify the running package:
 
 ```bash
 pnpm package:verify
 ```
 
-7. Inspect status or logs when needed:
+8. Inspect status or logs when needed:
 
 ```bash
 pnpm package:status
@@ -108,7 +111,7 @@ pnpm package:logs
 pnpm package:logs .env.package api
 ```
 
-8. Stop it when needed:
+9. Stop it when needed:
 
 ```bash
 pnpm package:down
@@ -144,6 +147,7 @@ Before starting containers, the script validates:
 
 - env file presence
 - production package profile (`CORTEX_ENVIRONMENT=production`, `CORTEX_DEV_MODE=false`)
+- query surface packaging mode (`CORTEX_QUERY_SURFACE_MODE=bundled|external`)
 - required domain variables
 - placeholder-domain replacement (`example.com`-style hosts are rejected until edited)
 - required model-profile variables
@@ -165,6 +169,12 @@ After startup, it waits for:
   console/query public URLs and `Cache-Control: no-store, no-cache, must-revalidate`
 - `python -m cortex.worker --check-startup` inside the worker container
 
+When `CORTEX_QUERY_SURFACE_MODE=external`, the same package flow switches to the
+dedicated `docker-compose.package.external-query.yml` bundle. In that mode Cortex still
+verifies the query-host `startup`, `ready`, and `GET /v1/chat/contracts/v1` API
+boundary, but it intentionally skips bundled `query-web` HTML/runtime-config checks
+because the employee browser shell is client-owned and shipped outside the package.
+
 The package also runs database migrations before `api` and `worker` proceed.
 The packaged worker now publishes its own exec-style startup contract through
 `python -m cortex.worker --check-startup`, and the shipped Compose/Kubernetes/ECS
@@ -173,11 +183,11 @@ examples wire that into their worker health signals.
 ## What `package:verify` checks
 
 - console host routes to the operator frontend
-- query host routes to the employee frontend
-- both frontend hosts emit explicit `X-Cortex-Surface` headers
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, query host routes to the employee frontend
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, both frontend hosts emit explicit `X-Cortex-Surface` headers
 - `live`, `startup`, and `ready` health endpoints respond through both browser hosts
-- both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
-- both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - that contract descriptor still declares the expected request semantics for replacement UIs:
   `userMessageSelectionPolicy=last-non-empty-user-message`, `streamRequiredValue=false`,
@@ -198,6 +208,9 @@ examples wire that into their worker health signals.
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
   query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including request semantics, employee-safe versus operator-only fields, stable error meanings, severity, and remediation guidance for every non-ready component
+- when `CORTEX_QUERY_SURFACE_MODE=external`, `package:status` makes that explicit and
+  reports the query host as `external-query-ui (not bundled)` instead of pretending a
+  packaged `query-web` shell exists
 - when the live query-contract endpoint itself is unavailable, `package:status` now keeps the rest
   of the package summary readable and prints that contract fetch failure as a degraded detail
 - `package:verify` now fails with explicit labels such as the missing routed surface, runtime-config
