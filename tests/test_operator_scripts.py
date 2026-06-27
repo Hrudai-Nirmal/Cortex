@@ -191,3 +191,16 @@ def testSupportingPackageScriptsAlsoCheckDockerDaemon() -> None:
         assert 'require_docker_daemon' in scriptText
         assert 'docker info >/dev/null 2>&1' in scriptText
         assert "Docker is installed but the daemon is not reachable." in scriptText
+
+
+def testPackagePullModelsRejectsRemoteModelProfiles() -> None:
+    """Model pull helper should fail fast when Cortex is configured to use a remote endpoint."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    scriptText = (rootDirectory / "scripts" / "package-pull-models.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'require_env CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT' in scriptText
+    assert 'require_env CORTEX_OLLAMA_BASE_URL' in scriptText
+    assert 'if [ "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" = "true" ]; then' in scriptText
+    assert "package:pull-models only manages the bundled local Ollama service." in scriptText
+    assert "Disable CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT or pull the required models into the remote provider directly." in scriptText

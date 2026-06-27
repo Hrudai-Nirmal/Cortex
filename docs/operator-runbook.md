@@ -127,6 +127,11 @@ pnpm package:pull-models
 pnpm package:verify
 ```
 
+`package:pull-models` only applies to the bundled local Ollama service. If the client
+deployment intentionally sets `CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT=true`, pull the required
+models or provision the equivalent artifacts directly on that remote provider instead of
+using the local package helper.
+
 If a client deployment intentionally targets NVIDIA Linux workers, set
 `CORTEX_PACKAGE_PYTORCH_WHEEL_INDEX_URL` to the matching PyTorch CUDA wheel channel and
 rebuild the package images before rollout. Keep the default CPU wheel channel for

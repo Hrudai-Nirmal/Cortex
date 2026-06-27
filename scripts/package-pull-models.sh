@@ -46,6 +46,15 @@ set +a
 
 require_env CORTEX_GENERATOR_MODEL
 require_env CORTEX_EMBEDDING_MODEL
+require_env CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT
+require_env CORTEX_OLLAMA_BASE_URL
+
+if [ "$CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT" = "true" ]; then
+  echo "package:pull-models only manages the bundled local Ollama service." >&2
+  echo "Disable CORTEX_ALLOW_REMOTE_MODEL_ENDPOINT or pull the required models into the remote provider directly." >&2
+  echo "Configured model endpoint: ${CORTEX_OLLAMA_BASE_URL}" >&2
+  exit 1
+fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T ollama \
   ollama pull "$CORTEX_GENERATOR_MODEL"
