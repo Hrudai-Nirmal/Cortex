@@ -79,6 +79,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package bootstrap now checks that same `cortex-runtime-config.js` payload and no-store cache policy before declaring the client package healthy, so broken browser-surface env injection fails during `package:up` instead of after operators open the UI.
 - Package operator tooling now also treats `GET /v1/chat/contracts/v1` as a richer deployment boundary: `package:verify` asserts the live request semantics, employee-safe versus operator-only field split, and stable machine-readable error meanings, while `package:status` prints those same contract details for operators without making them inspect raw JSON.
 - `package:status` now degrades gracefully when the live query-contract endpoint is unavailable, so operators still get the rest of the split-host/runtime summary instead of losing the entire status view to one missing dependency.
+- `package:status` now also lifts the startup-health `deployment-config` detail into a
+  first-class deployment-contract summary for console/query public URLs, fail-closed
+  startup policy, and query-surface mode, so operators do not have to scan raw
+  component rows to confirm what package contract is live.
 - `package:verify` now labels split-host, runtime-config, worker-startup, and query-contract failures with explicit operator-readable descriptions and points operators back to `pnpm package:status`, so packaged contract drift no longer dies behind an unlabeled `grep` failure.
 - `package:verify` now also asserts the live startup-health `deployment-config` detail
   matches the shipped console/query public URLs, fail-closed startup policy, and

@@ -166,6 +166,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` prints `docker compose ps` plus recent `api`/`worker`/`edge` logs when the package still fails to reach a healthy state
 - `package:up` also waits for the worker startup-check contract to pass before declaring the package ready
 - `package:status` prints both routed health views plus the observed surface identity
+- `package:status` now also prints the startup-health deployment contract summary for
+  the live console/query public URLs, fail-closed startup policy, and declared
+  `querySurfaceMode`
 - `package:status` prints the runtime `cortex-runtime-config.js` public URLs served by both browser hosts
 - `package:status` also prints the observed runtime-config cache policy so operators can confirm browser clients are not caching stale host mappings after a rollout
 - `package:status` prints the worker startup-check result from the running package

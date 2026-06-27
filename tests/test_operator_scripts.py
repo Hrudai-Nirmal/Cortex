@@ -204,6 +204,10 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/"' in scriptText
     assert 'echo "Surface routing:"' in scriptText
     assert 'print_surface_identity "$CORTEX_CONSOLE_HOST" "$console_headers"' in scriptText
+    assert 'print_deployment_contract_summary "$startup_payload"' in scriptText
+    assert "deployment contract:" in scriptText
+    assert "startupPolicy=" in scriptText
+    assert "querySurfaceMode=" in scriptText
     assert 'print_runtime_config_summary "console" "$console_runtime_config"' in scriptText
     assert 'print_cache_header_summary "console" "$console_runtime_config_headers"' in scriptText
     assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText

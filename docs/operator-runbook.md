@@ -235,7 +235,11 @@ examples wire that into their worker health signals.
 ## What `package:status` and `package:logs` do
 
 - `package:status` prints the current `startup` and `ready` component states for the console host,
-  query host, routed surface identity, browser runtime-config URLs, worker startup-check result, and the live external query-contract summary, including request semantics, employee-safe versus operator-only fields, stable error meanings, severity, and remediation guidance for every non-ready component
+  query host, routed surface identity, a lifted startup deployment-contract summary
+  (console/query public URLs, `startupPolicy`, and `querySurfaceMode`), browser
+  runtime-config URLs, worker startup-check result, and the live external query-contract
+  summary, including request semantics, employee-safe versus operator-only fields,
+  stable error meanings, severity, and remediation guidance for every non-ready component
 - when `CORTEX_QUERY_SURFACE_MODE=external`, `package:status` makes that explicit and
   reports the query host as `external-query-ui (not bundled)` instead of pretending a
   packaged `query-web` shell exists

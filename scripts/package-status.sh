@@ -85,6 +85,43 @@ PY
   fi
 }
 
+print_deployment_contract_summary() {
+  local payload="$1"
+  if command -v python3 >/dev/null 2>&1; then
+    DEPLOYMENT_CONTRACT_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+import re
+
+payload = json.loads(os.environ["DEPLOYMENT_CONTRACT_PAYLOAD"])
+detail = ""
+for component in payload.get("components", []):
+    if component.get("name") == "deployment-config":
+        detail = component.get("detail", "")
+        break
+
+console_match = re.search(r"console=([^,]+), query=", detail)
+query_match = re.search(r"query=([^,]+), cors=", detail)
+startup_policy_match = re.search(r"startupPolicy=([^,]+)", detail)
+surface_mode_match = re.search(r"querySurfaceMode=(bundled|external)", detail)
+
+print("deployment contract:")
+print(f"  - console: {console_match.group(1) if console_match else 'missing'}")
+print(f"  - query: {query_match.group(1) if query_match else 'missing'}")
+print(
+    "  - startup policy: "
+    f"{startup_policy_match.group(1) if startup_policy_match else 'missing'}"
+)
+print(
+    "  - query surface mode: "
+    f"{surface_mode_match.group(1) if surface_mode_match else 'missing'}"
+)
+PY
+  else
+    printf "deployment contract: %s\n" "$payload"
+  fi
+}
+
 print_contract_summary() {
   local payload="$1"
   if [ -z "$payload" ]; then
@@ -246,6 +283,7 @@ print_health "console startup" "$startup_payload"
 print_health "console ready" "$ready_payload"
 print_health "query startup" "$query_startup_payload"
 print_health "query ready" "$query_ready_payload"
+print_deployment_contract_summary "$startup_payload"
 print_runtime_config_summary "console" "$console_runtime_config"
 print_cache_header_summary "console" "$console_runtime_config_headers"
 if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
