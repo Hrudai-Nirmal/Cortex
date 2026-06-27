@@ -69,7 +69,8 @@ operator-only `x_cortex` fields, and machine-readable error meanings so third-pa
 shells can integrate against the running package without reverse-engineering the bundled UI.
 The bundled `query-web` surface and `pnpm package:verify` now also validate the live
 response-header set, evidence-status enums, route enums, abstention enums, and required
-error meanings so Cortex treats its own shipped employee UI and package tooling as strict
+error meanings, and the bundled employee shell now refuses to run against an API-only
+`querySurfaceMode=external` deployment contract, so Cortex treats its own shipped UI and package tooling as strict
 consumers of that same replacement-query contract.
 
 See [external-query-contract.md](docs/external-query-contract.md) for the stable wire contract.

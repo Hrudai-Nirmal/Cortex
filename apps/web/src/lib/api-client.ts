@@ -179,8 +179,35 @@ function validateExternalChatResponse(
   descriptor: ExternalQueryContractDescriptor,
   headers: Headers,
 ): QueryResponse {
+  for (const requiredField of REQUIRED_QUERY_EXTENSION_FIELDS) {
+    if (!(requiredField in response.x_cortex)) {
+      throw buildContractCompatibilityError(`The response is missing required Cortex field: ${requiredField}.`);
+    }
+  }
   if (response.x_cortex.contractVersion !== descriptor.contractVersion) {
     throw buildContractCompatibilityError("The response contract version does not match the live descriptor.");
+  }
+  if (!descriptor.routes.includes(response.x_cortex.route)) {
+    throw buildContractCompatibilityError("The response route is outside the deployed Cortex contract.");
+  }
+  if (!descriptor.evidenceStatuses.includes(response.x_cortex.evidenceStatus)) {
+    throw buildContractCompatibilityError("The response evidence status is outside the deployed Cortex contract.");
+  }
+  if (
+    response.x_cortex.abstained
+    && !descriptor.abstentionEvidenceStatuses.some(
+      (status) => status === response.x_cortex.evidenceStatus,
+    )
+  ) {
+    throw buildContractCompatibilityError("The response abstention state does not match the deployed evidence contract.");
+  }
+  if (
+    !response.x_cortex.abstained
+    && descriptor.abstentionEvidenceStatuses.some(
+      (status) => status === response.x_cortex.evidenceStatus,
+    )
+  ) {
+    throw buildContractCompatibilityError("The response abstention state is inconsistent with the deployed evidence contract.");
   }
   const contractHeader = headers.get("X-Cortex-Contract-Version");
   if (contractHeader !== descriptor.contractVersion) {

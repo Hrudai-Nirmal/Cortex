@@ -318,6 +318,76 @@ function mockSemanticallyIncompatibleContract(): void {
   );
 }
 
+function mockExternalOnlyContract(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...contractResponse,
+            querySurfaceMode: "external",
+            bundledQueryUiAvailable: false,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      ),
+  );
+}
+
+function mockSemanticallyIncompatibleChatResponse(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sessionResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(contractResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...queryResponse,
+            x_cortex: {
+              ...queryResponse.x_cortex,
+              route: "agent",
+              evidenceStatus: "unsupported",
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "X-Cortex-Contract-Version": "v1",
+              "X-Cortex-Trace-Id": "4576b626-c27a-4409-9a51-600cf115ff4a",
+              "X-Cortex-Evidence-Status": "unsupported",
+              "X-Cortex-Route": "agent",
+              "X-Cortex-Abstained": "false",
+            },
+          },
+        ),
+      ),
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -411,5 +481,31 @@ describe("EndUserQuery", () => {
 
     expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();
     expect(screen.getByRole("button", { name: "Submit question" })).toBeDisabled();
+  });
+
+  it("fails safely when the bundled employee shell reaches an external-only query contract", async () => {
+    mockExternalOnlyContract();
+    render(<EndUserQuery />);
+
+    expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Submit question" })).toBeDisabled();
+  });
+
+  it("fails safely when the deployed chat response drifts from the advertised route and evidence contract", async () => {
+    mockSemanticallyIncompatibleChatResponse();
+    render(<EndUserQuery />);
+    expect(
+      await screen.findByText("Your access permissions are applied automatically."),
+    ).toBeVisible();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Ask a question" }), {
+      target: { value: "What are our data retention rules?" },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Submit question" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Submit question" }));
+
+    expect(await screen.findByText(/incompatible with the deployed package/i)).toBeVisible();
   });
 });

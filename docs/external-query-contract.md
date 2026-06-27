@@ -66,6 +66,9 @@ on and what should remain reserved for elevated debugging:
   distinguish from a successful answer contract.
 - `responseHeaders`, `evidenceStatuses`, `routes`, and `abstentionEvidenceStatuses` are also part
   of the live semantic contract and should be validated before trusting the deployed package.
+- The shipped bundled employee UI fails closed when this live descriptor reports
+  `querySurfaceMode=external` or `bundledQueryUiAvailable=false`, because that package is
+  declaring an API-only employee surface rather than a bundled browser shell.
 
 ## Authentication and scope
 
@@ -120,6 +123,9 @@ Notes:
 - Replacement UIs should also validate `responseHeaders`, `evidenceStatuses`, `routes`,
   `abstentionEvidenceStatuses`, and `errorStatuses` so semantic contract drift fails closed
   before employee traffic starts flowing.
+- The bundled `query-web` surface now also validates the returned `route`,
+  `evidenceStatus`, and abstention-state consistency against the descriptor before it
+  accepts a response as displayable.
 
 ## Response
 

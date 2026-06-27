@@ -63,6 +63,10 @@ function getEvidencePresentation(response: QueryResponse): {
   };
 }
 
+function buildBundledQueryUiCompatibilityMessage(): string {
+  return "This Cortex query surface is incompatible with the deployed package. The bundled employee shell is unavailable for this deployment contract.";
+}
+
 /** Render a calm ask-answer-feedback experience for enterprise employees. */
 export function EndUserQuery() {
   const [query, setQuery] = useState("");
@@ -87,6 +91,14 @@ export function EndUserQuery() {
         ]);
         if (isMounted) {
           setSession(resolvedSession);
+          if (
+            resolvedQueryContract.querySurfaceMode !== "bundled"
+            || !resolvedQueryContract.bundledQueryUiAvailable
+          ) {
+            setQueryContract(null);
+            setErrorMessage(buildBundledQueryUiCompatibilityMessage());
+            return;
+          }
           setQueryContract(resolvedQueryContract);
         }
       } catch (error) {
