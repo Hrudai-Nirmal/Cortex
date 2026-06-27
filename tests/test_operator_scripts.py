@@ -135,6 +135,10 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40' in scriptText
     assert 'assert_surface_header "$CORTEX_CONSOLE_HOST" "console"' in scriptText
     assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
+    assert 'assert_runtime_config "$CORTEX_CONSOLE_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"' in scriptText
+    assert 'assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"' in scriptText
+    assert 'assert_runtime_config_cache_header "$CORTEX_CONSOLE_HOST"' in scriptText
+    assert 'assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
     assert 'wait_for_worker_startup_check' in scriptText

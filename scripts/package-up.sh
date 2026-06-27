@@ -164,6 +164,12 @@ read_headers() {
   curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
 }
 
+read_text() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 assert_surface_header() {
   local host="$1"
   local expected_surface="$2"
@@ -172,6 +178,37 @@ assert_surface_header() {
   headers="$(read_headers "$host" "/")"
   if ! printf "%s" "$headers" | grep -qi "^X-Cortex-Surface: ${expected_surface}$"; then
     echo "Expected ${host} to resolve to Cortex surface ${expected_surface}, but the routed headers did not match." >&2
+    printf "%s\n" "$headers" >&2
+    exit 1
+  fi
+}
+
+assert_runtime_config() {
+  local host="$1"
+  local expected_console_url="$2"
+  local expected_query_url="$3"
+  local runtime_config=""
+
+  runtime_config="$(read_text "$host" "/cortex-runtime-config.js")"
+  if ! printf "%s" "$runtime_config" | grep -q "consolePublicUrl: \"${expected_console_url}\""; then
+    echo "Expected ${host} runtime config to publish consolePublicUrl=${expected_console_url}." >&2
+    printf "%s\n" "$runtime_config" >&2
+    exit 1
+  fi
+  if ! printf "%s" "$runtime_config" | grep -q "queryPublicUrl: \"${expected_query_url}\""; then
+    echo "Expected ${host} runtime config to publish queryPublicUrl=${expected_query_url}." >&2
+    printf "%s\n" "$runtime_config" >&2
+    exit 1
+  fi
+}
+
+assert_runtime_config_cache_header() {
+  local host="$1"
+  local headers=""
+
+  headers="$(read_headers "$host" "/cortex-runtime-config.js")"
+  if ! printf "%s" "$headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate$'; then
+    echo "Expected ${host} runtime config to be served with Cache-Control: no-store, no-cache, must-revalidate." >&2
     printf "%s\n" "$headers" >&2
     exit 1
   fi
@@ -329,6 +366,10 @@ wait_for_endpoint "$CORTEX_CONSOLE_HOST" "/" "<!doctype html" 40
 wait_for_endpoint "$CORTEX_QUERY_HOST" "/" "<!doctype html" 40
 assert_surface_header "$CORTEX_CONSOLE_HOST" "console"
 assert_surface_header "$CORTEX_QUERY_HOST" "query"
+assert_runtime_config "$CORTEX_CONSOLE_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"
+assert_runtime_config "$CORTEX_QUERY_HOST" "$CORTEX_CONSOLE_PUBLIC_URL" "$CORTEX_QUERY_PUBLIC_URL"
+assert_runtime_config_cache_header "$CORTEX_CONSOLE_HOST"
+assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"
 
 wait_for_health_ready "$CORTEX_CONSOLE_HOST" "/health/ready" "runtime readiness"
 wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"

@@ -155,6 +155,8 @@ After startup, it waits for:
 - `GET /health/ready` through both console and query hosts
 - console and query HTML through the split host router
 - `X-Cortex-Surface` identity headers on both routed browser hosts
+- `cortex-runtime-config.js` through both routed browser hosts, including the expected
+  console/query public URLs and `Cache-Control: no-store, no-cache, must-revalidate`
 - `python -m cortex.worker --check-startup` inside the worker container
 
 The package also runs database migrations before `api` and `worker` proceed.
