@@ -88,6 +88,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - API and worker settings loading now collapse environment validation failures into one
   operator-readable `invalid Cortex settings: ...` runtime error, so packaged bad-env
   boot failures surface clear domain/storage/profile clues instead of raw Pydantic dumps.
+- The fixed console Settings tab now includes an operator release-gate checklist that
+  combines startup health, live dependencies, active immutable pipeline state, query
+  contract availability, queued validated versions, and latest trace evidence into one
+  go-live decision view.
 - Worker startup now preserves the underlying live-readiness exception text when database/model verification itself crashes, so operators see the real connection/provider clue instead of only a generic readiness failure banner.
 - API startup now also preserves the underlying startup-readiness exception text when startup health collection itself crashes, so packaged fail-closed boot errors still surface the real provider/storage/network clue instead of only an unlabeled traceback.
 - The packaged browser hosts now serve `cortex-runtime-config.js` with an explicit no-store cache policy, so client-domain changes propagate immediately after rollouts instead of sticking behind cached runtime host mappings.

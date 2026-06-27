@@ -78,6 +78,13 @@ interface LifecycleActionItem {
   detail: string;
 }
 
+interface ReleaseGateItem {
+  label: string;
+  status: "ready" | "degraded";
+  detail: string;
+  remediation: string;
+}
+
 function findRuntimeComponent(
   runtimeHealth: RuntimeHealth | null,
   componentName: string,
@@ -275,6 +282,85 @@ function buildLifecycleActionItems(
   return lifecycleItems;
 }
 
+function buildReleaseGateItems(
+  startupHealth: RuntimeHealth | null,
+  runtimeHealth: RuntimeHealth | null,
+  activeVersion: PipelineVersionSummary | null,
+  validatedVersions: PipelineVersionSummary[],
+  queryContract: ExternalQueryContractDescriptor | null,
+  latestTrace: TraceSummary | null,
+): ReleaseGateItem[] {
+  return [
+    {
+      label: "Static package contract",
+      status: startupHealth?.status === "ready" ? "ready" : "degraded",
+      detail:
+        startupHealth?.status === "ready"
+          ? "Startup-safe deployment checks are clean for the current package profile."
+          : "One or more fail-closed startup checks still block safe packaged boot.",
+      remediation:
+        startupHealth?.status === "ready"
+          ? "Keep startup health green before promoting this package into a client environment."
+          : "Clear startup blockers in the Settings tab before treating this package as deployable.",
+    },
+    {
+      label: "Live runtime dependencies",
+      status: runtimeHealth?.status === "ready" ? "ready" : "degraded",
+      detail:
+        runtimeHealth?.status === "ready"
+          ? "Database, model endpoint, storage, and runtime dependencies are currently healthy."
+          : "The running package is degraded or has not yet proven live dependency readiness.",
+      remediation:
+        runtimeHealth?.status === "ready"
+          ? "Continue polling runtime health after rollout to catch live dependency drift."
+          : "Fix live dependency failures before asking operators to trust ingestion or query traffic.",
+    },
+    {
+      label: "Immutable active pipeline",
+      status: activeVersion ? "ready" : "degraded",
+      detail: activeVersion
+        ? `Version v${activeVersion.version} is active and serving the package.`
+        : "No immutable active pipeline version is currently serving this package.",
+      remediation: activeVersion
+        ? "Keep a rollback candidate available before changing the live version."
+        : "Activate one validated immutable pipeline before shipping this package.",
+    },
+    {
+      label: "Promotion queue",
+      status: validatedVersions.length > 0 ? "degraded" : "ready",
+      detail:
+        validatedVersions.length > 0
+          ? `Version v${validatedVersions[0].version} is validated but not yet activated.`
+          : "No validated versions are waiting for operator promotion.",
+      remediation:
+        validatedVersions.length > 0
+          ? "Promote the queued version only after startup/runtime health and evidence review stay green."
+          : "Keep this queue empty unless a deliberate release candidate is waiting on approval.",
+    },
+    {
+      label: "External query contract",
+      status: queryContract ? "ready" : "degraded",
+      detail: queryContract
+        ? `Contract ${queryContract.contractVersion} is available for ${queryContract.querySurfaceMode} query mode clients.`
+        : "The live query contract descriptor is unavailable to bundled or client-owned employee shells.",
+      remediation: queryContract
+        ? "Re-check the live contract after deployments so client-owned chat shells stay aligned."
+        : "Restore GET /v1/chat/contracts/v1 before treating this package as integration-ready.",
+    },
+    {
+      label: "Evidence sample",
+      status: latestTrace?.outcome === "sufficient" ? "ready" : "degraded",
+      detail: latestTrace
+        ? `Latest trace ${latestTrace.traceId.slice(0, 8)} finished with outcome ${latestTrace.outcome}.`
+        : "No persisted trace is available yet to demonstrate retrieval, claims, and citations.",
+      remediation:
+        latestTrace?.outcome === "sufficient"
+          ? "Keep recent trace evidence and citations available as rollout proof for operators."
+          : "Run or inspect a representative query until the latest trace demonstrates sufficient evidence with citations.",
+    },
+  ];
+}
+
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
 export function DeveloperConsole() {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
@@ -311,6 +397,15 @@ export function DeveloperConsole() {
     validatedVersions,
     rollbackCandidates,
   );
+  const releaseGateItems = buildReleaseGateItems(
+    startupHealth,
+    runtimeHealth,
+    activeVersion,
+    validatedVersions,
+    queryContract,
+    latestTrace,
+  );
+  const releaseBlockers = releaseGateItems.filter((item) => item.status !== "ready");
 
   const loadConsole = useCallback(async (): Promise<void> => {
     try {
@@ -674,6 +769,38 @@ export function DeveloperConsole() {
                 <span><small>Live</small><strong>{liveReadinessStatus}</strong></span>
                 <span><small>Startup blockers</small><strong>{startupAlerts.length}</strong></span>
                 <span><small>Live blockers</small><strong>{runtimeAlerts.length}</strong></span>
+                <span><small>Release blockers</small><strong>{releaseBlockers.length}</strong></span>
+              </div>
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <ShieldCheck aria-hidden size={18} />
+                  <strong>Operator release gate</strong>
+                </div>
+                <p>
+                  This checklist collapses the package boot contract, live dependency state,
+                  active immutable pipeline, client query contract, and latest evidence sample
+                  into one go-live view for operators.
+                </p>
+                <table style={{ marginTop: 10 }}>
+                  <thead>
+                    <tr>
+                      <th>Gate</th>
+                      <th>Status</th>
+                      <th>Detail</th>
+                      <th>Remediation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {releaseGateItems.map((item) => (
+                      <tr key={item.label}>
+                        <td>{item.label}</td>
+                        <td>{item.status}</td>
+                        <td>{item.detail}</td>
+                        <td>{item.remediation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               {startupAlerts.length > 0 ? (
                 <div className="query-error" role="alert" style={{ marginBottom: 16 }}>

@@ -170,6 +170,17 @@ collapse Pydantic settings validation into a single operator-facing
 `invalid Cortex settings: ...` error string. That keeps bad public URLs, host mismatches,
 or relative storage paths from disappearing into a generic Python traceback.
 
+Inside the fixed developer console, the Settings tab now also exposes an
+`Operator release gate` checklist. It summarizes whether the package is safe to ship by
+combining:
+
+- startup-safe deployment validation
+- live runtime dependency readiness
+- active immutable pipeline presence
+- validated-but-not-yet-promoted pipeline versions
+- live external query-contract availability
+- the outcome of the latest persisted evidence-bearing trace
+
 After startup, it waits for:
 
 - `GET /health/startup` through both console and query hosts

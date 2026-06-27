@@ -168,6 +168,9 @@ The package now includes:
 - frontend surface config that keeps localhost defaults for development but rejects missing, placeholder, localhost, non-HTTPS, or nested-path public URLs inside packaged production browser builds
 - frontend runtime-config injection that reads `CORTEX_CONSOLE_PUBLIC_URL` and `CORTEX_QUERY_PUBLIC_URL` at container startup so browser-surface links stay aligned with the deployed client domains
 - fixed-console cross-surface navigation that prefers the runtime deployment contract from `GET /health/startup`, so the “Open employee view” link follows the live packaged query host instead of stale local browser assumptions when package state drifts
+- fixed-console release-gate checklist that collapses startup health, live dependencies,
+  active immutable pipeline state, external query-contract availability, queued validated
+  versions, and latest trace evidence into one operator go-live view
 - OpenShift Route and ECS task-family examples for client-owned split-host deployments, including a one-shot ECS migration task
 - an additional ECS task-family example for client-owned query UIs that keeps the fixed console, API, and worker while leaving the employee chat shell outside the Cortex package
 - additional Kubernetes and OpenShift external-query examples that keep the fixed console, API, and worker while leaving the employee chat shell outside the Cortex package
