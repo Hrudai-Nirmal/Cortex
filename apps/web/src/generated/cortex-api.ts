@@ -754,6 +754,7 @@ export interface components {
             authentication: "bearer-token";
             /** Supportsstreaming */
             supportsStreaming: boolean;
+            requestOptions: components["schemas"]["ExternalQueryRequestOptionsSchema"];
             /** Traceeventspathtemplate */
             traceEventsPathTemplate: string;
             /** Operatorconsolepath */
@@ -762,6 +763,12 @@ export interface components {
             responseHeaders: string[];
             /** Extensionfields */
             extensionFields: string[];
+            /** Employeesafeextensionfields */
+            employeeSafeExtensionFields: string[];
+            /** Operatoronlyextensionfields */
+            operatorOnlyExtensionFields: string[];
+            /** Errorstatuses */
+            errorStatuses: components["schemas"]["ExternalQueryErrorStatusSchema"][];
             /** Evidencestatuses */
             evidenceStatuses: ("sufficient" | "partial" | "insufficient" | "conflict")[];
             /** Routes */
@@ -770,6 +777,26 @@ export interface components {
             abstentionEvidenceStatuses: ("insufficient" | "conflict")[];
             /** Notes */
             notes: string[];
+        };
+        /**
+         * ExternalQueryErrorStatusSchema
+         * @description Describe one stable error class exported by the replacement-query facade.
+         */
+        ExternalQueryErrorStatusSchema: {
+            /**
+             * Statuscode
+             * @enum {integer}
+             */
+            statusCode: 422 | 403 | 503 | 500;
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "invalid_request" | "forbidden_scope" | "provider_unavailable" | "internal_error";
+            /** Retryable */
+            retryable: boolean;
+            /** Meaning */
+            meaning: string;
         };
         /**
          * ExternalQueryMetadataSchema
@@ -819,6 +846,24 @@ export interface components {
              * @default true
              */
             showCitations: boolean;
+        };
+        /**
+         * ExternalQueryRequestOptionsSchema
+         * @description Describe the stable request-shape rules replacement employee UIs must honor.
+         */
+        ExternalQueryRequestOptionsSchema: {
+            /**
+             * Usermessageselectionpolicy
+             * @constant
+             */
+            userMessageSelectionPolicy: "last-non-empty-user-message";
+            /**
+             * Streamrequiredvalue
+             * @constant
+             */
+            streamRequiredValue: false;
+            /** Supportscitationtoggle */
+            supportsCitationToggle: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {

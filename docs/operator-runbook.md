@@ -259,11 +259,12 @@ When clients use their own chat UI:
 
 - keep `console-web`
 - keep `api`
-- optionally read `GET /v1/chat/contracts/v1` at startup to confirm the live Cortex package still exports the expected `v1` contract
+- read `GET /v1/chat/contracts/v1` at startup to confirm the live Cortex package still exports the expected `v1` contract, request semantics, and employee-safe field boundary
 - call `POST /v1/chat/completions`
 - render citations from `x_cortex.citations`
 - preserve `x_cortex.traceId` for feedback and support workflows
 - preserve `X-Cortex-Route` and `X-Cortex-Abstained` if your gateway, BFF, or observability layer logs response headers for support workflows
+- treat `employeeSafeExtensionFields` as the supported browser dependency boundary for the employee shell
 - treat `x_cortex.traceEventsPath` as operator-only trace correlation unless the client intentionally runs an elevated builder/debug integration
 
 The bundled `query-web` surface now follows this same pattern itself: it loads the live

@@ -406,6 +406,11 @@ async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata(
     assert payload["method"] == "POST"
     assert payload["authentication"] == "bearer-token"
     assert payload["supportsStreaming"] is False
+    assert payload["requestOptions"] == {
+        "userMessageSelectionPolicy": "last-non-empty-user-message",
+        "streamRequiredValue": False,
+        "supportsCitationToggle": True,
+    }
     assert payload["traceEventsPathTemplate"] == "/v1/query/{traceId}/events"
     assert payload["operatorConsolePath"] == "/developer"
     assert payload["responseHeaders"] == [
@@ -416,6 +421,44 @@ async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata(
         "X-Cortex-Abstained",
     ]
     assert payload["extensionFields"][0] == "contractVersion"
+    assert payload["employeeSafeExtensionFields"] == [
+        "contractVersion",
+        "traceId",
+        "route",
+        "correctedQuery",
+        "evidenceStatus",
+        "abstained",
+        "claims",
+        "citations",
+        "stages",
+    ]
+    assert payload["operatorOnlyExtensionFields"] == ["traceEventsPath"]
+    assert payload["errorStatuses"] == [
+        {
+            "statusCode": 422,
+            "code": "invalid_request",
+            "retryable": False,
+            "meaning": "The request shape violates the stable Cortex query facade, for example no usable user message or stream=true.",
+        },
+        {
+            "statusCode": 403,
+            "code": "forbidden_scope",
+            "retryable": False,
+            "meaning": "The authenticated identity is not allowed to access the requested enterprise scope or sources.",
+        },
+        {
+            "statusCode": 503,
+            "code": "provider_unavailable",
+            "retryable": True,
+            "meaning": "A required local provider such as the configured model endpoint was unavailable or timed out during deterministic execution.",
+        },
+        {
+            "statusCode": 500,
+            "code": "internal_error",
+            "retryable": True,
+            "meaning": "Cortex failed outside the expected validation, authorization, or provider error contract.",
+        },
+    ]
     assert payload["abstentionEvidenceStatuses"] == ["insufficient", "conflict"]
     assert "Do not send raw enterprise scope" in payload["notes"][1]
 

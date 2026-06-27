@@ -756,6 +756,29 @@ export function DeveloperConsole() {
                 </p>
                 {queryContract ? (
                   <div style={{ marginTop: 12 }}>
+                    <strong>Request behavior</strong>
+                    <p style={{ marginTop: 6 }}>
+                      Query selection policy{" "}
+                      <code>{queryContract.requestOptions.userMessageSelectionPolicy}</code>.
+                      Required stream value <code>{String(queryContract.requestOptions.streamRequiredValue)}</code>.
+                      Citation toggle preserved <code>{String(queryContract.requestOptions.supportsCitationToggle)}</code>.
+                    </p>
+                    <strong>Employee-safe fields</strong>
+                    <p style={{ marginTop: 6 }}>
+                      {queryContract.employeeSafeExtensionFields.map((fieldName) => (
+                        <code key={fieldName} style={{ marginRight: 8 }}>
+                          x_cortex.{fieldName}
+                        </code>
+                      ))}
+                    </p>
+                    <strong>Operator-only fields</strong>
+                    <p style={{ marginTop: 6 }}>
+                      {queryContract.operatorOnlyExtensionFields.map((fieldName) => (
+                        <code key={fieldName} style={{ marginRight: 8 }}>
+                          x_cortex.{fieldName}
+                        </code>
+                      ))}
+                    </p>
                     <strong>Extension fields</strong>
                     <p style={{ marginTop: 6 }}>
                       {queryContract.extensionFields.map((fieldName) => (
@@ -772,6 +795,27 @@ export function DeveloperConsole() {
                         </code>
                       ))}
                     </p>
+                    <strong>Error statuses</strong>
+                    <table style={{ marginTop: 10 }}>
+                      <thead>
+                        <tr>
+                          <th>Status</th>
+                          <th>Code</th>
+                          <th>Retryable</th>
+                          <th>Meaning</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {queryContract.errorStatuses.map((errorStatus) => (
+                          <tr key={errorStatus.code}>
+                            <td>{errorStatus.statusCode}</td>
+                            <td><code>{errorStatus.code}</code></td>
+                            <td>{String(errorStatus.retryable)}</td>
+                            <td>{errorStatus.meaning}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : null}
               </div>

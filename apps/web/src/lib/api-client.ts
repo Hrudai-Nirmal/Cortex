@@ -32,6 +32,7 @@ const REQUIRED_QUERY_EXTENSION_FIELDS = [
   "citations",
   "stages",
 ] as const;
+const REQUIRED_OPERATOR_ONLY_EXTENSION_FIELDS = ["traceEventsPath"] as const;
 
 function getDefaultFixtureToken(): string {
   return getActiveSurface() === "query" ? "fixture-employee" : "fixture-admin";
@@ -91,9 +92,26 @@ function validateExternalQueryContractDescriptor(
   if (descriptor.supportsStreaming) {
     throw buildContractCompatibilityError("The bundled query UI only supports non-streaming Cortex chat responses.");
   }
+  if (descriptor.requestOptions.userMessageSelectionPolicy !== "last-non-empty-user-message") {
+    throw buildContractCompatibilityError("The deployed query message-selection policy is unsupported.");
+  }
+  if (descriptor.requestOptions.streamRequiredValue !== false) {
+    throw buildContractCompatibilityError("The deployed query contract no longer guarantees stream=false requests.");
+  }
+  if (!descriptor.requestOptions.supportsCitationToggle) {
+    throw buildContractCompatibilityError("The deployed query contract does not preserve the citation display toggle.");
+  }
   for (const requiredField of REQUIRED_QUERY_EXTENSION_FIELDS) {
+    if (!descriptor.employeeSafeExtensionFields.includes(requiredField)) {
+      throw buildContractCompatibilityError(`Missing required employee-safe Cortex field: ${requiredField}.`);
+    }
     if (!descriptor.extensionFields.includes(requiredField)) {
       throw buildContractCompatibilityError(`Missing required Cortex extension field: ${requiredField}.`);
+    }
+  }
+  for (const operatorOnlyField of REQUIRED_OPERATOR_ONLY_EXTENSION_FIELDS) {
+    if (!descriptor.operatorOnlyExtensionFields.includes(operatorOnlyField)) {
+      throw buildContractCompatibilityError(`Missing required operator-only Cortex field: ${operatorOnlyField}.`);
     }
   }
   return descriptor;

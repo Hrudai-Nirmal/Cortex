@@ -236,6 +236,23 @@ class ExternalQueryMetadataSchema(BaseModel):
     stages: list[StageSchema]
 
 
+class ExternalQueryRequestOptionsSchema(BaseModel):
+    """Describe the stable request-shape rules replacement employee UIs must honor."""
+
+    userMessageSelectionPolicy: Literal["last-non-empty-user-message"]
+    streamRequiredValue: Literal[False]
+    supportsCitationToggle: bool
+
+
+class ExternalQueryErrorStatusSchema(BaseModel):
+    """Describe one stable error class exported by the replacement-query facade."""
+
+    statusCode: Literal[422, 403, 503, 500]
+    code: Literal["invalid_request", "forbidden_scope", "provider_unavailable", "internal_error"]
+    retryable: bool
+    meaning: str
+
+
 class ExternalQueryContractDescriptorSchema(BaseModel):
     """Describe the stable third-party query integration contract exported by Cortex."""
 
@@ -244,10 +261,14 @@ class ExternalQueryContractDescriptorSchema(BaseModel):
     method: Literal["POST"]
     authentication: Literal["bearer-token"]
     supportsStreaming: bool
+    requestOptions: ExternalQueryRequestOptionsSchema
     traceEventsPathTemplate: str
     operatorConsolePath: str
     responseHeaders: list[str] = Field(min_length=1)
     extensionFields: list[str] = Field(min_length=1)
+    employeeSafeExtensionFields: list[str] = Field(min_length=1)
+    operatorOnlyExtensionFields: list[str] = Field(min_length=1)
+    errorStatuses: list[ExternalQueryErrorStatusSchema] = Field(min_length=1)
     evidenceStatuses: list[Literal["sufficient", "partial", "insufficient", "conflict"]] = (
         Field(min_length=1)
     )

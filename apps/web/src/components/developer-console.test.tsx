@@ -220,6 +220,11 @@ describe("DeveloperConsole", () => {
             method: "POST",
             authentication: "bearer-token",
             supportsStreaming: false,
+            requestOptions: {
+              userMessageSelectionPolicy: "last-non-empty-user-message",
+              streamRequiredValue: false,
+              supportsCitationToggle: true,
+            },
             traceEventsPathTemplate: "/v1/query/{traceId}/events",
             operatorConsolePath: "/developer",
             responseHeaders: [
@@ -240,6 +245,48 @@ describe("DeveloperConsole", () => {
               "claims",
               "citations",
               "stages",
+            ],
+            employeeSafeExtensionFields: [
+              "contractVersion",
+              "traceId",
+              "route",
+              "correctedQuery",
+              "evidenceStatus",
+              "abstained",
+              "claims",
+              "citations",
+              "stages",
+            ],
+            operatorOnlyExtensionFields: ["traceEventsPath"],
+            errorStatuses: [
+              {
+                statusCode: 422,
+                code: "invalid_request",
+                retryable: false,
+                meaning:
+                  "The request shape violates the stable Cortex query facade, for example no usable user message or stream=true.",
+              },
+              {
+                statusCode: 403,
+                code: "forbidden_scope",
+                retryable: false,
+                meaning:
+                  "The authenticated identity is not allowed to access the requested enterprise scope or sources.",
+              },
+              {
+                statusCode: 503,
+                code: "provider_unavailable",
+                retryable: true,
+                meaning:
+                  "A required local provider such as the configured model endpoint was unavailable or timed out during deterministic execution.",
+              },
+              {
+                statusCode: 500,
+                code: "internal_error",
+                retryable: true,
+                meaning:
+                  "Cortex failed outside the expected validation, authorization, or provider error contract.",
+              },
             ],
             evidenceStatuses: ["sufficient", "partial", "insufficient", "conflict"],
             routes: ["rag", "compute", "retrieve-then-compute"],
@@ -288,10 +335,16 @@ describe("DeveloperConsole", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByText("Client query contract")).toBeVisible();
     expect(screen.getByText("Contract headers")).toBeVisible();
+    expect(screen.getByText("Request behavior")).toBeVisible();
+    expect(screen.getByText("Employee-safe fields")).toBeVisible();
+    expect(screen.getByText("Operator-only fields")).toBeVisible();
+    expect(screen.getByText("Error statuses")).toBeVisible();
     expect(screen.getByText("X-Cortex-Route")).toBeVisible();
     expect(screen.getByText("X-Cortex-Abstained")).toBeVisible();
+    expect(screen.getByText("last-non-empty-user-message")).toBeVisible();
+    expect(screen.getByText("provider_unavailable")).toBeVisible();
     expect(screen.getByText("Contract guidance")).toBeVisible();
-    expect(screen.getByText("x_cortex.traceEventsPath")).toBeVisible();
+    expect(screen.getAllByText("x_cortex.traceEventsPath")).toHaveLength(2);
     expect(screen.getByText("insufficient")).toBeVisible();
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Package build profile")).toBeVisible();

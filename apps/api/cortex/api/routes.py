@@ -76,6 +76,44 @@ EXTERNAL_QUERY_CONTRACT_EXTENSION_FIELDS = [
     "citations",
     "stages",
 ]
+EXTERNAL_QUERY_EMPLOYEE_SAFE_EXTENSION_FIELDS = [
+    "contractVersion",
+    "traceId",
+    "route",
+    "correctedQuery",
+    "evidenceStatus",
+    "abstained",
+    "claims",
+    "citations",
+    "stages",
+]
+EXTERNAL_QUERY_OPERATOR_ONLY_EXTENSION_FIELDS = ["traceEventsPath"]
+EXTERNAL_QUERY_ERROR_STATUSES = [
+    {
+        "statusCode": 422,
+        "code": "invalid_request",
+        "retryable": False,
+        "meaning": "The request shape violates the stable Cortex query facade, for example no usable user message or stream=true.",
+    },
+    {
+        "statusCode": 403,
+        "code": "forbidden_scope",
+        "retryable": False,
+        "meaning": "The authenticated identity is not allowed to access the requested enterprise scope or sources.",
+    },
+    {
+        "statusCode": 503,
+        "code": "provider_unavailable",
+        "retryable": True,
+        "meaning": "A required local provider such as the configured model endpoint was unavailable or timed out during deterministic execution.",
+    },
+    {
+        "statusCode": 500,
+        "code": "internal_error",
+        "retryable": True,
+        "meaning": "Cortex failed outside the expected validation, authorization, or provider error contract.",
+    },
+]
 EXTERNAL_QUERY_CONTRACT_NOTES = [
     "Use the last non-empty user message as the deterministic query input.",
     "Do not send raw enterprise scope or ACL principals from the browser; Cortex derives them from the bearer token.",
@@ -131,10 +169,18 @@ def buildExternalQueryContractDescriptor() -> ExternalQueryContractDescriptorSch
         method="POST",
         authentication="bearer-token",
         supportsStreaming=False,
+        requestOptions={
+            "userMessageSelectionPolicy": "last-non-empty-user-message",
+            "streamRequiredValue": False,
+            "supportsCitationToggle": True,
+        },
         traceEventsPathTemplate="/v1/query/{traceId}/events",
         operatorConsolePath="/developer",
         responseHeaders=EXTERNAL_QUERY_CONTRACT_RESPONSE_HEADERS,
         extensionFields=EXTERNAL_QUERY_CONTRACT_EXTENSION_FIELDS,
+        employeeSafeExtensionFields=EXTERNAL_QUERY_EMPLOYEE_SAFE_EXTENSION_FIELDS,
+        operatorOnlyExtensionFields=EXTERNAL_QUERY_OPERATOR_ONLY_EXTENSION_FIELDS,
+        errorStatuses=EXTERNAL_QUERY_ERROR_STATUSES,
         evidenceStatuses=["sufficient", "partial", "insufficient", "conflict"],
         routes=["rag", "compute", "retrieve-then-compute"],
         abstentionEvidenceStatuses=["insufficient", "conflict"],

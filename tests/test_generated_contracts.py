@@ -22,6 +22,11 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
     assert "ExternalQueryMetadataSchema" in generatedTypesText
     assert "contractVersion: \"v1\";" in generatedTypesText
     assert "traceEventsPath: string;" in generatedTypesText
+    assert "requestOptions:" in generatedTypesText
+    assert "userMessageSelectionPolicy: \"last-non-empty-user-message\";" in generatedTypesText
+    assert "employeeSafeExtensionFields: string[];" in generatedTypesText
+    assert "operatorOnlyExtensionFields: string[];" in generatedTypesText
+    assert "errorStatuses:" in generatedTypesText
     assert "responseHeaders: string[];" in generatedTypesText
     assert "TraceSummaryResponse" in generatedTypesText
     assert "RetrievedEvidenceSchema" in generatedTypesText

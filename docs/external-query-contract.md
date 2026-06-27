@@ -29,10 +29,14 @@ descriptor for the replacement-query contract. It publishes:
 - `method`
 - `authentication`
 - `supportsStreaming`
+- `requestOptions`
 - `traceEventsPathTemplate`
 - `operatorConsolePath`
 - `responseHeaders`
 - `extensionFields`
+- `employeeSafeExtensionFields`
+- `operatorOnlyExtensionFields`
+- `errorStatuses`
 - `evidenceStatuses`
 - `routes`
 - `abstentionEvidenceStatuses`
@@ -42,6 +46,16 @@ Replacement query shells may cache this descriptor at startup to confirm they ar
 integrating with a compatible Cortex deployment before issuing real user queries.
 The shipped `query-web` surface now does exactly this, which keeps the bundled employee UI
 honest as one more consumer of the public contract rather than a bypass around it.
+
+The descriptor now also formalizes the split between what an employee-facing UI may depend
+on and what should remain reserved for elevated debugging:
+
+- `requestOptions` documents the stable request semantics replacement UIs must follow.
+- `employeeSafeExtensionFields` identifies the `x_cortex` fields a standard employee UI may
+  safely use.
+- `operatorOnlyExtensionFields` identifies fields that should remain correlation/debug aids.
+- `errorStatuses` publishes the stable non-abstention error meanings a replacement UI should
+  distinguish from a successful answer contract.
 
 ## Authentication and scope
 
@@ -88,6 +102,9 @@ Notes:
 - The live discovery descriptor always points back to this request shape through `endpointPath` and `method`.
 - The bundled `query-web` surface now validates the response headers (`X-Cortex-*`) against the
   `x_cortex` payload so contract drift is detected early.
+- Replacement UIs should also validate `requestOptions` before enabling traffic so they fail
+  closed if the deployment no longer guarantees `stream=false`, the last-user-message
+  selection rule, or the citation toggle contract they expect.
 
 ## Response
 
@@ -132,6 +149,17 @@ Response headers:
 - `X-Cortex-Route: rag|compute|retrieve-then-compute`
 - `X-Cortex-Abstained: true|false`
 
+Stable error meanings advertised through `errorStatuses`:
+
+- `422 invalid_request`: the request shape violates the stable Cortex facade, such as `stream=true`
+  or no usable user message
+- `403 forbidden_scope`: the authenticated identity is not allowed to access the requested
+  enterprise scope or sources
+- `503 provider_unavailable`: a required local provider was unavailable or timed out during
+  deterministic execution
+- `500 internal_error`: Cortex failed outside the expected validation, authorization, or
+  provider error contract
+
 ## `x_cortex` fields
 
 - `contractVersion`: stable extension-contract version for replacement query shells
@@ -153,6 +181,10 @@ Response headers:
 - `X-Cortex-Abstained` duplicates that abstention signal in header form for gateways, observability, and thin clients that inspect headers before parsing the JSON body.
 - `X-Cortex-Route` exposes whether Cortex answered through RAG, deterministic compute, or retrieve-then-compute so operators can reconcile runtime behavior without inferring it from answer text.
 - `x_cortex.claims` and `x_cortex.citations` remain the source of truth for claim-level evidence rendering.
+- `employeeSafeExtensionFields` is the allowlist a replacement employee UI should treat as its
+  supported dependency boundary.
+- `operatorOnlyExtensionFields` marks fields such as `traceEventsPath` that should not become a
+  hard dependency of a standard employee browser shell.
 
 ## Error contract
 
@@ -169,6 +201,7 @@ Replacement UIs should distinguish these cases from intentional abstention. Abst
 ## Integration guidance
 
 - Treat `choices[0].message.content` as display text.
+- Read and validate `requestOptions` before sending traffic from a replacement UI.
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.
 - Treat `x_cortex.evidenceStatus` and `x_cortex.abstained` as answer-governance signals.
 - Treat `x_cortex.claims[*].supportStatus` as the atomic support verdict for each claim,
@@ -177,16 +210,21 @@ Replacement UIs should distinguish these cases from intentional abstention. Abst
 - Expect `x_cortex.contractVersion === "v1"` before relying on this extension shape.
 - Treat `x_cortex.traceEventsPath` as an operator/debug correlation pointer. Do not call it directly from a standard employee-facing replacement UI unless that client is intentionally running with builder-grade identity and permissions.
 - Use the returned `traceId` to fetch persisted trace detail from the fixed developer console rather than recreating hidden pipeline state in the client UI.
+- Distinguish intentional abstention from `errorStatuses`; abstention remains a successful `200`
+  response with evidence metadata rather than an exception path.
 
 ## Replacement UI checklist
 
 - Authenticate the employee user and forward the bearer token to Cortex.
+- Validate `requestOptions.streamRequiredValue === false` and
+  `requestOptions.userMessageSelectionPolicy === "last-non-empty-user-message"` at startup.
 - Call `POST /v1/chat/completions` with `stream=false`.
 - Render `choices[0].message.content` as the answer text.
 - Render `x_cortex.citations` and `x_cortex.evidenceStatus` as the evidence boundary.
 - Treat `x_cortex.abstained=true` as an intentional no-answer outcome, not a transport failure.
 - Persist `x_cortex.traceId` anywhere the client captures user feedback or support tickets.
 - Preserve `X-Cortex-Route` and `X-Cortex-Abstained` in gateway or observability logs if the client stack records response headers.
+- Treat `employeeSafeExtensionFields` as the safe UI dependency boundary for the employee shell.
 - Do not depend on direct access to `x_cortex.traceEventsPath` from the employee browser surface.
 
 ## Non-goals of this contract

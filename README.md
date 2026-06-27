@@ -60,6 +60,9 @@ The response headers also carry:
 
 The live package also publishes `GET /v1/chat/contracts/v1` so operators and replacement
 UI builders can discover the exact stable contract metadata from the running deployment.
+That live descriptor now also publishes the stable request semantics, employee-safe versus
+operator-only `x_cortex` fields, and machine-readable error meanings so third-party chat
+shells can integrate against the running package without reverse-engineering the bundled UI.
 
 See [external-query-contract.md](docs/external-query-contract.md) for the stable wire contract.
 
