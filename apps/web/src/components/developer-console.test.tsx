@@ -368,6 +368,11 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Startup policy")).toBeVisible();
     expect(screen.getByText("Query contract handshake")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
+    expect(await screen.findByText("Lifecycle queue")).toBeVisible();
+    expect(screen.getByText("Promote validated version")).toBeVisible();
+    expect(screen.getByText("Version v4 is validated and waiting for activation into the live query path.")).toBeVisible();
+    expect(screen.getByText("Keep rollback candidate ready")).toBeVisible();
+    expect(screen.getByText("Version v2 remains available for explicit rollback if the active release regresses.")).toBeVisible();
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();

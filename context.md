@@ -25,6 +25,7 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - The developer console now surfaces focused durable-job detail plus persisted source hashes, extraction diagnostics, and accelerator reports for operator troubleshooting.
 - The source-detail lane now also surfaces active/failed/quarantined version counts, the stable source fingerprint, and retrieval-status guidance that tells operators whether the newest onboarding attempt is actually retrievable or whether an older active version still serves the live corpus.
 - The developer console now distinguishes validated pipeline versions from the active release and exposes retired immutable versions as explicit rollback targets.
+- The developer console versions lane now also builds a lifecycle queue from active, validated, and retired pipeline versions, so promotion and rollback intent show up as operator actions instead of only release rows.
 - The developer console trace view now includes validated answer preview plus persisted claims, support status, and citation linkage instead of only stage counts and citation totals.
 - The developer console trace view now also exposes persisted retrieved-evidence rows with source, locator, and ranking scores so operators can inspect the actual chunks behind a response.
 - The developer console settings view now foregrounds packaged model and identity profiles so operators can confirm deployment intent without scanning the raw readiness table.

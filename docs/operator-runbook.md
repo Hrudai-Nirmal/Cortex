@@ -25,6 +25,7 @@ Inside the fixed console, operators can now distinguish:
 - the currently active immutable pipeline version
 - validated versions waiting activation
 - retired versions that remain eligible for explicit rollback
+- a lifecycle queue that turns those release states into explicit promotion and rollback actions
 
 The console trace timeline now also shows:
 

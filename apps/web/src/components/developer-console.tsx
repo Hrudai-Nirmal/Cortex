@@ -73,6 +73,11 @@ interface OperatorActionItem {
   remediation: string;
 }
 
+interface LifecycleActionItem {
+  title: string;
+  detail: string;
+}
+
 function findRuntimeComponent(
   runtimeHealth: RuntimeHealth | null,
   componentName: string,
@@ -199,6 +204,37 @@ function buildOperatorActionItems(
   return [...startupItems, ...runtimeItems, ...surfaceItems];
 }
 
+function buildLifecycleActionItems(
+  activeVersion: PipelineVersionSummary | null,
+  validatedVersions: PipelineVersionSummary[],
+  rollbackCandidates: PipelineVersionSummary[],
+): LifecycleActionItem[] {
+  const lifecycleItems: LifecycleActionItem[] = [];
+
+  if (validatedVersions.length > 0) {
+    lifecycleItems.push({
+      title: "Promote validated version",
+      detail: `Version v${validatedVersions[0].version} is validated and waiting for activation into the live query path.`,
+    });
+  }
+
+  if (rollbackCandidates.length > 0) {
+    lifecycleItems.push({
+      title: "Keep rollback candidate ready",
+      detail: `Version v${rollbackCandidates[0].version} remains available for explicit rollback if the active release regresses.`,
+    });
+  }
+
+  if (activeVersion) {
+    lifecycleItems.push({
+      title: "Track active release",
+      detail: `Version v${activeVersion.version} is the live immutable pipeline serving the current package.`,
+    });
+  }
+
+  return lifecycleItems;
+}
+
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
 export function DeveloperConsole() {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
@@ -230,6 +266,11 @@ export function DeveloperConsole() {
   const validatedVersions = pipelineVersions.filter((version) => version.status === "validated");
   const rollbackCandidates = pipelineVersions.filter((version) => version.status === "retired");
   const activeVersion = pipelineVersions.find((version) => version.status === "active") ?? null;
+  const lifecycleActionItems = buildLifecycleActionItems(
+    activeVersion,
+    validatedVersions,
+    rollbackCandidates,
+  );
 
   const loadConsole = useCallback(async (): Promise<void> => {
     try {
@@ -501,6 +542,26 @@ export function DeveloperConsole() {
                   </p>
                 </div>
               ) : null}
+              <div className="source-form-card" style={{ marginBottom: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Lifecycle queue</strong>
+                </div>
+                {lifecycleActionItems.length > 0 ? (
+                  <div className="source-list">
+                    {lifecycleActionItems.map((lifecycleActionItem) => (
+                      <div className="source-list__item" key={lifecycleActionItem.title}>
+                        <div>
+                          <strong>{lifecycleActionItem.title}</strong>
+                          <small>{lifecycleActionItem.detail}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No validated or retired versions are waiting on operator action.</p>
+                )}
+              </div>
               <table>
                 <thead>
                   <tr>

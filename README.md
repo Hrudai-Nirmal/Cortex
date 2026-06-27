@@ -94,6 +94,7 @@ and launches the API, worker, console, and app surfaces as local background proc
 - The console now exposes persisted source hashes, extraction diagnostics, accelerator reports, and focused durable job detail for operator troubleshooting.
 - The source-detail lane now surfaces per-document version counts, active vs failed/quarantined history, the stable source fingerprint, and retrieval-status guidance that distinguishes the newest onboarded version from the version that is actually live for retrieval.
 - The console version lane now distinguishes active, validated, and retired immutable pipeline versions so operators can see promotable releases and explicit rollback targets.
+- The console version lane now also builds a lifecycle queue for active, validated, and retired releases so promotion and rollback start from explicit operator actions instead of only a version table.
 - The console trace lane now shows validated answer preview, claim support status, citation linkage, and stage evidence together for faster operator review.
 - The console trace lane now also exposes ranked retrieved evidence rows so operators can inspect which source chunks actually drove a response without leaving the fixed console.
 - The console settings lane now surfaces the packaged model profile and identity profile directly, not only as rows in the readiness table.
