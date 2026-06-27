@@ -47,6 +47,9 @@ split is expressed through ingress rules in `infra/k8s/cortex-package.yaml`.
 For clients who keep their own employee chat UI, `infra/k8s/cortex-package-external-query.yaml`
 ships the API-only Cortex package mode that preserves `console-web`, `api`, and `worker`
 while leaving the query shell outside the package.
+Both the bundled and external Kubernetes/ECS examples now declare
+`CORTEX_QUERY_SURFACE_MODE` explicitly so the shipped manifests cannot silently inherit
+the backend default and drift between bundled versus API-only employee surfaces.
 
 Adjacent platform examples now ship as well:
 

@@ -160,6 +160,11 @@ Before starting containers, the script validates:
 - local/private model-endpoint policy unless remote model access is explicitly allowed
 - Docker Compose rendering
 
+The Kubernetes and ECS examples now pin `CORTEX_QUERY_SURFACE_MODE` explicitly as well.
+Treat that as part of the deployment contract, not an optional override, because it
+controls whether the employee host is a bundled `query-web` surface or a client-owned
+API-only integration boundary.
+
 After startup, it waits for:
 
 - `GET /health/startup` through both console and query hosts

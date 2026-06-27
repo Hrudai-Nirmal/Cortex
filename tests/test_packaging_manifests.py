@@ -94,6 +94,32 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert 'test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in composeText
 
 
+def testShippedManifestsDeclareQuerySurfaceModeExplicitly() -> None:
+    """Client deployment examples should pin bundled vs external query mode instead of relying on defaults."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    bundledKubernetesManifest = (
+        rootDirectory / "infra" / "k8s" / "cortex-package.yaml"
+    ).read_text(encoding="utf-8")
+    externalKubernetesManifest = (
+        rootDirectory / "infra" / "k8s" / "cortex-package-external-query.yaml"
+    ).read_text(encoding="utf-8")
+    bundledEcsTaskFamily = (
+        rootDirectory / "infra" / "ecs" / "cortex-task-family.json"
+    ).read_text(encoding="utf-8")
+    externalEcsTaskFamily = (
+        rootDirectory / "infra" / "ecs" / "cortex-task-family-external-query.json"
+    ).read_text(encoding="utf-8")
+    ecsMigrationTask = (
+        rootDirectory / "infra" / "ecs" / "cortex-migrate-task.json"
+    ).read_text(encoding="utf-8")
+
+    assert 'CORTEX_QUERY_SURFACE_MODE: bundled' in bundledKubernetesManifest
+    assert 'CORTEX_QUERY_SURFACE_MODE: external' in externalKubernetesManifest
+    assert '"name": "CORTEX_QUERY_SURFACE_MODE", "value": "bundled"' in bundledEcsTaskFamily
+    assert '"name": "CORTEX_QUERY_SURFACE_MODE", "value": "external"' in externalEcsTaskFamily
+    assert '"name": "CORTEX_QUERY_SURFACE_MODE", "value": "bundled"' in ecsMigrationTask
+
+
 def testExternalQueryComposeOverrideDisablesBundledQueryWeb() -> None:
     """Compose should also ship an API-only package mode for client-owned query shells."""
     composeOverrideText = (

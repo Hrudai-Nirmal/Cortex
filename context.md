@@ -82,6 +82,9 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - `package:verify` now labels split-host, runtime-config, worker-startup, and query-contract failures with explicit operator-readable descriptions and points operators back to `pnpm package:status`, so packaged contract drift no longer dies behind an unlabeled `grep` failure.
 - The package scripts now keep those same query-contract checks active even when the employee chat shell is client-owned: in `external` query-surface mode they skip bundled `query-web` HTML/runtime-config assertions, switch the edge proxy to the API-only template, and report `external-query-ui (not bundled)` so operators can tell intentional surface omission from an actual packaging failure.
 - The fixed console now also falls back to startup-health deployment metadata when the contract endpoint is unavailable, so operators can still see whether the intended query-surface mode is bundled or client-owned during partial outages.
+- The shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
+  explicitly, preventing client deployments from silently drifting between bundled and
+  API-only employee query modes through backend defaults.
 - Worker startup now preserves the underlying live-readiness exception text when database/model verification itself crashes, so operators see the real connection/provider clue instead of only a generic readiness failure banner.
 - API startup now also preserves the underlying startup-readiness exception text when startup health collection itself crashes, so packaged fail-closed boot errors still surface the real provider/storage/network clue instead of only an unlabeled traceback.
 - The packaged browser hosts now serve `cortex-runtime-config.js` with an explicit no-store cache policy, so client-domain changes propagate immediately after rollouts instead of sticking behind cached runtime host mappings.
