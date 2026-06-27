@@ -123,6 +123,54 @@ async def testValidateWorkerStartupRaisesForLiveReadinessFailures(monkeypatch) -
         await workerModule.validateWorkerStartup(buildWorkerSettings())
 
 
+@pytest.mark.asyncio
+async def testValidateWorkerStartupPreservesLiveReadinessExceptionContext(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unexpected live-readiness exceptions should keep the underlying operator clue."""
+
+    class StubRuntimeHealthService:
+        """Return clean static health, then raise during live readiness collection."""
+
+        def __init__(self, session, settings, modelProvider) -> None:
+            self.session = session
+
+        async def getStartupReadiness(self) -> RuntimeHealthResponse:
+            return buildRuntimeHealth(
+                RuntimeComponentSchema(
+                    name="deployment-config",
+                    status="ready",
+                    severity="info",
+                    detail="console=https://console.example.test",
+                    remediation=None,
+                )
+            )
+
+        async def getReadiness(self) -> RuntimeHealthResponse:
+            raise RuntimeError("database connection reset by peer")
+
+        @staticmethod
+        def getFailingComponents(runtimeHealth: RuntimeHealthResponse) -> list[RuntimeComponentSchema]:
+            return [
+                component for component in runtimeHealth.components if component.status != "ready"
+            ]
+
+    @asynccontextmanager
+    async def stubSessionFactory():
+        yield object()
+
+    monkeypatch.setattr(workerModule, "RuntimeHealthService", StubRuntimeHealthService)
+    monkeypatch.setattr(workerModule, "sessionFactory", stubSessionFactory)
+
+    with pytest.raises(
+        WorkerStartupError,
+        match="database connection reset by peer",
+    ) as errorInfo:
+        await workerModule.validateWorkerStartup(buildWorkerSettings())
+
+    assert "worker startup could not verify live runtime readiness" in str(errorInfo.value)
+
+
 def testWorkerMainRunsStartupCheckInsteadOfLoop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

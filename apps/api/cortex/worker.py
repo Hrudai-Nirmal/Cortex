@@ -67,7 +67,10 @@ async def validateWorkerStartup(settings: Settings) -> None:
     except Exception as error:
         logger.error("worker_startup_health_error", error=str(error))
         raise WorkerStartupError(
-            "worker startup could not verify database and model readiness"
+            buildStartupExceptionMessage(
+                "worker startup could not verify live runtime readiness",
+                error,
+            )
         ) from error
 
     logRuntimeHealth("worker_startup_live_health", liveHealth)
@@ -122,6 +125,12 @@ def buildStartupFailureMessage(
         else:
             formattedFailures.append(f"{component.name}: {component.detail}")
     return "worker startup blocked by runtime health checks: " + "; ".join(formattedFailures)
+
+
+def buildStartupExceptionMessage(prefix: str, error: Exception) -> str:
+    """Preserve the underlying startup exception text for operator troubleshooting."""
+    normalizedDetail = str(error).strip() or error.__class__.__name__
+    return f"{prefix}: {normalizedDetail}"
 
 
 async def runWorkerIteration(settings) -> None:
