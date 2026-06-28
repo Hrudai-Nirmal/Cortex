@@ -154,6 +154,29 @@ describe("DeveloperConsole", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
+            status: "blocked",
+            environment: "development",
+            startupStatus: "ready",
+            liveReadinessStatus: "degraded",
+            blockingPhase: "live",
+            detail:
+              "worker startup blocked by runtime health checks: postgresql: database ready but pgvector extension is missing | remediation: Install or enable the PostgreSQL vector extension.",
+            failingComponents: [
+              {
+                name: "postgresql",
+                status: "degraded",
+                severity: "error",
+                detail: "database ready but pgvector extension is missing",
+                remediation: "Install or enable the PostgreSQL vector extension.",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
             traceId: "4576b626-c27a-4409-9a51-600cf115ff4a",
             enterpriseId: "00000000-0000-0000-0000-000000000001",
             actorId: "maya.chen@example.com",
@@ -392,11 +415,16 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Package build profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
+    expect(screen.getByText("Worker startup contract")).toBeVisible();
+    expect(screen.getByText("Blocked during live readiness.")).toBeVisible();
+    expect(screen.getByText("Durable worker startup")).toBeVisible();
+    expect(screen.getByText("Worker startup contract is blocked or unavailable.")).toBeVisible();
     expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getByText("Live readiness")).toBeVisible();
     expect(screen.getByText("Static package startup contract is satisfied.")).toBeVisible();
     expect(screen.getByText("Operator action queue")).toBeVisible();
     expect(screen.getByText("Runtime alert · model-endpoint-policy")).toBeVisible();
+    expect(screen.getByText("Worker startup blocker · postgresql")).toBeVisible();
     expect(screen.getAllByText("Point CORTEX_OLLAMA_BASE_URL at a local endpoint.").length).toBeGreaterThan(0);
     expect(screen.getAllByText("generator=qwen3:14b, embedding=qwen3-embedding:0.6b, requiredAccelerator=cpu")).toHaveLength(2);
     expect(
@@ -420,7 +448,7 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
   });
 
   it("keeps the console usable when the external query contract endpoint is unavailable", async () => {
@@ -490,6 +518,20 @@ describe("DeveloperConsole", () => {
         ),
       )
       .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "ready",
+            environment: "production",
+            startupStatus: "ready",
+            liveReadinessStatus: "ready",
+            blockingPhase: "none",
+            detail: "Worker startup contract is satisfied for the current package profile.",
+            failingComponents: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
         new Response(JSON.stringify(null), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -533,6 +575,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("External client-owned employee shell")).toBeVisible();
     expect(screen.getAllByText("This package exposes the query host as an API-only surface for a client-owned employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
+    expect(screen.getByText("Worker startup contract")).toBeVisible();
+    expect(screen.getByText("Ready through shared startup and live-readiness checks.")).toBeVisible();
     expect(screen.getByText("Startup contract")).toBeVisible();
     expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
     expect(screen.getByText("Operator action queue")).toBeVisible();

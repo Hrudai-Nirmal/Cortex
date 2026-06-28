@@ -98,6 +98,11 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
   health status.
 - The package scripts now keep those same query-contract checks active even when the employee chat shell is client-owned: in `external` query-surface mode they skip bundled `query-web` HTML/runtime-config assertions, switch the edge proxy to the API-only template, and report `external-query-ui (not bundled)` so operators can tell intentional surface omission from an actual packaging failure.
 - The fixed console now also falls back to startup-health deployment metadata when the contract endpoint is unavailable, so operators can still see whether the intended query-surface mode is bundled or client-owned during partial outages.
+- The fixed console and packaged API now expose a shared `GET /health/worker-startup`
+  contract that mirrors the worker CLI startup gate with phase-aware status and blocking
+  components, so operators can see whether durable ingestion/evaluation/retention jobs are
+  safe before leaving the product; `package:verify` still remains the stronger proof because
+  it executes that same gate inside the real worker container.
 - The shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
   explicitly, preventing client deployments from silently drifting between bundled and
   API-only employee query modes through backend defaults.

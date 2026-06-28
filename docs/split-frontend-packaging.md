@@ -172,6 +172,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:status` prints the runtime `cortex-runtime-config.js` public URLs served by both browser hosts
 - `package:status` also prints the observed runtime-config cache policy so operators can confirm browser clients are not caching stale host mappings after a rollout
 - `package:status` prints the worker startup-check result from the running package
+- the fixed console also reads the shared `GET /health/worker-startup` contract so operators
+  can inspect durable-job safety without leaving the product, while `package:verify` still
+  proves that same gate inside the real worker container
 - `package:status` also prints the live external query-contract summary exported by the query host
 - `package:status` now also prints compact summaries of the live request/response schema endpoints exported for replacement query UIs
 - that contract summary now also includes `querySurfaceMode` and `bundledQueryUiAvailable`

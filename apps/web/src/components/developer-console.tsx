@@ -21,6 +21,7 @@ import {
   getRuntimeHealth,
   getStartupHealth,
   getSession,
+  getWorkerStartupHealth,
   subscribeToTraceEvents,
   validatePipeline,
 } from "../lib/api-client";
@@ -34,6 +35,7 @@ import type {
   RuntimeHealth,
   Session,
   TraceSummary,
+  WorkerStartupHealth,
 } from "../types";
 import { JobOperations } from "./job-operations";
 import { PipelineGraph as PipelineGraphCanvas } from "./pipeline-graph";
@@ -255,6 +257,7 @@ function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
 function buildOperatorActionItems(
   startupAlerts: RuntimeHealth["components"],
   runtimeAlerts: RuntimeHealth["components"],
+  workerStartupHealth: WorkerStartupHealth | null,
   surfaceDeploymentChecks: SurfaceDeploymentCheck[],
 ): OperatorActionItem[] {
   const startupItems = startupAlerts.map((component) => ({
@@ -267,6 +270,13 @@ function buildOperatorActionItems(
     detail: component.detail,
     remediation: component.remediation ?? "Clear this runtime degradation before trusting the package in production.",
   }));
+  const workerItems = workerStartupHealth?.status === "blocked"
+    ? (workerStartupHealth.failingComponents ?? []).map((component) => ({
+      label: `Worker startup blocker · ${component.name}`,
+      detail: component.detail,
+      remediation: component.remediation ?? "Clear this worker startup blocker before enabling durable job processing.",
+    }))
+    : [];
   const surfaceItems = surfaceDeploymentChecks
     .filter((check) => check.status !== "ready")
     .map((check) => ({
@@ -274,7 +284,7 @@ function buildOperatorActionItems(
       detail: check.detail,
       remediation: check.remediation,
     }));
-  return [...startupItems, ...runtimeItems, ...surfaceItems];
+  return [...startupItems, ...runtimeItems, ...workerItems, ...surfaceItems];
 }
 
 function buildLifecycleActionItems(
@@ -311,6 +321,7 @@ function buildLifecycleActionItems(
 function buildReleaseGateItems(
   startupHealth: RuntimeHealth | null,
   runtimeHealth: RuntimeHealth | null,
+  workerStartupHealth: WorkerStartupHealth | null,
   activeVersion: PipelineVersionSummary | null,
   validatedVersions: PipelineVersionSummary[],
   queryContract: ExternalQueryContractDescriptor | null,
@@ -340,6 +351,18 @@ function buildReleaseGateItems(
         runtimeHealth?.status === "ready"
           ? "Continue polling runtime health after rollout to catch live dependency drift."
           : "Fix live dependency failures before asking operators to trust ingestion or query traffic.",
+    },
+    {
+      label: "Durable worker startup",
+      status: workerStartupHealth?.status === "ready" ? "ready" : "degraded",
+      detail:
+        workerStartupHealth?.status === "ready"
+          ? "Worker startup contract is satisfied for the current package profile."
+          : "Worker startup contract is blocked or unavailable.",
+      remediation:
+        workerStartupHealth?.status === "ready"
+          ? "Keep verifying this shared contract after rollout so durable job processing stays enabled."
+          : "Clear worker startup blockers before trusting ingestion, retention, or evaluation jobs in the shipped package.",
     },
     {
       label: "Immutable active pipeline",
@@ -396,6 +419,7 @@ export function DeveloperConsole() {
   const [pipelineVersions, setPipelineVersions] = useState<PipelineVersionSummary[]>([]);
   const [startupHealth, setStartupHealth] = useState<RuntimeHealth | null>(null);
   const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealth | null>(null);
+  const [workerStartupHealth, setWorkerStartupHealth] = useState<WorkerStartupHealth | null>(null);
   const [latestTrace, setLatestTrace] = useState<TraceSummary | null>(null);
   const [queryContract, setQueryContract] = useState<ExternalQueryContractDescriptor | null>(
     null,
@@ -432,6 +456,7 @@ export function DeveloperConsole() {
   const releaseGateItems = buildReleaseGateItems(
     startupHealth,
     runtimeHealth,
+    workerStartupHealth,
     activeVersion,
     validatedVersions,
     queryContract,
@@ -446,6 +471,7 @@ export function DeveloperConsole() {
         versionsResult,
         startupHealthResult,
         healthResult,
+        workerStartupResult,
         traceResult,
         contractResult,
         sessionResult,
@@ -455,6 +481,7 @@ export function DeveloperConsole() {
         getPipelineVersions(ENTERPRISE_ID),
         getStartupHealth(),
         getRuntimeHealth(),
+        getWorkerStartupHealth(),
         getLatestTrace(ENTERPRISE_ID),
         getExternalQueryContract(),
         getSession(),
@@ -479,6 +506,12 @@ export function DeveloperConsole() {
         setRuntimeHealth(healthResult.value);
       } else {
         loadFailures.push(`Runtime health: ${healthResult.reason instanceof Error ? healthResult.reason.message : "load failed"}`);
+      }
+      if (workerStartupResult.status === "fulfilled") {
+        setWorkerStartupHealth(workerStartupResult.value);
+      } else {
+        setWorkerStartupHealth(null);
+        loadFailures.push(`Worker startup: ${workerStartupResult.reason instanceof Error ? workerStartupResult.reason.message : "load failed"}`);
       }
       if (traceResult.status === "fulfilled") {
         setLatestTrace(traceResult.value);
@@ -633,6 +666,7 @@ export function DeveloperConsole() {
   const operatorActionItems = buildOperatorActionItems(
     startupAlerts,
     runtimeAlerts,
+    workerStartupHealth,
     surfaceDeploymentChecks,
   );
   const packageReadinessStatus = startupHealth?.status ?? "loading";
@@ -648,6 +682,15 @@ export function DeveloperConsole() {
   const responseSchemaPropertySummary = queryResponseSchema
     ? summarizeSchemaProperties(queryResponseSchema, ["id", "object", "choices", "x_cortex"])
     : "Schema unavailable";
+  const workerStartupSummary = workerStartupHealth == null
+    ? "Worker startup contract is still loading."
+    : workerStartupHealth.blockingPhase === "none"
+      ? "Ready through shared startup and live-readiness checks."
+      : workerStartupHealth.blockingPhase === "live"
+        ? "Blocked during live readiness."
+        : workerStartupHealth.blockingPhase === "startup"
+          ? "Blocked during startup-safe checks."
+          : "Blocked while collecting worker startup readiness.";
 
   return (
     <main className="developer-console">
@@ -1018,6 +1061,16 @@ export function DeveloperConsole() {
                 {identityProfile?.remediation ? (
                   <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {identityProfile.remediation}</p>
                 ) : null}
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Worker startup contract</strong>
+                </div>
+                <p>{workerStartupSummary}</p>
+                <p style={{ marginTop: 8 }}>
+                  {workerStartupHealth?.detail ?? "Shared worker startup detail is still loading."}
+                </p>
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">

@@ -250,7 +250,8 @@ examples wire that into their worker health signals.
 - `package:status` prints the current `startup` and `ready` component states for the console host,
   query host, routed surface identity, a lifted startup deployment-contract summary
   (console/query public URLs, `startupPolicy`, and `querySurfaceMode`), browser
-  runtime-config URLs, worker startup-check result, and the live external query-contract
+  runtime-config URLs, worker startup-check result, the shared `GET /health/worker-startup`
+  contract exposed inside the product, and the live external query-contract
   summary, including request semantics, employee-safe versus operator-only fields,
   stable error meanings, compact request/response schema summaries, severity, and
   remediation guidance for every non-ready component
@@ -277,10 +278,16 @@ builders can start with the next repair action instead of scanning raw version m
 - `GET /health/live`: process liveness only
 - `GET /health/startup`: static deployment validation
 - `GET /health/ready`: live dependency readiness
+- `GET /health/worker-startup`: shared durable-worker startup gate with blocking phase and components
 
 `startup` is the first place operators should look when a package fails because of bad
 host/domain configuration, invalid public URLs, storage issues, parser availability, or
 offline-policy violations.
+
+`worker-startup` answers a slightly different question: whether the durable worker would
+enter its polling loop right now. The fixed console uses that shared endpoint for operator
+visibility, while `pnpm package:verify` remains the stronger release proof because it runs
+`python -m cortex.worker --check-startup` inside the actual worker container.
 
 `package:up` now surfaces any degraded startup/readiness components immediately, including
 their severity and remediation guidance, instead of only reporting a timeout.

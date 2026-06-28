@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/worker-startup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getworkerstartuphealth
+         * @description Report whether the durable worker would safely enter its polling loop right now.
+         */
+        get: operations["getWorkerStartupHealth_health_worker_startup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/session": {
         parameters: {
             query?: never;
@@ -1512,6 +1532,38 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * WorkerStartupHealthResponse
+         * @description Summarize whether the durable worker can safely enter its polling loop.
+         */
+        WorkerStartupHealthResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "blocked";
+            /** Environment */
+            environment: string;
+            /**
+             * Startupstatus
+             * @enum {string}
+             */
+            startupStatus: "ready" | "degraded";
+            /**
+             * Livereadinessstatus
+             * @enum {string}
+             */
+            liveReadinessStatus: "ready" | "degraded" | "unknown";
+            /**
+             * Blockingphase
+             * @enum {string}
+             */
+            blockingPhase: "none" | "startup" | "live" | "exception";
+            /** Detail */
+            detail: string;
+            /** Failingcomponents */
+            failingComponents?: components["schemas"]["RuntimeComponentSchema"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -1579,6 +1631,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuntimeHealthResponse"];
+                };
+            };
+        };
+    };
+    getWorkerStartupHealth_health_worker_startup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerStartupHealthResponse"];
                 };
             };
         };

@@ -14,7 +14,13 @@ from cortex.config import Settings
 from cortex.database import getDatabaseSession
 from cortex.errors import ProviderOperationError
 from cortex.main import createApp
-from cortex.schemas import QueryResponse, SeedFixturesResponse, StageSchema
+from cortex.schemas import (
+    QueryResponse,
+    RuntimeComponentSchema,
+    RuntimeHealthResponse,
+    SeedFixturesResponse,
+    StageSchema,
+)
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.runtime import RuntimeHealthService
 
@@ -533,6 +539,54 @@ async def testExternalQueryContractSchemaEndpointsExposeStableRequestAndResponse
     responseMetadataSchema = responseSchema["$defs"]["ExternalQueryMetadataSchema"]
     assert "claims" in responseMetadataSchema["properties"]
     assert "citations" in responseMetadataSchema["properties"]
+
+
+@pytest.mark.asyncio
+async def testWorkerStartupHealthEndpointExposesSharedOperatorContract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Operators should be able to inspect the shared worker-startup contract from the API."""
+    application = createApp(buildPackageSettings())
+
+    async def stubCollectWorkerStartupHealth(settings):
+        return {
+            "status": "blocked",
+            "environment": settings.environment,
+            "startupStatus": "ready",
+            "liveReadinessStatus": "degraded",
+            "blockingPhase": "live",
+            "detail": (
+                "worker startup blocked by runtime health checks: "
+                "postgresql: database ready but pgvector extension is missing"
+            ),
+            "failingComponents": [
+                {
+                    "name": "postgresql",
+                    "status": "degraded",
+                    "severity": "error",
+                    "detail": "database ready but pgvector extension is missing",
+                    "remediation": "Install or enable the PostgreSQL vector extension.",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(routeModule, "collectWorkerStartupHealth", stubCollectWorkerStartupHealth)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.get("/health/worker-startup")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["status"] == "blocked"
+    assert payload["blockingPhase"] == "live"
+    assert payload["startupStatus"] == "ready"
+    assert payload["liveReadinessStatus"] == "degraded"
+    assert "worker startup blocked by runtime health checks" in payload["detail"]
+    assert payload["failingComponents"][0]["name"] == "postgresql"
+    assert "pgvector extension is missing" in payload["failingComponents"][0]["detail"]
 
 
 @pytest.mark.asyncio

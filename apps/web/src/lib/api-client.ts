@@ -20,6 +20,7 @@ import type {
   SourceDetail,
   SourceSummary,
   TraceSummary,
+  WorkerStartupHealth,
 } from "../types";
 
 const BUNDLED_QUERY_CONTRACT_VERSION = "v1";
@@ -395,6 +396,11 @@ export async function getRuntimeHealth(): Promise<RuntimeHealth> {
 /** Check the static package startup contract without touching live dependencies. */
 export async function getStartupHealth(): Promise<RuntimeHealth> {
   return fetchJson<RuntimeHealth>("/health/startup");
+}
+
+/** Check whether the durable worker can safely enter its polling loop. */
+export async function getWorkerStartupHealth(): Promise<WorkerStartupHealth> {
+  return fetchJson<WorkerStartupHealth>("/health/worker-startup");
 }
 
 /** Load the current source inventory shown in the developer operations surface. */

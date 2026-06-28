@@ -145,6 +145,7 @@ The package now includes:
 - `GET /health/live` for liveness
 - `GET /health/startup` for static deployment validation
 - `GET /health/ready` for database, pgvector, model, storage, and accelerator readiness
+- `GET /health/worker-startup` for the shared durable-worker startup gate exposed to the fixed console
 - runtime-health payloads with per-component severity and remediation guidance for operators
 - runtime-health payloads that explicitly declare the packaged generator, embedding, and accelerator profile
 - runtime-health payloads that explicitly declare the packaged Torch wheel/build profile used for Docling-backed container images
@@ -170,6 +171,9 @@ The package now includes:
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - package bootstrap now also proves both routed browser hosts publish the expected `cortex-runtime-config.js` values and no-store cache policy before declaring the package healthy
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
+- the fixed console now also shows that shared worker-startup contract directly from
+  `GET /health/worker-startup`, including whether the durable loop is blocked during
+  startup-safe checks or live readiness
 - shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
   explicitly so bundled versus client-owned employee shells cannot drift through backend
   defaults

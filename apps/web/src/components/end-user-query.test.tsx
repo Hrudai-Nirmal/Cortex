@@ -32,6 +32,8 @@ const contractResponse = {
   bundledQueryUiAvailable: true,
   traceEventsPathTemplate: "/v1/query/{traceId}/events",
   operatorConsolePath: "/developer",
+  requestSchemaPath: "/v1/chat/contracts/v1/schemas/request",
+  responseSchemaPath: "/v1/chat/contracts/v1/schemas/response",
   responseHeaders: [
     "X-Cortex-Contract-Version",
     "X-Cortex-Trace-Id",

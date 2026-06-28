@@ -41,6 +41,7 @@ from cortex.schemas import (
     SourceSummaryResponse,
     TraceSummaryResponse,
     ValidatePipelineRequest,
+    WorkerStartupHealthResponse,
 )
 from cortex.services.audit import persistControlPlaneAudit
 from cortex.services.auth import requireAdminIdentity, requireBuilderIdentity, resolveIdentity
@@ -53,6 +54,7 @@ from cortex.services.query import QueryService
 from cortex.services.runtime import RuntimeHealthService
 from cortex.services.seed import seedFixtures
 from cortex.services.sources import SourceService
+from cortex.worker import collectWorkerStartupHealth
 
 router = APIRouter()
 settings = getSettings()
@@ -218,6 +220,12 @@ async def getStartupReadiness() -> RuntimeHealthResponse:
         modelProvider=buildModelProvider(settings),
     )
     return await runtimeHealthService.getStartupReadiness()
+
+
+@router.get("/health/worker-startup", response_model=WorkerStartupHealthResponse)
+async def getWorkerStartupHealth() -> WorkerStartupHealthResponse:
+    """Report whether the durable worker would safely enter its polling loop right now."""
+    return await collectWorkerStartupHealth(settings)
 
 
 @router.get("/v1/session", response_model=SessionResponse)

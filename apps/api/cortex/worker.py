@@ -11,7 +11,11 @@ from cortex.config import Settings, getSettings
 from cortex.database import sessionFactory
 from cortex.errors import WorkerStartupError
 from cortex.logging_config import configureLogging, getLogger
-from cortex.schemas import RuntimeComponentSchema, RuntimeHealthResponse
+from cortex.schemas import (
+    RuntimeComponentSchema,
+    RuntimeHealthResponse,
+    WorkerStartupHealthResponse,
+)
 from cortex.services.jobs import DurableJobService, processJob
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.runtime import RuntimeHealthService
@@ -35,6 +39,13 @@ async def runWorker() -> None:
 
 async def validateWorkerStartup(settings: Settings) -> None:
     """Fail fast when the worker runtime is not safe to enter its polling loop."""
+    workerStartupHealth = await collectWorkerStartupHealth(settings)
+    if workerStartupHealth.status != "ready":
+        raise WorkerStartupError(workerStartupHealth.detail)
+
+
+async def collectWorkerStartupHealth(settings: Settings) -> WorkerStartupHealthResponse:
+    """Collect the shared worker-startup contract used by APIs, scripts, and the worker CLI."""
     modelProvider = OllamaModelProvider(
         baseUrl=settings.ollamaBaseUrl,
         generatorModel=settings.generatorModel,
@@ -53,8 +64,14 @@ async def validateWorkerStartup(settings: Settings) -> None:
             phase="startup",
             components=serializeRuntimeComponents(staticFailures),
         )
-        raise WorkerStartupError(
-            buildStartupFailureMessage(staticFailures)
+        return WorkerStartupHealthResponse(
+            status="blocked",
+            environment=settings.environment,
+            startupStatus=staticHealth.status,
+            liveReadinessStatus="unknown",
+            blockingPhase="startup",
+            detail=buildStartupFailureMessage(staticFailures),
+            failingComponents=staticFailures,
         )
 
     try:
@@ -66,12 +83,18 @@ async def validateWorkerStartup(settings: Settings) -> None:
             ).getReadiness()
     except Exception as error:
         logger.error("worker_startup_health_error", error=str(error))
-        raise WorkerStartupError(
-            buildStartupExceptionMessage(
+        return WorkerStartupHealthResponse(
+            status="blocked",
+            environment=settings.environment,
+            startupStatus=staticHealth.status,
+            liveReadinessStatus="unknown",
+            blockingPhase="exception",
+            detail=buildStartupExceptionMessage(
                 "worker startup could not verify live runtime readiness",
                 error,
-            )
-        ) from error
+            ),
+            failingComponents=[],
+        )
 
     logRuntimeHealth("worker_startup_live_health", liveHealth)
     liveFailures = RuntimeHealthService.getFailingComponents(liveHealth)
@@ -81,9 +104,24 @@ async def validateWorkerStartup(settings: Settings) -> None:
             phase="live",
             components=serializeRuntimeComponents(liveFailures),
         )
-        raise WorkerStartupError(
-            buildStartupFailureMessage(liveFailures)
+        return WorkerStartupHealthResponse(
+            status="blocked",
+            environment=settings.environment,
+            startupStatus=staticHealth.status,
+            liveReadinessStatus=liveHealth.status,
+            blockingPhase="live",
+            detail=buildStartupFailureMessage(liveFailures),
+            failingComponents=liveFailures,
         )
+    return WorkerStartupHealthResponse(
+        status="ready",
+        environment=settings.environment,
+        startupStatus=staticHealth.status,
+        liveReadinessStatus=liveHealth.status,
+        blockingPhase="none",
+        detail="Worker startup contract is satisfied for the current package profile.",
+        failingComponents=[],
+    )
 
 
 def logRuntimeHealth(eventName: str, runtimeHealth: RuntimeHealthResponse) -> None:

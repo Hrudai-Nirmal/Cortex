@@ -13,6 +13,7 @@ export type QueryRequest = components["schemas"]["QueryRequest"];
 export type Session = components["schemas"]["SessionResponse"];
 export type TraceSummary = components["schemas"]["TraceSummaryResponse"];
 export type RuntimeHealth = components["schemas"]["RuntimeHealthResponse"];
+export type WorkerStartupHealth = components["schemas"]["WorkerStartupHealthResponse"];
 export type PipelineGraph = components["schemas"]["PipelineGraphResponse"];
 export type PipelineVersionSummary = components["schemas"]["PipelineVersionSummaryResponse"];
 export type SourceSummary = components["schemas"]["SourceSummaryResponse"];

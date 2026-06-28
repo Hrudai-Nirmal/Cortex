@@ -15,6 +15,7 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
         / "generated"
         / "cortex-api.ts"
     ).read_text(encoding="utf-8")
+    assert '"/health/worker-startup"' in generatedTypesText
     assert '"/v1/chat/completions"' in generatedTypesText
     assert '"/v1/chat/contracts/v1"' in generatedTypesText
     assert "ChatCompletionResponseSchema" in generatedTypesText
@@ -36,4 +37,6 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
     assert '"/v1/chat/contracts/v1/schemas/response"' in generatedTypesText
     assert "TraceSummaryResponse" in generatedTypesText
     assert "RetrievedEvidenceSchema" in generatedTypesText
+    assert "WorkerStartupHealthResponse" in generatedTypesText
+    assert "blockingPhase: \"none\" | \"startup\" | \"live\" | \"exception\";" in generatedTypesText
     assert "claims: components[\"schemas\"][\"ClaimSchema\"][];" in generatedTypesText

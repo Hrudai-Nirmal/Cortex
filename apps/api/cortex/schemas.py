@@ -168,6 +168,18 @@ class RuntimeHealthResponse(BaseModel):
     components: list[RuntimeComponentSchema]
 
 
+class WorkerStartupHealthResponse(BaseModel):
+    """Summarize whether the durable worker can safely enter its polling loop."""
+
+    status: Literal["ready", "blocked"]
+    environment: str
+    startupStatus: Literal["ready", "degraded"]
+    liveReadinessStatus: Literal["ready", "degraded", "unknown"]
+    blockingPhase: Literal["none", "startup", "live", "exception"]
+    detail: str
+    failingComponents: list[RuntimeComponentSchema] = Field(default_factory=list)
+
+
 class ChatMessageSchema(BaseModel):
     """Carry one OpenAI-compatible chat message used by replacement query shells."""
 
