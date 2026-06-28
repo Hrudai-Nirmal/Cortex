@@ -71,6 +71,7 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
         const jobDetail = await getJobStatus(jobId);
         if (isMounted) {
           setSelectedJob(jobDetail);
+          setErrorMessage(null);
         }
       } catch (error) {
         if (isMounted) {
@@ -80,8 +81,12 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
     }
 
     void loadJobDetail();
+    const pollTimer = window.setInterval(() => {
+      void loadJobDetail();
+    }, 4000);
     return () => {
       isMounted = false;
+      window.clearInterval(pollTimer);
     };
   }, [selectedJobId]);
 

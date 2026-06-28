@@ -190,6 +190,7 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
         const detail = await getSourceDetail(enterpriseId, selectedDocumentId as string);
         if (isMounted) {
           setSelectedSource(detail);
+          setErrorMessage(null);
         }
       } catch (error) {
         if (isMounted) {
@@ -199,8 +200,12 @@ export function SourceOperations({ enterpriseId, onJobQueued }: SourceOperations
     }
 
     void loadDetail();
+    const pollTimer = window.setInterval(() => {
+      void loadDetail();
+    }, 5000);
     return () => {
       isMounted = false;
+      window.clearInterval(pollTimer);
     };
   }, [enterpriseId, selectedDocumentId]);
 

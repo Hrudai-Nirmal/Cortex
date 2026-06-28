@@ -181,6 +181,11 @@ combining:
 - live external query-contract availability
 - the outcome of the latest persisted evidence-bearing trace
 
+Inside the `Sources` and `Jobs` tabs, the selected detail cards also keep polling their
+persisted records while the surrounding lists refresh. That means operators can stay on
+one source or job and still watch onboarding move from `processing` to `active`, or a
+running durable job flip into `failed`, without manually reselecting the row.
+
 After startup, it waits for:
 
 - `GET /health/startup` through both console and query hosts
