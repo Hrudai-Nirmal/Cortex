@@ -263,6 +263,12 @@ examples wire that into their worker health signals.
 - `package:verify` now fails with explicit labels such as the missing routed surface, runtime-config
   drift, blocked worker startup check, or query-contract field that broke, and points operators back
   to `pnpm package:status` for the fuller routed health summary
+- `package:status` now also prints the routed `GET /health/worker-startup` summary with
+  startup status, live-readiness status, blocking phase, and blocking components so the
+  edge-exposed API signal lines up with what the fixed console shows
+- `package:verify` now also requires that routed worker-startup payload to report
+  `status=ready` and `blockingPhase=none` in addition to the stronger in-container worker
+  CLI check
 - `package:logs` tails compose logs for the whole package or one named service
 
 The fixed console now mirrors that packaging story more directly: even if one settings-side

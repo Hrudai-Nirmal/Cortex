@@ -174,6 +174,9 @@ The package now includes:
 - the fixed console now also shows that shared worker-startup contract directly from
   `GET /health/worker-startup`, including whether the durable loop is blocked during
   startup-safe checks or live readiness
+- `pnpm package:status` and `pnpm package:verify` now also read that routed
+  `GET /health/worker-startup` payload from the query host, while the in-container worker
+  probe remains the stronger proof that the shipped worker itself can enter its loop
 - shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
   explicitly so bundled versus client-owned employee shells cannot drift through backend
   defaults

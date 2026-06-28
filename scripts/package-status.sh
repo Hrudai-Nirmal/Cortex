@@ -262,6 +262,35 @@ print_worker_status() {
   fi
 }
 
+print_worker_contract_summary() {
+  local payload="$1"
+  if command -v python3 >/dev/null 2>&1; then
+    WORKER_STARTUP_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["WORKER_STARTUP_PAYLOAD"])
+print("worker startup contract:")
+print(f"  - status: {payload.get('status', 'unknown')}")
+print(f"  - startup status: {payload.get('startupStatus', 'unknown')}")
+print(f"  - live readiness status: {payload.get('liveReadinessStatus', 'unknown')}")
+print(f"  - blocking phase: {payload.get('blockingPhase', 'unknown')}")
+print(f"  - detail: {payload.get('detail', 'missing')}")
+for component in payload.get("failingComponents", []):
+    remediation = component.get("remediation")
+    print(
+        f"  - blocker {component.get('name', 'unknown')}: "
+        f"{component.get('status', 'unknown')} [{component.get('severity', 'info')}] :: "
+        f"{component.get('detail', 'missing')}"
+    )
+    if remediation:
+        print(f"      remediation: {remediation}")
+PY
+  else
+    printf "worker startup contract: %s\n" "$payload"
+  fi
+}
+
 require_command curl
 require_command docker
 require_docker_daemon
@@ -286,6 +315,7 @@ startup_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/startup")"
 ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
+worker_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/worker-startup")"
 query_contract_payload=""
 query_contract_error=""
 query_request_schema_payload=""
@@ -335,4 +365,5 @@ print_contract_summary "$query_contract_payload"
 print_contract_fetch_error "$query_contract_error"
 print_schema_summary "query request schema" "$query_request_schema_payload"
 print_schema_summary "query response schema" "$query_response_schema_payload"
+print_worker_contract_summary "$worker_startup_payload"
 print_worker_status

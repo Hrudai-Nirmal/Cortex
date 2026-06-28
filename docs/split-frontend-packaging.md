@@ -175,6 +175,8 @@ The packaged operator scripts now verify the split-host contract directly:
 - the fixed console also reads the shared `GET /health/worker-startup` contract so operators
   can inspect durable-job safety without leaving the product, while `package:verify` still
   proves that same gate inside the real worker container
+- `package:status` now also prints the routed worker-startup contract payload itself so
+  host-routed API checks, fixed-console views, and worker-container probes stay aligned
 - `package:status` also prints the live external query-contract summary exported by the query host
 - `package:status` now also prints compact summaries of the live request/response schema endpoints exported for replacement query UIs
 - that contract summary now also includes `querySurfaceMode` and `bundledQueryUiAvailable`

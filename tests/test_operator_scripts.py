@@ -78,6 +78,7 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/live"' in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/worker-startup"' in verifyText
     assert "X-Cortex-Contract-Version: v1" in verifyText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in verifyText
     assert 'read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in verifyText
@@ -135,6 +136,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert 'assert_contains "$response_schema" \'"title":"ChatCompletionResponseSchema"\' "query response schema title"' in verifyText
     assert 'assert_contains "$response_schema" \'"x_cortex"\' "query response schema cortex property"' in verifyText
     assert 'assert_contains "$response_schema" \'"ExternalQueryMetadataSchema"\' "query response schema metadata definition"' in verifyText
+    assert 'assert_contains "$worker_startup_health" \'"status":"ready"\' "worker-startup API status"' in verifyText
+    assert 'assert_contains "$worker_startup_health" \'"blockingPhase":"none"\' "worker-startup API blocking phase"' in verifyText
     assert 'assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"' in verifyText
     assert 'assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"' in verifyText
     assert 'assert_contains "$query_contract" \'"contractVersion":"v1"\' "query contract version"' in verifyText
@@ -209,6 +212,7 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'docker info >/dev/null 2>&1' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/startup"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/health/ready"' in scriptText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/health/worker-startup"' in scriptText
     assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1"' in scriptText
     assert 'read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in scriptText
     assert 'read_headers "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js"' in scriptText
@@ -231,6 +235,9 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'query response schema: unavailable' in scriptText
     assert 'print_schema_summary "query request schema" "$query_request_schema_payload"' in scriptText
     assert 'print_schema_summary "query response schema" "$query_response_schema_payload"' in scriptText
+    assert 'print_worker_contract_summary "$worker_startup_payload"' in scriptText
+    assert "worker startup contract:" in scriptText
+    assert "blocking phase:" in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in scriptText
     assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText

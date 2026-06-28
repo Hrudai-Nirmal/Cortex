@@ -103,6 +103,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
   components, so operators can see whether durable ingestion/evaluation/retention jobs are
   safe before leaving the product; `package:verify` still remains the stronger proof because
   it executes that same gate inside the real worker container.
+- Package operator tooling now also reads that same routed `GET /health/worker-startup`
+  contract during `package:status` and `package:verify`, so the split-host edge surface,
+  fixed console, and in-container worker check all describe the same durable-job readiness
+  story instead of leaving operators to compare unrelated signals.
 - The shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
   explicitly, preventing client deployments from silently drifting between bundled and
   API-only employee query modes through backend defaults.
