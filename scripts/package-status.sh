@@ -184,6 +184,39 @@ print_contract_fetch_error() {
   fi
 }
 
+print_schema_summary() {
+  local label="$1"
+  local payload="$2"
+  if [ -z "$payload" ]; then
+    if [ "$label" = "query request schema" ]; then
+      echo "query request schema: unavailable"
+      return 0
+    fi
+    if [ "$label" = "query response schema" ]; then
+      echo "query response schema: unavailable"
+      return 0
+    fi
+    echo "${label}: unavailable"
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    SCHEMA_LABEL="$label" SCHEMA_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+label = os.environ["SCHEMA_LABEL"]
+payload = json.loads(os.environ["SCHEMA_PAYLOAD"])
+properties = payload.get("properties", {})
+property_names = ", ".join(properties.keys())
+print(f"{label}:")
+print(f"  - schema title: {payload.get('title', 'missing')}")
+print(f"  - top-level properties: {property_names or 'missing'}")
+PY
+  else
+    printf "%s: %s\n" "$label" "$payload"
+  fi
+}
+
 print_runtime_config_summary() {
   local label="$1"
   local payload="$2"
@@ -255,10 +288,18 @@ query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
 query_contract_payload=""
 query_contract_error=""
+query_request_schema_payload=""
+query_response_schema_payload=""
 if query_contract_payload="$(try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"; then
   :
 else
   query_contract_error="$(cat /tmp/cortex-package-status-error.$$ 2>/dev/null || true)"
+fi
+if query_request_schema_payload="$(try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/request")"; then
+  :
+fi
+if query_response_schema_payload="$(try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/response")"; then
+  :
 fi
 rm -f /tmp/cortex-package-status-error.$$ 2>/dev/null || true
 console_runtime_config="$(read_text "$CORTEX_CONSOLE_HOST" "/cortex-runtime-config.js")"
@@ -292,4 +333,6 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
 fi
 print_contract_summary "$query_contract_payload"
 print_contract_fetch_error "$query_contract_error"
+print_schema_summary "query request schema" "$query_request_schema_payload"
+print_schema_summary "query response schema" "$query_response_schema_payload"
 print_worker_status

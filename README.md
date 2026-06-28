@@ -161,6 +161,7 @@ The package now includes:
   the shipped console/query public URLs, fail-closed startup policy, and declared
   query-surface mode instead of only trusting a generic `ready` status
 - package verification that checks the browser `cortex-runtime-config.js` payload on both hosts so frontend runtime config matches the deployed client domains
+- package verification now also checks the live request/response schema endpoints for the replacement query contract
 - package verification that now fails with named operator-readable routing, contract, runtime-config, and worker-startup errors instead of opaque shell `grep` exits
 - browser runtime-config delivery that serves `cortex-runtime-config.js` with `Cache-Control: no-store, no-cache, must-revalidate` so client-domain changes take effect immediately after a rollout instead of lingering in browser caches
 - package verification that also runs the worker startup check so durable job readiness is proven alongside API/browser readiness
@@ -174,6 +175,7 @@ The package now includes:
 - API and worker settings loading now collapse invalid deployment env into one
   operator-readable `invalid Cortex settings: ...` error instead of a raw validation dump
 - package status now prints the live query-contract version, route set, abstention evidence states, response headers, request semantics, employee-safe versus operator-only `x_cortex` fields, and stable error meanings from `GET /v1/chat/contracts/v1`
+- package status now also prints compact summaries of the live request/response query schemas exported at `GET /v1/chat/contracts/v1/schemas/request` and `GET /v1/chat/contracts/v1/schemas/response`
 - package status now also prints the live startup deployment contract summary for the
   shipped console/query public URLs, fail-closed startup policy, and query-surface mode
 - package status now prints the browser runtime-config public URLs exposed by both frontend hosts so operators can catch split-host drift without opening dev tools

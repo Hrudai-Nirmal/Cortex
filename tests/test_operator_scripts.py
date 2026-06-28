@@ -94,6 +94,8 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"requestOptions"' in verifyText
     assert '"querySurfaceMode"' in verifyText
     assert '"bundledQueryUiAvailable"' in verifyText
+    assert '"requestSchemaPath"' in verifyText
+    assert '"responseSchemaPath"' in verifyText
     assert "console_startup=" in verifyText
     assert "query_startup=" in verifyText
     assert '"startupPolicy":"fail-closed"' not in verifyText
@@ -124,6 +126,15 @@ def testPackageVerifyChecksSurfaceAndContractHeaders() -> None:
     assert '"conflict"' in verifyText
     assert '"retrieve-then-compute"' in verifyText
     assert '"traceEventsPath"' in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/request"' in verifyText
+    assert 'read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/response"' in verifyText
+    assert 'assert_contains "$request_schema" \'"title":"ChatCompletionRequestSchema"\' "query request schema title"' in verifyText
+    assert 'assert_contains "$request_schema" \'"messages"\' "query request schema messages property"' in verifyText
+    assert 'assert_contains "$request_schema" \'"cortex"\' "query request schema cortex property"' in verifyText
+    assert 'assert_contains "$request_schema" \'"const":false\' "query request schema stream const"' in verifyText
+    assert 'assert_contains "$response_schema" \'"title":"ChatCompletionResponseSchema"\' "query response schema title"' in verifyText
+    assert 'assert_contains "$response_schema" \'"x_cortex"\' "query response schema cortex property"' in verifyText
+    assert 'assert_contains "$response_schema" \'"ExternalQueryMetadataSchema"\' "query response schema metadata definition"' in verifyText
     assert 'assert_contains "$console_headers" "X-Cortex-Surface: console" "console surface header"' in verifyText
     assert 'assert_contains "$query_headers" "X-Cortex-Surface: query" "query surface header"' in verifyText
     assert 'assert_contains "$query_contract" \'"contractVersion":"v1"\' "query contract version"' in verifyText
@@ -214,6 +225,12 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'query contract: unavailable' in scriptText
     assert "query contract detail:" in scriptText
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
+    assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/request"' in scriptText
+    assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/response"' in scriptText
+    assert 'query request schema: unavailable' in scriptText
+    assert 'query response schema: unavailable' in scriptText
+    assert 'print_schema_summary "query request schema" "$query_request_schema_payload"' in scriptText
+    assert 'print_schema_summary "query response schema" "$query_response_schema_payload"' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in scriptText
     assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
@@ -224,6 +241,8 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_cache_header_summary "query" "$query_runtime_config_headers"' in scriptText
     assert 'echo "  ${CORTEX_QUERY_HOST} -> external-query-ui (not bundled)"' in scriptText
     assert 'request semantics' in scriptText
+    assert 'schema title' in scriptText
+    assert 'top-level properties' in scriptText
     assert 'employee-safe fields' in scriptText
     assert 'operator-only fields' in scriptText
     assert 'error statuses' in scriptText

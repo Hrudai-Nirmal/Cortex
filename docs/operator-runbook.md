@@ -219,6 +219,9 @@ examples wire that into their worker health signals.
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts publish `cortex-runtime-config.js` with the expected console/query public URLs
 - when `CORTEX_QUERY_SURFACE_MODE=bundled`, both browser hosts serve `cortex-runtime-config.js` with a no-store cache policy so split-host domain changes are not hidden behind stale browser state
 - the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
+- the query host also publishes `GET /v1/chat/contracts/v1/schemas/request` and
+  `GET /v1/chat/contracts/v1/schemas/response` so replacement UIs can validate the exact
+  request/response wire shape against the running package
 - that contract descriptor now also publishes `querySurfaceMode` plus
   `bundledQueryUiAvailable`, so operators can verify whether the package ships the
   employee shell or expects a client-owned one
@@ -244,7 +247,8 @@ examples wire that into their worker health signals.
   (console/query public URLs, `startupPolicy`, and `querySurfaceMode`), browser
   runtime-config URLs, worker startup-check result, and the live external query-contract
   summary, including request semantics, employee-safe versus operator-only fields,
-  stable error meanings, severity, and remediation guidance for every non-ready component
+  stable error meanings, compact request/response schema summaries, severity, and
+  remediation guidance for every non-ready component
 - when `CORTEX_QUERY_SURFACE_MODE=external`, `package:status` makes that explicit and
   reports the query host as `external-query-ui (not bundled)` instead of pretending a
   packaged `query-web` shell exists
