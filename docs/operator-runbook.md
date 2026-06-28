@@ -295,6 +295,14 @@ enter its polling loop right now. The fixed console uses that shared endpoint fo
 visibility, while `pnpm package:verify` remains the stronger release proof because it runs
 `python -m cortex.worker --check-startup` inside the actual worker container.
 
+Within `ready`, Cortex now separates the local model dependency into:
+
+- `ollama-endpoint`: whether the configured endpoint itself is reachable
+- `ollama-models`: whether the pinned generator and embedding models are actually loaded there
+
+That split matters in client environments because the remediation is different: restoring
+network/service reachability is not the same task as preloading the exact pinned models.
+
 `package:up` now surfaces any degraded startup/readiness components immediately, including
 their severity and remediation guidance, instead of only reporting a timeout.
 

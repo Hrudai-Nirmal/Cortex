@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from cortex.services.model_provider import (
+    ModelProviderHealth,
     OllamaModelProvider,
     STRUCTURED_GENERATION_MAX_TOKENS,
     STRUCTURED_GENERATION_REASONING_EFFORT,
@@ -49,6 +50,24 @@ class FakeResponse:
         return self.payload
 
 
+class FakeHealthAsyncClient:
+    """Return one deterministic Ollama tag payload without hitting a live endpoint."""
+
+    payload: dict[str, Any] = {"models": []}
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        return
+
+    async def __aenter__(self) -> "FakeHealthAsyncClient":
+        return self
+
+    async def __aexit__(self, excType, exc, traceback) -> None:
+        return None
+
+    async def get(self, url: str) -> FakeResponse:
+        return FakeResponse(self.payload)
+
+
 @pytest.mark.asyncio
 async def testGenerateStructuredDisablesReasoningAndCapsTokens(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep bounded-claims generation short enough for local package verification."""
@@ -77,3 +96,61 @@ async def testGenerateStructuredDisablesReasoningAndCapsTokens(monkeypatch: pyte
         == STRUCTURED_GENERATION_REASONING_EFFORT
     )
     assert FakeAsyncClient.capturedTimeout == STRUCTURED_GENERATION_TIMEOUT_SECONDS
+
+
+@pytest.mark.asyncio
+async def testGetHealthReturnsReachableEndpointAndPinnedModels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Health checks should distinguish endpoint reachability from pinned-model availability."""
+    import cortex.services.model_provider as modelProviderModule
+
+    FakeHealthAsyncClient.payload = {
+        "models": [
+            {"name": "qwen3:1.7b"},
+            {"name": "qwen3-embedding:0.6b"},
+            {"name": "bge-reranker:small"},
+        ]
+    }
+    monkeypatch.setattr(modelProviderModule.httpx, "AsyncClient", FakeHealthAsyncClient)
+    provider = OllamaModelProvider(
+        baseUrl="http://127.0.0.1:11434",
+        generatorModel="qwen3:1.7b",
+        embeddingModel="qwen3-embedding:0.6b",
+    )
+
+    health = await provider.getHealth()
+
+    assert health == ModelProviderHealth(
+        endpointReachable=True,
+        endpointDetail="endpoint reachable",
+        availableModelNames=("bge-reranker:small", "qwen3-embedding:0.6b", "qwen3:1.7b"),
+        missingModels=(),
+    )
+
+
+@pytest.mark.asyncio
+async def testGetHealthReportsExactMissingPinnedModels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Health checks should report which configured models are missing from the endpoint."""
+    import cortex.services.model_provider as modelProviderModule
+
+    FakeHealthAsyncClient.payload = {
+        "models": [
+            {"name": "qwen3-embedding:0.6b"},
+        ]
+    }
+    monkeypatch.setattr(modelProviderModule.httpx, "AsyncClient", FakeHealthAsyncClient)
+    provider = OllamaModelProvider(
+        baseUrl="http://ollama:11434",
+        generatorModel="qwen3:14b",
+        embeddingModel="qwen3-embedding:0.6b",
+    )
+
+    health = await provider.getHealth()
+
+    assert health.endpointReachable is True
+    assert health.endpointDetail == "endpoint reachable"
+    assert health.availableModelNames == ("qwen3-embedding:0.6b",)
+    assert health.missingModels == ("qwen3:14b",)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlparse
 
@@ -15,6 +16,16 @@ TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 STRUCTURED_GENERATION_MAX_TOKENS = 256
 STRUCTURED_GENERATION_REASONING_EFFORT = "none"
 STRUCTURED_GENERATION_TIMEOUT_SECONDS = 300.0
+
+
+@dataclass(frozen=True)
+class ModelProviderHealth:
+    """Summarize endpoint reachability and pinned-model availability for operator health checks."""
+
+    endpointReachable: bool
+    endpointDetail: str
+    availableModelNames: tuple[str, ...]
+    missingModels: tuple[str, ...]
 
 
 class EmbeddingProvider(Protocol):
@@ -138,13 +149,27 @@ class OllamaModelProvider:
 
     async def checkHealth(self) -> tuple[bool, str]:
         """Verify the local model endpoint is reachable without running a generation."""
+        health = await self.getHealth()
+        if not health.endpointReachable:
+            return False, health.endpointDetail
+        if health.missingModels:
+            return False, f"missing models: {', '.join(health.missingModels)}"
+        return True, "ollama models ready"
+
+    async def getHealth(self) -> ModelProviderHealth:
+        """Return endpoint reachability plus pinned-model availability for operator tooling."""
         try:
             async with httpx.AsyncClient(timeout=min(self.timeoutSeconds, 10.0)) as client:
                 response = await client.get(f"{self.baseUrl}/api/tags")
                 response.raise_for_status()
                 payload = response.json()
         except (httpx.HTTPError, ValueError) as error:
-            return False, str(error)
+            return ModelProviderHealth(
+                endpointReachable=False,
+                endpointDetail=str(error),
+                availableModelNames=(),
+                missingModels=(self.generatorModel, self.embeddingModel),
+            )
         models = payload.get("models", [])
         availableModelNames = {
             modelEntry.get("name", "") for modelEntry in models if isinstance(modelEntry, dict)
@@ -154,6 +179,9 @@ class OllamaModelProvider:
             for modelName in (self.generatorModel, self.embeddingModel)
             if modelName not in availableModelNames
         ]
-        if missingModels:
-            return False, f"missing models: {', '.join(missingModels)}"
-        return True, "ollama models ready"
+        return ModelProviderHealth(
+            endpointReachable=True,
+            endpointDetail="endpoint reachable",
+            availableModelNames=tuple(sorted(modelName for modelName in availableModelNames if modelName)),
+            missingModels=tuple(missingModels),
+        )

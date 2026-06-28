@@ -36,7 +36,7 @@ class RuntimeHealthService:
             self._checkModelProfile(),
             self._checkPackageBuildProfile(),
             await self._checkDatabase(),
-            await self._checkOllama(),
+            *await self._checkOllamaComponents(),
             self._checkModelEndpointPolicy(),
             self._checkObjectStorage(),
             self._checkAccelerator(),
@@ -120,22 +120,70 @@ class RuntimeHealthService:
             detail="database ready",
         )
 
-    async def _checkOllama(self) -> RuntimeComponentSchema:
-        isReady, detail = await self.modelProvider.checkHealth()
-        remediation = None
-        if not isReady:
-            remediation = (
-                "Start the configured model endpoint and verify CORTEX_OLLAMA_BASE_URL. "
-                "If the endpoint is reachable but models are missing, run "
-                "pnpm package:pull-models and then pnpm package:verify."
-            )
-        return self._buildComponent(
-            name="ollama",
-            status="ready" if isReady else "unavailable",
-            severity="info" if isReady else "error",
-            detail=detail,
-            remediation=remediation,
+    async def _checkOllamaComponents(self) -> list[RuntimeComponentSchema]:
+        """Separate endpoint reachability from pinned-model availability for operators."""
+        health = await self.modelProvider.getHealth()
+        endpointComponent = self._buildComponent(
+            name="ollama-endpoint",
+            status="ready" if health.endpointReachable else "unavailable",
+            severity="info" if health.endpointReachable else "error",
+            detail=(
+                f"endpoint reachable at {self.modelProvider.baseUrl}"
+                if health.endpointReachable
+                else health.endpointDetail
+            ),
+            remediation=(
+                None
+                if health.endpointReachable
+                else "Start the configured model endpoint and verify CORTEX_OLLAMA_BASE_URL."
+            ),
         )
+        if not health.endpointReachable:
+            modelComponent = self._buildComponent(
+                name="ollama-models",
+                status="unavailable",
+                severity="error",
+                detail=(
+                    "model availability could not be checked because the configured endpoint "
+                    "is unreachable"
+                ),
+                remediation=(
+                    "Restore endpoint reachability first, then verify the pinned generator and "
+                    "embedding models are loaded."
+                ),
+            )
+            return [endpointComponent, modelComponent]
+        missingModels = list(health.missingModels)
+        if missingModels:
+            availableModels = ", ".join(health.availableModelNames) or "none reported"
+            modelComponent = self._buildComponent(
+                name="ollama-models",
+                status="degraded",
+                severity="error",
+                detail=(
+                    f"missing pinned models: {', '.join(missingModels)}; "
+                    f"available models: {availableModels}"
+                ),
+                remediation=(
+                    "Pull the missing models into the configured endpoint or run "
+                    "pnpm package:pull-models, then rerun pnpm package:verify."
+                ),
+            )
+            return [endpointComponent, modelComponent]
+        modelComponent = self._buildComponent(
+            name="ollama-models",
+            status="ready",
+            severity="info",
+            detail=(
+                f"pinned models available: generator={self.settings.generatorModel}, "
+                f"embedding={self.settings.embeddingModel}"
+            ),
+            remediation=(
+                "Keep the pinned generator and embedding models loaded in the configured "
+                "endpoint before promoting this package."
+            ),
+        )
+        return [endpointComponent, modelComponent]
 
     def _checkObjectStorage(self) -> RuntimeComponentSchema:
         storageRoot = Path(self.settings.objectStorageRoot)

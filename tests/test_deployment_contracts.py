@@ -419,6 +419,112 @@ async def testStartupHealthTreatsWebsiteAllowlistAsOptionalCapability() -> None:
 
 
 @pytest.mark.asyncio
+async def testLiveReadinessSeparatesModelEndpointFromPinnedModelAvailability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Operators should see endpoint reachability and pinned-model availability as separate checks."""
+    settings = buildPackageSettings()
+    runtimeHealthService = RuntimeHealthService(
+        session=object(),
+        settings=settings,
+        modelProvider=OllamaModelProvider(
+            baseUrl=settings.ollamaBaseUrl,
+            generatorModel=settings.generatorModel,
+            embeddingModel=settings.embeddingModel,
+        ),
+    )
+
+    async def stubDatabase() -> RuntimeComponentSchema:
+        return RuntimeComponentSchema(
+            name="postgresql",
+            status="ready",
+            severity="info",
+            detail="database ready",
+            remediation=None,
+        )
+
+    async def stubModelChecks() -> list[RuntimeComponentSchema]:
+        return [
+            RuntimeComponentSchema(
+                name="ollama-endpoint",
+                status="ready",
+                severity="info",
+                detail="endpoint reachable at http://ollama:11434",
+                remediation=None,
+            ),
+            RuntimeComponentSchema(
+                name="ollama-models",
+                status="degraded",
+                severity="error",
+                detail="missing pinned models: qwen3:14b",
+                remediation="Pull the missing models into the configured endpoint.",
+            ),
+        ]
+
+    monkeypatch.setattr(runtimeHealthService, "_checkDatabase", stubDatabase)
+    monkeypatch.setattr(runtimeHealthService, "_checkOllamaComponents", stubModelChecks)
+    monkeypatch.setattr(
+        runtimeHealthService,
+        "_checkObjectStorage",
+        lambda: RuntimeComponentSchema(
+            name="object-storage",
+            status="ready",
+            severity="info",
+            detail="storage ready",
+            remediation=None,
+        ),
+    )
+    monkeypatch.setattr(
+        runtimeHealthService,
+        "_checkAccelerator",
+        lambda: RuntimeComponentSchema(
+            name="accelerator",
+            status="ready",
+            severity="info",
+            detail="detected cpu",
+            remediation=None,
+        ),
+    )
+    monkeypatch.setattr(
+        runtimeHealthService,
+        "_checkParserDependencies",
+        lambda: RuntimeComponentSchema(
+            name="parser-dependencies",
+            status="ready",
+            severity="info",
+            detail="Docling and local parsers available",
+            remediation=None,
+        ),
+    )
+    monkeypatch.setattr(
+        runtimeHealthService,
+        "_checkWebsiteIngestion",
+        lambda: RuntimeComponentSchema(
+            name="website-ingestion",
+            status="ready",
+            severity="info",
+            detail="uploads remain available",
+            remediation=None,
+        ),
+    )
+
+    runtimeHealth = await runtimeHealthService.getReadiness()
+
+    endpointComponent = next(
+        component for component in runtimeHealth.components if component.name == "ollama-endpoint"
+    )
+    modelComponent = next(
+        component for component in runtimeHealth.components if component.name == "ollama-models"
+    )
+    assert runtimeHealth.status == "degraded"
+    assert endpointComponent.status == "ready"
+    assert "http://ollama:11434" in endpointComponent.detail
+    assert modelComponent.status == "degraded"
+    assert "qwen3:14b" in modelComponent.detail
+    assert modelComponent.remediation is not None
+
+
+@pytest.mark.asyncio
 async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata() -> None:
     """Replacement chat shells should be able to discover the live v1 contract descriptor."""
     application = createApp(buildPackageSettings())

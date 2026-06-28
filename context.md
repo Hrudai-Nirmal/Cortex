@@ -107,6 +107,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
   contract during `package:status` and `package:verify`, so the split-host edge surface,
   fixed console, and in-container worker check all describe the same durable-job readiness
   story instead of leaving operators to compare unrelated signals.
+- Live runtime health now separates `ollama-endpoint` reachability from `ollama-models`
+  pinned-model availability, so operators can tell “endpoint is down” from “endpoint is up
+  but the required generator or embedding model is missing” without inferring it from one
+  overloaded component detail.
 - The shipped Kubernetes and ECS package examples now pin `CORTEX_QUERY_SURFACE_MODE`
   explicitly, preventing client deployments from silently drifting between bundled and
   API-only employee query modes through backend defaults.

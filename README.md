@@ -148,6 +148,7 @@ The package now includes:
 - `GET /health/worker-startup` for the shared durable-worker startup gate exposed to the fixed console
 - runtime-health payloads with per-component severity and remediation guidance for operators
 - runtime-health payloads that explicitly declare the packaged generator, embedding, and accelerator profile
+- runtime-health payloads that separate model-endpoint reachability from pinned-model availability for the configured generator and embedding models
 - runtime-health payloads that explicitly declare the packaged Torch wheel/build profile used for Docling-backed container images
 - runtime-health payloads that explicitly declare the packaged identity profile, including auth mode and OIDC contract
 - container and ingress examples with readiness/liveness probes
