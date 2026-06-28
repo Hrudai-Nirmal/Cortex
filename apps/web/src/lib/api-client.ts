@@ -14,6 +14,7 @@ import type {
   QueryRequest,
   QueryResponse,
   QueryStageEvent,
+  QueryContractSchemaDocument,
   RuntimeHealth,
   Session,
   SourceDetail,
@@ -122,6 +123,12 @@ function validateExternalQueryContractDescriptor(
   if (!descriptor.requestOptions.supportsCitationToggle) {
     throw buildContractCompatibilityError("The deployed query contract does not preserve the citation display toggle.");
   }
+  if (descriptor.requestSchemaPath !== "/v1/chat/contracts/v1/schemas/request") {
+    throw buildContractCompatibilityError("The deployed query request schema path is unsupported.");
+  }
+  if (descriptor.responseSchemaPath !== "/v1/chat/contracts/v1/schemas/response") {
+    throw buildContractCompatibilityError("The deployed query response schema path is unsupported.");
+  }
   if (!["bundled", "external"].includes(descriptor.querySurfaceMode)) {
     throw buildContractCompatibilityError("The deployed query-surface mode is unsupported.");
   }
@@ -172,6 +179,26 @@ function validateExternalQueryContractDescriptor(
     }
   }
   return descriptor;
+}
+
+function validateQueryContractSchemaDocument(
+  schemaDocument: QueryContractSchemaDocument,
+  expectedTitle: string,
+  requiredProperties: string[],
+): QueryContractSchemaDocument {
+  if (schemaDocument.title !== expectedTitle) {
+    throw buildContractCompatibilityError(
+      `The deployed schema title ${schemaDocument.title} does not match ${expectedTitle}.`,
+    );
+  }
+  for (const requiredProperty of requiredProperties) {
+    if (!(requiredProperty in schemaDocument.properties)) {
+      throw buildContractCompatibilityError(
+        `The deployed schema ${expectedTitle} is missing property ${requiredProperty}.`,
+      );
+    }
+  }
+  return schemaDocument;
 }
 
 function validateExternalChatResponse(
@@ -299,6 +326,28 @@ export async function submitChatQuery(
 export async function getExternalQueryContract(): Promise<ExternalQueryContractDescriptor> {
   return validateExternalQueryContractDescriptor(
     await fetchJson<ExternalQueryContractDescriptor>("/v1/chat/contracts/v1"),
+  );
+}
+
+/** Load the live replacement-query request schema exported by Cortex. */
+export async function getExternalQueryRequestSchema(
+  schemaPath = "/v1/chat/contracts/v1/schemas/request",
+): Promise<QueryContractSchemaDocument> {
+  return validateQueryContractSchemaDocument(
+    await fetchJson<QueryContractSchemaDocument>(schemaPath),
+    "ChatCompletionRequestSchema",
+    ["messages", "stream", "cortex"],
+  );
+}
+
+/** Load the live replacement-query response schema exported by Cortex. */
+export async function getExternalQueryResponseSchema(
+  schemaPath = "/v1/chat/contracts/v1/schemas/response",
+): Promise<QueryContractSchemaDocument> {
+  return validateQueryContractSchemaDocument(
+    await fetchJson<QueryContractSchemaDocument>(schemaPath),
+    "ChatCompletionResponseSchema",
+    ["id", "object", "choices", "x_cortex"],
   );
 }
 

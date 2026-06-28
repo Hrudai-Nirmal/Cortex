@@ -13,6 +13,8 @@ import {
 import {
   activatePipeline,
   getExternalQueryContract,
+  getExternalQueryRequestSchema,
+  getExternalQueryResponseSchema,
   getActivePipeline,
   getLatestTrace,
   getPipelineVersions,
@@ -27,6 +29,7 @@ import type {
   ExternalQueryContractDescriptor,
   PipelineGraph,
   PipelineVersionSummary,
+  QueryContractSchemaDocument,
   QueryStageEvent,
   RuntimeHealth,
   Session,
@@ -145,6 +148,8 @@ function buildSurfaceDeploymentChecks(
   startupPolicy: string | null,
   querySurfaceMode: "bundled" | "external" | null,
   queryContract: ExternalQueryContractDescriptor | null,
+  queryRequestSchema: QueryContractSchemaDocument | null,
+  queryResponseSchema: QueryContractSchemaDocument | null,
 ): SurfaceDeploymentCheck[] {
   const consoleOrigin = getUrlOrigin(consoleUrl);
   const queryOrigin = getUrlOrigin(queryUrl);
@@ -212,6 +217,16 @@ function buildSurfaceDeploymentChecks(
         ? "Replacement chat shells should validate the live contract descriptor before trusting the deployed query surface."
         : "Restore GET /v1/chat/contracts/v1 so bundled and client-owned query UIs can verify the live Cortex contract before sending traffic.",
     },
+    {
+      label: "Query contract schemas",
+      status: queryRequestSchema && queryResponseSchema ? "ready" : "degraded",
+      detail: queryRequestSchema && queryResponseSchema
+        ? `Live schemas ${queryRequestSchema.title} and ${queryResponseSchema.title} are available for replacement UI validation.`
+        : "The live replacement-query request/response schemas are unavailable.",
+      remediation: queryRequestSchema && queryResponseSchema
+        ? "Keep the request/response schema endpoints stable so client-owned chat UIs can validate their wire contract against the running package."
+        : "Publish GET /v1/chat/contracts/v1 plus its request/response schema endpoints so replacement UIs can validate the live wire contract before sending traffic.",
+    },
   ];
 }
 
@@ -220,6 +235,17 @@ function buildLoadWarnings(loadFailures: string[]): string | null {
     return null;
   }
   return `Some operator data is unavailable: ${loadFailures.join(" | ")}`;
+}
+
+function summarizeSchemaProperties(
+  schemaDocument: QueryContractSchemaDocument,
+  preferredPropertyOrder: string[],
+): string {
+  const schemaPropertyNames = Object.keys(schemaDocument.properties);
+  const orderedPropertyNames = preferredPropertyOrder.filter((propertyName) =>
+    schemaPropertyNames.includes(propertyName),
+  );
+  return orderedPropertyNames.join(", ");
 }
 
 function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
@@ -374,6 +400,12 @@ export function DeveloperConsole() {
   const [queryContract, setQueryContract] = useState<ExternalQueryContractDescriptor | null>(
     null,
   );
+  const [queryRequestSchema, setQueryRequestSchema] = useState<QueryContractSchemaDocument | null>(
+    null,
+  );
+  const [queryResponseSchema, setQueryResponseSchema] = useState<QueryContractSchemaDocument | null>(
+    null,
+  );
   const [session, setSession] = useState<Session | null>(null);
   const [tracePlayback, setTracePlayback] = useState<QueryStageEvent[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -455,8 +487,26 @@ export function DeveloperConsole() {
       }
       if (contractResult.status === "fulfilled") {
         setQueryContract(contractResult.value);
+        const [requestSchemaResult, responseSchemaResult] = await Promise.allSettled([
+          getExternalQueryRequestSchema(contractResult.value.requestSchemaPath),
+          getExternalQueryResponseSchema(contractResult.value.responseSchemaPath),
+        ]);
+        if (requestSchemaResult.status === "fulfilled") {
+          setQueryRequestSchema(requestSchemaResult.value);
+        } else {
+          setQueryRequestSchema(null);
+          loadFailures.push(`Query request schema: ${requestSchemaResult.reason instanceof Error ? requestSchemaResult.reason.message : "load failed"}`);
+        }
+        if (responseSchemaResult.status === "fulfilled") {
+          setQueryResponseSchema(responseSchemaResult.value);
+        } else {
+          setQueryResponseSchema(null);
+          loadFailures.push(`Query response schema: ${responseSchemaResult.reason instanceof Error ? responseSchemaResult.reason.message : "load failed"}`);
+        }
       } else {
         setQueryContract(null);
+        setQueryRequestSchema(null);
+        setQueryResponseSchema(null);
         loadFailures.push(`Query contract: ${contractResult.reason instanceof Error ? contractResult.reason.message : "load failed"}`);
       }
       if (sessionResult.status === "fulfilled") {
@@ -577,6 +627,8 @@ export function DeveloperConsole() {
     deployedSurfaceConfig.startupPolicy,
     deployedSurfaceConfig.querySurfaceMode,
     queryContract,
+    queryRequestSchema,
+    queryResponseSchema,
   );
   const operatorActionItems = buildOperatorActionItems(
     startupAlerts,
@@ -590,6 +642,12 @@ export function DeveloperConsole() {
     : "/v1/query/{traceId}/events";
   const retrievedEvidence = latestTrace?.retrievedEvidence ?? [];
   const contractHeaderNames = queryContract?.responseHeaders ?? [...EXTERNAL_QUERY_HEADER_NAMES];
+  const requestSchemaPropertySummary = queryRequestSchema
+    ? summarizeSchemaProperties(queryRequestSchema, ["messages", "stream", "cortex"])
+    : "Schema unavailable";
+  const responseSchemaPropertySummary = queryResponseSchema
+    ? summarizeSchemaProperties(queryResponseSchema, ["id", "object", "choices", "x_cortex"])
+    : "Schema unavailable";
 
   return (
     <main className="developer-console">
@@ -1072,6 +1130,31 @@ export function DeveloperConsole() {
                       Required stream value <code>{String(queryContract.requestOptions.streamRequiredValue)}</code>.
                       Citation toggle preserved <code>{String(queryContract.requestOptions.supportsCitationToggle)}</code>.
                     </p>
+                    <strong>Query contract schemas</strong>
+                    <table style={{ marginTop: 10 }}>
+                      <thead>
+                        <tr>
+                          <th>Schema</th>
+                          <th>Path</th>
+                          <th>Title</th>
+                          <th>Top-level properties</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Request</td>
+                          <td><code>{queryContract.requestSchemaPath}</code></td>
+                          <td>{queryRequestSchema?.title ?? "Unavailable"}</td>
+                          <td>{requestSchemaPropertySummary}</td>
+                        </tr>
+                        <tr>
+                          <td>Response</td>
+                          <td><code>{queryContract.responseSchemaPath}</code></td>
+                          <td>{queryResponseSchema?.title ?? "Unavailable"}</td>
+                          <td>{responseSchemaPropertySummary}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                     <strong>Employee-safe fields</strong>
                     <p style={{ marginTop: 6 }}>
                       {queryContract.employeeSafeExtensionFields.map((fieldName) => (

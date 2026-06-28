@@ -27,3 +27,8 @@ export type ExternalChatCompletionResponse = components["schemas"]["ChatCompleti
 export type ExternalQueryContractDescriptor =
   components["schemas"]["ExternalQueryContractDescriptorSchema"];
 export type RetrievedEvidence = components["schemas"]["RetrievedEvidenceSchema"];
+
+export interface QueryContractSchemaDocument {
+  title: string;
+  properties: Record<string, unknown>;
+}

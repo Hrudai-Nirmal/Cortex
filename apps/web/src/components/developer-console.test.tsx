@@ -229,6 +229,8 @@ describe("DeveloperConsole", () => {
             bundledQueryUiAvailable: true,
             traceEventsPathTemplate: "/v1/query/{traceId}/events",
             operatorConsolePath: "/developer",
+            requestSchemaPath: "/v1/chat/contracts/v1/schemas/request",
+            responseSchemaPath: "/v1/chat/contracts/v1/schemas/response",
             responseHeaders: [
               "X-Cortex-Contract-Version",
               "X-Cortex-Trace-Id",
@@ -318,6 +320,34 @@ describe("DeveloperConsole", () => {
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            title: "ChatCompletionRequestSchema",
+            properties: {
+              model: { type: "string" },
+              messages: { type: "array" },
+              stream: { type: "boolean", const: false },
+              cortex: { type: "object" },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            title: "ChatCompletionResponseSchema",
+            properties: {
+              id: { type: "string" },
+              object: { type: "string" },
+              choices: { type: "array" },
+              x_cortex: { $ref: "#/$defs/ExternalQueryMetadataSchema" },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
       );
 
     render(<DeveloperConsole />);
@@ -343,7 +373,12 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Bundled employee shell")).toBeVisible();
     expect(screen.getAllByText("This package ships the built-in query-web employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Contract headers")).toBeVisible();
+    expect(screen.getAllByText("Query contract schemas").length).toBeGreaterThan(0);
     expect(screen.getByText("Request behavior")).toBeVisible();
+    expect(screen.getByText("ChatCompletionRequestSchema")).toBeVisible();
+    expect(screen.getByText("ChatCompletionResponseSchema")).toBeVisible();
+    expect(screen.getByText("messages, stream, cortex")).toBeVisible();
+    expect(screen.getByText("id, object, choices, x_cortex")).toBeVisible();
     expect(screen.getByText("Employee-safe fields")).toBeVisible();
     expect(screen.getByText("Operator-only fields")).toBeVisible();
     expect(screen.getByText("Error statuses")).toBeVisible();
@@ -375,6 +410,7 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Browser host split")).toBeVisible();
     expect(screen.getByText("Startup policy")).toBeVisible();
     expect(screen.getByText("Query contract handshake")).toBeVisible();
+    expect(screen.getAllByText("Query contract schemas").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
     expect(await screen.findByText("Lifecycle queue")).toBeVisible();
     expect(screen.getByText("Promote validated version")).toBeVisible();
@@ -384,7 +420,7 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Rollback ready")).toBeVisible();
     expect(screen.getByRole("button", { name: "Promote" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Roll back" })).toBeVisible();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
   });
 
   it("keeps the console usable when the external query contract endpoint is unavailable", async () => {
@@ -502,7 +538,9 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Operator action queue")).toBeVisible();
     expect(screen.getByText("Startup gate · object-storage")).toBeVisible();
     expect(screen.getAllByText("Query contract handshake").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Query contract schemas").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Restore GET /v1/chat/contracts/v1 so bundled and client-owned query UIs can verify the live Cortex contract before sending traffic.").length).toBeGreaterThan(0);
     expect(screen.getAllByText("The live replacement-query contract descriptor is unavailable.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Publish GET /v1/chat/contracts/v1 plus its request/response schema endpoints so replacement UIs can validate the live wire contract before sending traffic.").length).toBeGreaterThan(0);
   });
 });
