@@ -178,6 +178,8 @@ def buildExternalQueryContractDescriptor() -> ExternalQueryContractDescriptorSch
         bundledQueryUiAvailable=settings.querySurfaceMode == "bundled",
         traceEventsPathTemplate="/v1/query/{traceId}/events",
         operatorConsolePath="/developer",
+        requestSchemaPath="/v1/chat/contracts/v1/schemas/request",
+        responseSchemaPath="/v1/chat/contracts/v1/schemas/response",
         responseHeaders=EXTERNAL_QUERY_CONTRACT_RESPONSE_HEADERS,
         extensionFields=EXTERNAL_QUERY_CONTRACT_EXTENSION_FIELDS,
         employeeSafeExtensionFields=EXTERNAL_QUERY_EMPLOYEE_SAFE_EXTENSION_FIELDS,
@@ -243,6 +245,18 @@ async def getSession(request: Request) -> SessionResponse:
 async def getExternalQueryContract() -> ExternalQueryContractDescriptorSchema:
     """Publish the live stable query-facade contract for replacement client UIs."""
     return buildExternalQueryContractDescriptor()
+
+
+@router.get("/v1/chat/contracts/v1/schemas/request")
+async def getExternalQueryRequestSchema() -> dict[str, object]:
+    """Publish the machine-readable JSON Schema for replacement-query request validation."""
+    return ChatCompletionRequestSchema.model_json_schema(by_alias=True)
+
+
+@router.get("/v1/chat/contracts/v1/schemas/response")
+async def getExternalQueryResponseSchema() -> dict[str, object]:
+    """Publish the machine-readable JSON Schema for replacement-query response validation."""
+    return ChatCompletionResponseSchema.model_json_schema(by_alias=True, mode="serialization")
 
 
 @router.post("/v1/ingestion/text", response_model=IngestTextResponse)

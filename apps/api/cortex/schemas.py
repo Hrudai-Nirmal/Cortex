@@ -186,7 +186,7 @@ class ChatCompletionRequestSchema(BaseModel):
 
     model: str = Field(default="cortex-bounded-rag", min_length=1, max_length=255)
     messages: list[ChatMessageSchema] = Field(min_length=1, max_length=100)
-    stream: bool = False
+    stream: bool = Field(default=False, json_schema_extra={"const": False})
     cortex: ExternalQueryOptionsSchema = Field(default_factory=ExternalQueryOptionsSchema)
 
     @field_validator("messages")
@@ -266,6 +266,8 @@ class ExternalQueryContractDescriptorSchema(BaseModel):
     bundledQueryUiAvailable: bool
     traceEventsPathTemplate: str
     operatorConsolePath: str
+    requestSchemaPath: str
+    responseSchemaPath: str
     responseHeaders: list[str] = Field(min_length=1)
     extensionFields: list[str] = Field(min_length=1)
     employeeSafeExtensionFields: list[str] = Field(min_length=1)

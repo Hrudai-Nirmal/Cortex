@@ -439,6 +439,8 @@ async def testExternalQueryContractDescriptorExposesStableReplacementUiMetadata(
     assert payload["bundledQueryUiAvailable"] is True
     assert payload["traceEventsPathTemplate"] == "/v1/query/{traceId}/events"
     assert payload["operatorConsolePath"] == "/developer"
+    assert payload["requestSchemaPath"] == "/v1/chat/contracts/v1/schemas/request"
+    assert payload["responseSchemaPath"] == "/v1/chat/contracts/v1/schemas/response"
     assert payload["responseHeaders"] == [
         "X-Cortex-Contract-Version",
         "X-Cortex-Trace-Id",
@@ -504,6 +506,33 @@ async def testExternalQueryContractDescriptorReportsClientOwnedQueryShell() -> N
     assert response.status_code == 200
     assert payload["querySurfaceMode"] == "external"
     assert payload["bundledQueryUiAvailable"] is False
+
+
+@pytest.mark.asyncio
+async def testExternalQueryContractSchemaEndpointsExposeStableRequestAndResponseShapes() -> None:
+    """Replacement chat shells should be able to fetch machine-readable request/response schemas."""
+    application = createApp(buildPackageSettings())
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application),
+        base_url="http://testserver",
+    ) as client:
+        requestSchemaResponse = await client.get("/v1/chat/contracts/v1/schemas/request")
+        responseSchemaResponse = await client.get("/v1/chat/contracts/v1/schemas/response")
+
+    requestSchema = requestSchemaResponse.json()
+    responseSchema = responseSchemaResponse.json()
+    assert requestSchemaResponse.status_code == 200
+    assert responseSchemaResponse.status_code == 200
+    assert requestSchema["title"] == "ChatCompletionRequestSchema"
+    assert "messages" in requestSchema["properties"]
+    assert "cortex" in requestSchema["properties"]
+    assert requestSchema["properties"]["stream"]["const"] is False
+    assert responseSchema["title"] == "ChatCompletionResponseSchema"
+    assert "x_cortex" in responseSchema["properties"]
+    responseMetadataSchema = responseSchema["$defs"]["ExternalQueryMetadataSchema"]
+    assert "claims" in responseMetadataSchema["properties"]
+    assert "citations" in responseMetadataSchema["properties"]
 
 
 @pytest.mark.asyncio

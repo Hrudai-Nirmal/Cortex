@@ -26,10 +26,14 @@ def testGeneratedApiContractIncludesExternalChatFacade() -> None:
     assert "userMessageSelectionPolicy: \"last-non-empty-user-message\";" in generatedTypesText
     assert "querySurfaceMode: \"bundled\" | \"external\";" in generatedTypesText
     assert "bundledQueryUiAvailable: boolean;" in generatedTypesText
+    assert "requestSchemaPath: string;" in generatedTypesText
+    assert "responseSchemaPath: string;" in generatedTypesText
     assert "employeeSafeExtensionFields: string[];" in generatedTypesText
     assert "operatorOnlyExtensionFields: string[];" in generatedTypesText
     assert "errorStatuses:" in generatedTypesText
     assert "responseHeaders: string[];" in generatedTypesText
+    assert '"/v1/chat/contracts/v1/schemas/request"' in generatedTypesText
+    assert '"/v1/chat/contracts/v1/schemas/response"' in generatedTypesText
     assert "TraceSummaryResponse" in generatedTypesText
     assert "RetrievedEvidenceSchema" in generatedTypesText
     assert "claims: components[\"schemas\"][\"ClaimSchema\"][];" in generatedTypesText

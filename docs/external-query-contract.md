@@ -34,6 +34,8 @@ descriptor for the replacement-query contract. It publishes:
 - `bundledQueryUiAvailable`
 - `traceEventsPathTemplate`
 - `operatorConsolePath`
+- `requestSchemaPath`
+- `responseSchemaPath`
 - `responseHeaders`
 - `extensionFields`
 - `employeeSafeExtensionFields`
@@ -59,6 +61,9 @@ on and what should remain reserved for elevated debugging:
   or exposes the query host as an API-only contract for a client-owned UI.
 - `bundledQueryUiAvailable` is the matching capability flag for gateways or SDK layers that
   prefer a direct boolean instead of interpreting the surface-mode enum.
+- `requestSchemaPath` and `responseSchemaPath` point at live JSON Schema documents for the
+  exact request and response wire shapes, so replacement UIs can validate against the
+  running package without depending on a full OpenAPI document.
 - `employeeSafeExtensionFields` identifies the `x_cortex` fields a standard employee UI may
   safely use.
 - `operatorOnlyExtensionFields` identifies fields that should remain correlation/debug aids.
@@ -113,6 +118,8 @@ Notes:
 - `GET /v1/query/{traceId}/events` is a builder/operator trace surface, not an employee-client browser API.
 - Replacement employee chat shells should use the returned `traceId` for correlation, feedback, and support escalation rather than attempting to replay trace events directly.
 - The live discovery descriptor always points back to this request shape through `endpointPath` and `method`.
+- The live discovery descriptor also points at `/v1/chat/contracts/v1/schemas/request` for a
+  machine-readable JSON Schema of this exact request body.
 - Replacement UIs should also verify `querySurfaceMode` and `bundledQueryUiAvailable` so they
   know whether they are replacing the employee shell or running alongside the shipped one.
 - The bundled `query-web` surface now validates the response headers (`X-Cortex-*`) against the
@@ -170,6 +177,9 @@ Response headers:
 - `X-Cortex-Route: rag|compute|retrieve-then-compute`
 - `X-Cortex-Abstained: true|false`
 
+The live discovery descriptor also points at `/v1/chat/contracts/v1/schemas/response` for a
+machine-readable JSON Schema of this exact response body.
+
 Stable error meanings advertised through `errorStatuses`:
 
 - `422 invalid_request`: the request shape violates the stable Cortex facade, such as `stream=true`
@@ -223,6 +233,8 @@ Replacement UIs should distinguish these cases from intentional abstention. Abst
 
 - Treat `choices[0].message.content` as display text.
 - Read and validate `requestOptions` before sending traffic from a replacement UI.
+- Read and validate `requestSchemaPath` and `responseSchemaPath` at startup if the client
+  wants machine-readable schema verification against the running package.
 - Read and validate the descriptor’s `responseHeaders`, `evidenceStatuses`, `routes`,
   `abstentionEvidenceStatuses`, and `errorStatuses` before enabling traffic from a replacement UI.
 - Treat `x_cortex.citations` as the source of truth for evidence rendering.

@@ -104,6 +104,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/chat/contracts/v1/schemas/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getexternalqueryrequestschema
+         * @description Publish the machine-readable JSON Schema for replacement-query request validation.
+         */
+        get: operations["getExternalQueryRequestSchema_v1_chat_contracts_v1_schemas_request_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chat/contracts/v1/schemas/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getexternalqueryresponseschema
+         * @description Publish the machine-readable JSON Schema for replacement-query response validation.
+         */
+        get: operations["getExternalQueryResponseSchema_v1_chat_contracts_v1_schemas_response_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ingestion/text": {
         parameters: {
             query?: never;
@@ -571,8 +611,9 @@ export interface components {
             /**
              * Stream
              * @default false
+             * @constant
              */
-            stream: boolean;
+            stream: false;
             cortex?: components["schemas"]["ExternalQueryOptionsSchema"];
         };
         /**
@@ -766,6 +807,10 @@ export interface components {
             traceEventsPathTemplate: string;
             /** Operatorconsolepath */
             operatorConsolePath: string;
+            /** Requestschemapath */
+            requestSchemaPath: string;
+            /** Responseschemapath */
+            responseSchemaPath: string;
             /** Responseheaders */
             responseHeaders: string[];
             /** Extensionfields */
@@ -1574,6 +1619,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExternalQueryContractDescriptorSchema"];
+                };
+            };
+        };
+    };
+    getExternalQueryRequestSchema_v1_chat_contracts_v1_schemas_request_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    getExternalQueryResponseSchema_v1_chat_contracts_v1_schemas_response_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

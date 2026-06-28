@@ -64,6 +64,11 @@ That descriptor now also states whether the deployment ships the bundled employe
 (`querySurfaceMode=bundled`, `bundledQueryUiAvailable=true`) or exposes the query host as
 an API-only contract for a client-owned chat UI (`querySurfaceMode=external`,
 `bundledQueryUiAvailable=false`).
+It also points at live machine-readable request/response JSON Schemas
+(`GET /v1/chat/contracts/v1/schemas/request` and
+`GET /v1/chat/contracts/v1/schemas/response`) so replacement chat shells can validate
+their wire contract against the running package without scraping the full OpenAPI
+document.
 That live descriptor now also publishes the stable request semantics, employee-safe versus
 operator-only `x_cortex` fields, and machine-readable error meanings so third-party chat
 shells can integrate against the running package without reverse-engineering the bundled UI.
