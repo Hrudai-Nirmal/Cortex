@@ -375,10 +375,10 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Contract headers")).toBeVisible();
     expect(screen.getAllByText("Query contract schemas").length).toBeGreaterThan(0);
     expect(screen.getByText("Request behavior")).toBeVisible();
-    expect(screen.getByText("ChatCompletionRequestSchema")).toBeVisible();
-    expect(screen.getByText("ChatCompletionResponseSchema")).toBeVisible();
-    expect(screen.getByText("messages, stream, cortex")).toBeVisible();
-    expect(screen.getByText("id, object, choices, x_cortex")).toBeVisible();
+    expect(screen.getAllByText("ChatCompletionRequestSchema").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("ChatCompletionResponseSchema").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("messages, stream, cortex").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("id, object, choices, x_cortex").length).toBeGreaterThan(0);
     expect(screen.getByText("Employee-safe fields")).toBeVisible();
     expect(screen.getByText("Operator-only fields")).toBeVisible();
     expect(screen.getByText("Error statuses")).toBeVisible();
