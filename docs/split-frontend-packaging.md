@@ -190,6 +190,9 @@ The packaged operator scripts now verify the split-host contract directly:
   host-routed API checks, fixed-console views, and worker-container probes stay aligned
 - `package:status` also prints the live external query-contract summary exported by the query host
 - `package:status` now also prints compact summaries of the live request/response schema endpoints exported for replacement query UIs
+- `package:status` now also emits a single `replacement query contract readiness` summary
+  so operators can see immediately whether the descriptor plus both wire schemas are all
+  live, instead of having to mentally combine three separate sections
 - that contract summary now also includes `querySurfaceMode` and `bundledQueryUiAvailable`
   so operators can confirm whether the running package ships `query-web` or expects a
   client-owned employee shell

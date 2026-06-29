@@ -190,6 +190,36 @@ print_contract_fetch_error() {
   fi
 }
 
+print_query_contract_readiness() {
+  local contract_payload="$1"
+  local request_schema_payload="$2"
+  local response_schema_payload="$3"
+  local status="ready"
+  local missing_parts=()
+
+  if [ -z "$contract_payload" ]; then
+    status="degraded"
+    missing_parts+=("missing contract descriptor")
+  fi
+  if [ -z "$request_schema_payload" ]; then
+    status="degraded"
+    missing_parts+=("missing request schema")
+  fi
+  if [ -z "$response_schema_payload" ]; then
+    status="degraded"
+    missing_parts+=("missing response schema")
+  fi
+
+  echo "replacement query contract readiness:"
+  if [ "$status" = "ready" ]; then
+    echo "  - status: ready"
+    echo "  - detail: descriptor + request schema + response schema are all live"
+    return 0
+  fi
+  echo "  - status: degraded"
+  echo "  - detail: $(IFS=', '; echo "${missing_parts[*]}")"
+}
+
 print_schema_summary() {
   local label="$1"
   local payload="$2"
@@ -373,6 +403,7 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
 fi
 print_contract_summary "$query_contract_payload"
 print_contract_fetch_error "$query_contract_error"
+print_query_contract_readiness "$query_contract_payload" "$query_request_schema_payload" "$query_response_schema_payload"
 print_schema_summary "query request schema" "$query_request_schema_payload"
 print_schema_summary "query response schema" "$query_response_schema_payload"
 print_worker_contract_summary "$worker_startup_payload"

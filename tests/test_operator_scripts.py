@@ -244,6 +244,13 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_contract_summary "$query_contract_payload"' in scriptText
     assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/request"' in scriptText
     assert 'try_read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1/schemas/response"' in scriptText
+    assert 'print_query_contract_readiness "$query_contract_payload" "$query_request_schema_payload" "$query_response_schema_payload"' in scriptText
+    assert "replacement query contract readiness:" in scriptText
+    assert "  - status: ready" in scriptText
+    assert "  - status: degraded" in scriptText
+    assert "missing contract descriptor" in scriptText
+    assert "missing request schema" in scriptText
+    assert "missing response schema" in scriptText
     assert 'query request schema: unavailable' in scriptText
     assert 'query response schema: unavailable' in scriptText
     assert 'print_schema_summary "query request schema" "$query_request_schema_payload"' in scriptText
