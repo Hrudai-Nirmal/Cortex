@@ -164,6 +164,10 @@ The Kubernetes and ECS examples now pin `CORTEX_QUERY_SURFACE_MODE` explicitly a
 Treat that as part of the deployment contract, not an optional override, because it
 controls whether the employee host is a bundled `query-web` surface or a client-owned
 API-only integration boundary.
+For the Kubernetes and OpenShift `external` examples, the employee host intentionally
+exposes only `/v1` and `/health`; `/` stays console-only. If the employee host starts
+serving a browser page at `/`, treat that as package drift and stop the rollout until the
+ingress or Route configuration is corrected.
 
 When a packaged runtime still starts with invalid environment values, the API/worker now
 collapse Pydantic settings validation into a single operator-facing

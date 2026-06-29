@@ -59,6 +59,9 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Operator bootstrap tooling: `.env.package.example`, package up/verify/down scripts, and a deployment runbook for Docker, Kubernetes, OpenShift, and ECS-style host routing.
 - The shipped ECS examples now include both the full split-host package and an API-only external-query variant, so client-owned chat shells have a concrete deployment artifact instead of only prose guidance.
 - The shipped Kubernetes and OpenShift examples now also include API-only external-query variants, so client-owned chat shells have concrete non-ECS deployment artifacts instead of only a general recommendation.
+- Those Kubernetes/OpenShift external-query examples now also keep `/` routed only on the
+  console host; the employee query host exposes `/v1` and `/health` only so the package
+  remains API-only for client-owned chat shells.
 - The local package workflow now mirrors that same split: `CORTEX_QUERY_SURFACE_MODE=bundled|external` selects between the full split-host bundle and a dedicated `docker-compose.package.external-query.yml` package that omits `query-web` while preserving the fixed console, API/worker, and query-host contract surface.
 - Package operator scripts now also fail fast with a clear message when Docker is installed but its daemon/runtime is unavailable, so local client-package debugging does not start with raw socket errors.
 - `package:pull-models` now also fails fast when the deployment is intentionally configured for a remote model endpoint, so operators do not mistakenly preload the bundled local Ollama while the real runtime points somewhere else.

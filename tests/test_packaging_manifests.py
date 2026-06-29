@@ -290,6 +290,27 @@ def testKubernetesExternalQueryManifestSupportsClientOwnedChatUis() -> None:
     assert 'command: ["python", "-m", "cortex.worker", "--check-startup"]' in manifestText
 
 
+def testKubernetesExternalQueryManifestKeepsTheQueryHostApiOnly() -> None:
+    """The external-query ingress should expose the employee host only for API and health paths."""
+    manifestText = (
+        Path(__file__).resolve().parents[1]
+        / "infra"
+        / "k8s"
+        / "cortex-package-external-query.yaml"
+    ).read_text(encoding="utf-8")
+    consoleHostSection = manifestText.split("- host: cortex-console.example.com", maxsplit=1)[1].split(
+        "- host: cortex-app.example.com",
+        maxsplit=1,
+    )[0]
+    queryHostSection = manifestText.split("- host: cortex-app.example.com", maxsplit=1)[1]
+    assert re.search(r"(?m)^ {10}- path: /$", consoleHostSection)
+    assert "name: cortex-console-web" in consoleHostSection
+    assert re.search(r"(?m)^ {10}- path: /v1$", queryHostSection)
+    assert re.search(r"(?m)^ {10}- path: /health$", queryHostSection)
+    assert not re.search(r"(?m)^ {10}- path: /$", queryHostSection)
+    assert "name: cortex-console-web" not in queryHostSection
+
+
 def testOpenShiftExternalQueryRoutesSupportClientOwnedChatUis() -> None:
     """OpenShift examples should ship a console-plus-API route set for client-owned query shells."""
     routeManifestText = (
