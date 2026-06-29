@@ -741,6 +741,7 @@ async def testDevelopmentSeedEndpointSkipsSampleTraceGeneration(
         yield StubSession()
 
     async def fakeSeedFixtures(session, settings, modelProvider, *, includeSampleTraces: bool = True):
+        assert modelProvider is None
         assert includeSampleTraces is False
         return SeedFixturesResponse(
             seededDocuments=9,

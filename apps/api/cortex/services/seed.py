@@ -12,6 +12,7 @@ from cortex.config import Settings
 from cortex.domain.chunking import ChunkerConfig
 from cortex.schemas import AccessScopeSchema, QueryRequest, SeedFixturesResponse
 from cortex.services.ingestion import IngestionService, PostgresIngestionRepository
+from cortex.errors import InputValidationError
 from cortex.services.model_provider import OllamaModelProvider
 from cortex.services.query import QueryService
 
@@ -158,7 +159,7 @@ def buildSeedDocuments(settings: Settings) -> tuple[SeedDocument, ...]:
 async def seedFixtures(
     session: AsyncSession,
     settings: Settings,
-    modelProvider: OllamaModelProvider,
+    modelProvider: OllamaModelProvider | None,
     *,
     includeSampleTraces: bool = True,
 ) -> SeedFixturesResponse:
@@ -168,7 +169,11 @@ async def seedFixtures(
         embeddingProvider=modelProvider,
         batchSize=50,
     )
-    queryService = QueryService(session=session, settings=settings, modelProvider=modelProvider)
+    queryService = None
+    if includeSampleTraces:
+        if modelProvider is None:
+            raise InputValidationError("sample trace generation requires a live model provider")
+        queryService = QueryService(session=session, settings=settings, modelProvider=modelProvider)
     seededEnterpriseIds: set[UUID] = set()
     for seedDocument in buildSeedDocuments(settings):
         await ingestionService.ingestText(
@@ -188,6 +193,7 @@ async def seedFixtures(
         seededEnterpriseIds.add(seedDocument.enterpriseId or settings.enterpriseId)
     traceCount = 0
     if includeSampleTraces:
+        assert queryService is not None
         for queryText in (
             "What are our retentin rules?",
             "What is the total from the revenue worksheet values?",

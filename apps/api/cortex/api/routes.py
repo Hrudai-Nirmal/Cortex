@@ -747,7 +747,7 @@ async def seedDevelopmentFixtures(
         response = await seedFixtures(
             session,
             settings,
-            buildModelProvider(settings),
+            None,
             includeSampleTraces=False,
         )
         await persistControlPlaneAudit(
