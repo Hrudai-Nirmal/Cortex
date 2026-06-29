@@ -182,6 +182,8 @@ The package now includes:
 - package bootstrap/status/verify now also prove that API-only host is still the routed Cortex
   query surface via `X-Cortex-Surface: query`, so operators can distinguish an intentional
   query-host `404` from a generic edge or default-host failure
+- package bootstrap now also checks that the live query contract advertises the expected
+  `querySurfaceMode` and `bundledQueryUiAvailable` values before the rollout is considered healthy
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
 - the fixed console now also shows that shared worker-startup contract directly from
   `GET /health/worker-startup`, including whether the durable loop is blocked during

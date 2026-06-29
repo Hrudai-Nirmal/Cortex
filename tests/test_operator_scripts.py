@@ -197,6 +197,9 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
     assert 'assert_external_query_root_api_only "$CORTEX_QUERY_HOST"' in scriptText
     assert 'external query host should return HTTP 404 at / but returned ${status_code}' in scriptText
+    assert 'assert_query_contract_mode "$CORTEX_QUERY_HOST" "$CORTEX_QUERY_SURFACE_MODE"' in scriptText
+    assert 'query contract surface mode ${expected_mode}' in scriptText
+    assert 'bundledQueryUiAvailable=${expected_bundled_availability}' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'wait_for_worker_startup_check' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText

@@ -240,6 +240,31 @@ get_json() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+assert_query_contract_mode() {
+  local host="$1"
+  local expected_mode="$2"
+  local expected_bundled_availability="false"
+  local contract_payload=""
+
+  if [ "$expected_mode" = "bundled" ]; then
+    expected_bundled_availability="true"
+  fi
+
+  contract_payload="$(get_json "$host" "/v1/chat/contracts/v1")"
+  if ! printf "%s" "$contract_payload" | grep -q "\"querySurfaceMode\":\"${expected_mode}\""; then
+    echo "Package startup failed: query contract surface mode ${expected_mode} was not advertised by ${host}." >&2
+    printf "%s\n" "$contract_payload" >&2
+    print_compose_diagnostics
+    exit 1
+  fi
+  if ! printf "%s" "$contract_payload" | grep -q "\"bundledQueryUiAvailable\":${expected_bundled_availability}"; then
+    echo "Package startup failed: query contract did not advertise bundledQueryUiAvailable=${expected_bundled_availability} for ${expected_mode} mode." >&2
+    printf "%s\n" "$contract_payload" >&2
+    print_compose_diagnostics
+    exit 1
+  fi
+}
+
 wait_for_health_ready() {
   local host="$1"
   local path="$2"
@@ -412,6 +437,7 @@ else
   assert_external_query_root_api_only "$CORTEX_QUERY_HOST"
 fi
 wait_for_query_contract
+assert_query_contract_mode "$CORTEX_QUERY_HOST" "$CORTEX_QUERY_SURFACE_MODE"
 wait_for_worker_startup_check
 
 echo "Package is up."

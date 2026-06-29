@@ -210,6 +210,9 @@ dedicated `docker-compose.package.external-query.yml` bundle. In that mode Corte
 verifies the query-host `startup`, `ready`, and `GET /v1/chat/contracts/v1` API
 boundary, but it intentionally skips bundled `query-web` HTML/runtime-config checks
 because the employee browser shell is client-owned and shipped outside the package.
+Bootstrap now also checks that the live contract advertises the expected
+`querySurfaceMode` and `bundledQueryUiAvailable` values for that chosen mode before the
+package is treated as healthy.
 
 The package also runs database migrations before `api` and `worker` proceed.
 The packaged worker now publishes its own exec-style startup contract through
