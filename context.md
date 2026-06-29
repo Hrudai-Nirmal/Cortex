@@ -38,6 +38,9 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - The developer console settings lane now also builds an operator action queue from startup blockers, live runtime degradations, and degraded surface-contract checks, so deployment troubleshooting starts with a prioritized fix list instead of requiring operators to scan every table manually.
 - The developer console settings lane now also fetches and summarizes the live replacement-query request/response schemas, so operators can inspect the concrete client-owned chat UI wire shape from the fixed console instead of relying on package scripts or prose docs alone.
 - The developer console source-operations lane now also builds an operator queue from failed, quarantined, processing, and stale-live-version conditions, so source onboarding drift is visible as actions instead of only raw version metadata.
+- The developer console durable-jobs lane now also derives a small operator queue from
+  persisted lock age and retry count, so stuck running work and retry pressure show up as
+  actions instead of requiring operators to infer them from timestamps manually.
 - The developer console source and durable-job detail panes now keep polling their selected persisted records while the surrounding lists refresh, so operator drill-down stays truthful during processing, activation, and failure transitions instead of freezing on stale detail state.
 - Multi-image frontend packaging with separate console/query Vite builds, static frontend Docker images, edge Nginx host routing, and package/Kubernetes deployment manifests.
 - The Kubernetes package example now models client-owned domains, shared non-secret config, secret injection, and persistent object storage instead of baking in development hostnames.

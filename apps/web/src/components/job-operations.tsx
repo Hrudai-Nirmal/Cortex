@@ -5,9 +5,65 @@ import { ArrowsLeftRight, Clock, WarningCircle } from "@phosphor-icons/react";
 import { getJobs, getJobStatus } from "../lib/api-client";
 import type { JobStatus, JobSummary } from "../types";
 
+const STALE_RUNNING_JOB_MINUTES = 15;
+const RETRY_PRESSURE_ATTEMPTS = 2;
+
 interface JobOperationsProps {
   enterpriseId: string;
   highlightedJobId: string | null;
+}
+
+interface JobOperatorActionItem {
+  title: string;
+  detail: string;
+}
+
+function getMinutesSince(timestamp: string | null | undefined): number | null {
+  if (!timestamp) {
+    return null;
+  }
+  const timestampValue = new Date(timestamp).getTime();
+  if (Number.isNaN(timestampValue)) {
+    return null;
+  }
+  return Math.max(0, Math.round((Date.now() - timestampValue) / 60000));
+}
+
+function formatDurationMinutes(durationMinutes: number | null): string {
+  if (durationMinutes == null) {
+    return "—";
+  }
+  if (durationMinutes < 60) {
+    return `${durationMinutes}m`;
+  }
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = durationMinutes % 60;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+}
+
+function buildJobOperatorActionItems(selectedJob: JobStatus | null): JobOperatorActionItem[] {
+  if (!selectedJob) {
+    return [];
+  }
+  const actionItems: JobOperatorActionItem[] = [];
+  const lockAgeMinutes = getMinutesSince(selectedJob.lockedAt);
+  if (
+    selectedJob.status === "running"
+    && lockAgeMinutes != null
+    && lockAgeMinutes >= STALE_RUNNING_JOB_MINUTES
+  ) {
+    actionItems.push({
+      title: "Investigate stale running job",
+      detail: `Locked for ${formatDurationMinutes(lockAgeMinutes)}. Check worker health, startup gate, and the source diagnostics before retrying.`,
+    });
+  }
+  if (selectedJob.attempts >= RETRY_PRESSURE_ATTEMPTS && selectedJob.lastError) {
+    actionItems.push({
+      title: "Review retry pressure",
+      detail: `${selectedJob.attempts} attempts with last error: ${selectedJob.lastError}. Repair the root cause before more retries.`,
+    });
+  }
+  return actionItems;
 }
 
 /** Render the newest persisted worker jobs with their status and failure detail. */
@@ -21,6 +77,9 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
   const runningCount = jobs.filter((job) => job.status === "running").length;
   const failedCount = jobs.filter((job) => job.status === "failed").length;
   const completedCount = jobs.filter((job) => job.status === "completed").length;
+  const selectedJobQueueAge = formatDurationMinutes(getMinutesSince(selectedJob?.availableAt));
+  const selectedJobLockAge = formatDurationMinutes(getMinutesSince(selectedJob?.lockedAt));
+  const operatorActionItems = buildJobOperatorActionItems(selectedJob);
   const attentionJob = jobs.find((job) => job.status === "failed") ?? jobs.find((job) => job.status === "running") ?? null;
 
   useEffect(() => {
@@ -125,6 +184,22 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
           </div>
         </div>
       ) : null}
+      {operatorActionItems.length > 0 ? (
+        <div className="source-form-card" style={{ marginBottom: 16 }}>
+          <div className="source-form-card__heading">
+            <WarningCircle aria-hidden size={18} />
+            <strong>Job operator queue</strong>
+          </div>
+          <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+            {operatorActionItems.map((operatorActionItem) => (
+              <li key={operatorActionItem.title} style={{ marginBottom: 8 }}>
+                <strong>{operatorActionItem.title}</strong>
+                <div>{operatorActionItem.detail}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <table>
         <thead>
           <tr>
@@ -180,6 +255,8 @@ export function JobOperations({ enterpriseId, highlightedJobId }: JobOperationsP
               <div><dt>Available</dt><dd>{new Date(selectedJob.availableAt).toLocaleString()}</dd></div>
               <div><dt>Locked</dt><dd>{selectedJob.lockedAt ? new Date(selectedJob.lockedAt).toLocaleString() : "not locked"}</dd></div>
               <div><dt>Updated</dt><dd>{new Date(selectedJob.updatedAt).toLocaleString()}</dd></div>
+              <div><dt>Queue age</dt><dd>{selectedJobQueueAge}</dd></div>
+              <div><dt>Lock age</dt><dd>{selectedJobLockAge}</dd></div>
               <div><dt>Document</dt><dd>{selectedJob.documentId ?? "—"}</dd></div>
               <div><dt>Version</dt><dd>{selectedJob.documentVersionId ?? "—"}</dd></div>
               <div><dt>Source</dt><dd>{selectedJob.sourceDisplayName ?? "—"}</dd></div>

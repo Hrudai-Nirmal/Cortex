@@ -17,6 +17,67 @@ afterEach(() => {
 });
 
 describe("JobOperations", () => {
+  it("surfaces stale running locks and retry pressure as operator actions", async () => {
+    const currentTime = Date.now();
+    const lockedAtIso = new Date(currentTime - (25 * 60 * 1000)).toISOString();
+    const availableAtIso = new Date(currentTime - (30 * 60 * 1000)).toISOString();
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              jobId: "50000000-0000-0000-0000-000000000010",
+              jobType: "ingestion.source",
+              status: "running",
+              attempts: 3,
+              updatedAt: lockedAtIso,
+              lastError: "Docling timed out twice before this retry.",
+              documentId: "30000000-0000-0000-0000-000000000010",
+              sourceDisplayName: "Policy Rollup",
+            },
+          ]),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            jobId: "50000000-0000-0000-0000-000000000010",
+            enterpriseId: "00000000-0000-0000-0000-000000000001",
+            jobType: "ingestion.source",
+            status: "running",
+            attempts: 3,
+            availableAt: availableAtIso,
+            lockedAt: lockedAtIso,
+            lastError: "Docling timed out twice before this retry.",
+            documentId: "30000000-0000-0000-0000-000000000010",
+            documentVersionId: "40000000-0000-0000-0000-000000000010",
+            sourceDisplayName: "Policy Rollup",
+            updatedAt: lockedAtIso,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+    render(
+      <JobOperations
+        enterpriseId="00000000-0000-0000-0000-000000000001"
+        highlightedJobId={null}
+      />,
+    );
+
+    expect(await screen.findByText("Policy Rollup")).toBeVisible();
+    expect(await screen.findByText("Job operator queue")).toBeVisible();
+    expect(screen.getByText("Investigate stale running job")).toBeVisible();
+    expect(screen.getByText("Review retry pressure")).toBeVisible();
+    expect(screen.getByText("Locked for 25m. Check worker health, startup gate, and the source diagnostics before retrying.")).toBeVisible();
+    expect(screen.getByText("3 attempts with last error: Docling timed out twice before this retry.. Repair the root cause before more retries.")).toBeVisible();
+    expect(screen.getByText("Lock age")).toBeVisible();
+    expect(screen.getByText("25m")).toBeVisible();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
   it("shows failed durable jobs with their last error", async () => {
     fetchMock
       .mockResolvedValueOnce(

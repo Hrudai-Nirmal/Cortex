@@ -117,6 +117,9 @@ and launches the API, worker, console, and app surfaces as local background proc
 - The console settings lane now also separates the fail-closed startup contract from live runtime readiness, so operators can distinguish static package boot blockers from live dependency regressions without leaving the fixed console.
 - The console settings lane now also builds an operator action queue from startup blockers, runtime degradations, and surface-contract failures so deployment troubleshooting starts with an explicit fix list instead of a table hunt.
 - The source operations lane now also builds an operator queue for failed, quarantined, processing, and stale-live-version onboarding states so source triage starts with actions instead of raw diagnostics.
+- The durable jobs lane now also turns persisted lock age and retry count into a small
+  operator queue, so stuck workers and retry storms are visible before operators start
+  clicking through raw job rows.
 - The selected source-detail and job-detail panes now keep polling their persisted records while the lists refresh, so operators see activation/failure transitions in place instead of opening a stale detail view and waiting for a manual reselection.
 - Supported source formats: PDF, DOCX, HTML, TXT/Markdown, and CSV.
 - Uploads are stored once by raw SHA-256 beneath `CORTEX_OBJECT_STORAGE_ROOT`, then ingested through durable jobs.
