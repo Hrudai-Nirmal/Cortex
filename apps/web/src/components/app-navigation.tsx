@@ -4,48 +4,44 @@ import { useEffect, useState } from "react";
 import {
   ArrowsLeftRight,
   BookOpenText,
-  BracketsCurly,
   ChartLineUp,
   ChatCircleDots,
   Database,
   FileMagnifyingGlass,
-  Fingerprint,
   Gauge,
   GearSix,
   Graph,
-  ShieldCheck,
   UserCircle,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { getQueryPublicUrl } from "../config";
 import { getSession, getStartupHealth } from "../lib/api-client";
-import type { RuntimeHealth, Session, Surface } from "../types";
+import type { DeveloperWorkspaceTab, RuntimeHealth, Session, Surface } from "../types";
 
 interface AppNavigationProps {
   activeSurface: Surface;
   onSurfaceChange?: (surface: Surface) => void;
+  activeDeveloperSection?: DeveloperWorkspaceTab;
+  onDeveloperSectionChange?: (section: DeveloperWorkspaceTab) => void;
 }
 
 interface NavItem {
   label: string;
   icon: Icon;
-  isActive?: boolean;
+  section: DeveloperWorkspaceTab;
 }
 
 const developerItems: NavItem[] = [
-  { label: "Overview", icon: Gauge },
-  { label: "Pipelines", icon: Graph, isActive: true },
-  { label: "Executions", icon: ArrowsLeftRight },
-  { label: "Traces", icon: FileMagnifyingGlass },
-  { label: "Evaluations", icon: ChartLineUp },
-  { label: "Sources", icon: Database },
-  { label: "Models", icon: BracketsCurly },
+  { label: "Graph", icon: Graph, section: "Graph" },
+  { label: "Sources", icon: Database, section: "Sources" },
+  { label: "Jobs", icon: ArrowsLeftRight, section: "Jobs" },
+  { label: "Configuration", icon: Gauge, section: "Configuration" },
+  { label: "Evaluations", icon: ChartLineUp, section: "Evaluations" },
+  { label: "Versions", icon: FileMagnifyingGlass, section: "Versions" },
 ];
 
 const governanceItems: NavItem[] = [
-  { label: "Access", icon: Fingerprint },
-  { label: "Policies", icon: ShieldCheck },
-  { label: "Audit log", icon: BookOpenText },
+  { label: "Settings", icon: GearSix, section: "Settings" },
 ];
 
 function getRuntimeQueryPublicUrl(runtimeHealth: RuntimeHealth | null): string | null {
@@ -59,22 +55,34 @@ function getRuntimeQueryPublicUrl(runtimeHealth: RuntimeHealth | null): string |
   return queryMatch?.[1] ?? null;
 }
 
-function renderNavItem(item: NavItem) {
+function renderNavItem(
+  item: NavItem,
+  activeDeveloperSection: DeveloperWorkspaceTab,
+  onDeveloperSectionChange?: (section: DeveloperWorkspaceTab) => void,
+) {
   const ItemIcon = item.icon;
+  const isActive = item.section === activeDeveloperSection;
   return (
     <button
-      className={`nav-item${item.isActive ? " nav-item--active" : ""}`}
+      aria-current={isActive ? "page" : undefined}
+      className={`nav-item${isActive ? " nav-item--active" : ""}`}
       key={item.label}
       type="button"
+      onClick={() => onDeveloperSectionChange?.(item.section)}
     >
-      <ItemIcon aria-hidden size={17} weight={item.isActive ? "duotone" : "regular"} />
+      <ItemIcon aria-hidden size={17} weight={isActive ? "duotone" : "regular"} />
       <span>{item.label}</span>
     </button>
   );
 }
 
 /** Render navigation appropriate to the currently selected product surface. */
-export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationProps) {
+export function AppNavigation({
+  activeSurface,
+  onSurfaceChange,
+  activeDeveloperSection = "Graph",
+  onDeveloperSectionChange,
+}: AppNavigationProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [runtimeQueryPublicUrl, setRuntimeQueryPublicUrl] = useState<string | null>(null);
   const fallbackQueryPublicUrl = getQueryPublicUrl();
@@ -148,9 +156,17 @@ export function AppNavigation({ activeSurface, onSurfaceChange }: AppNavigationP
     <aside className="developer-navigation">
       <div className="brand">Cortex</div>
       <div className="nav-section-label">Operations</div>
-      <nav aria-label="Developer operations">{developerItems.map(renderNavItem)}</nav>
+      <nav aria-label="Developer operations">
+        {developerItems.map((item) =>
+          renderNavItem(item, activeDeveloperSection, onDeveloperSectionChange),
+        )}
+      </nav>
       <div className="nav-section-label nav-section-label--spaced">Governance</div>
-      <nav aria-label="Governance">{governanceItems.map(renderNavItem)}</nav>
+      <nav aria-label="Governance">
+        {governanceItems.map((item) =>
+          renderNavItem(item, activeDeveloperSection, onDeveloperSectionChange),
+        )}
+      </nav>
       <div className="developer-navigation__footer">
         <a className="surface-switch" href={runtimeQueryPublicUrl ?? fallbackQueryPublicUrl}>
           <ChatCircleDots aria-hidden size={17} /> Open employee view

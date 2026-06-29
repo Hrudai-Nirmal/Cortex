@@ -29,6 +29,19 @@ afterEach(() => {
 });
 
 describe("DeveloperConsole", () => {
+  it("supports a controlled active tab so shared navigation can drive the workspace", async () => {
+    fetchMock.mockRejectedValue(new Error("developer console background fetch is unavailable"));
+
+    render(<DeveloperConsole activeTab="Sources" />);
+
+    expect(screen.getByRole("button", { name: "Sources" })).toHaveClass("is-active");
+    expect(screen.getByText("Upload source")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ Node" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByRole("alert").length).toBeGreaterThan(0);
+    });
+  });
+
   it("loads the active pipeline and latest persisted trace", async () => {
     fetchMock
       .mockResolvedValueOnce(

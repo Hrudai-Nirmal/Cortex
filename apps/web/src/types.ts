@@ -3,6 +3,14 @@
 import type { components } from "./generated/cortex-api";
 
 export type Surface = "developer" | "query";
+export type DeveloperWorkspaceTab =
+  | "Graph"
+  | "Sources"
+  | "Jobs"
+  | "Configuration"
+  | "Evaluations"
+  | "Versions"
+  | "Settings";
 
 export type Citation = components["schemas"]["CitationSchema"];
 export type Claim = components["schemas"]["ClaimSchema"];

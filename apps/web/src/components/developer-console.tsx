@@ -27,6 +27,7 @@ import {
 } from "../lib/api-client";
 import { getConsolePublicUrl, getQueryPublicUrl } from "../config";
 import type {
+  DeveloperWorkspaceTab,
   ExternalQueryContractDescriptor,
   PipelineGraph,
   PipelineVersionSummary,
@@ -64,6 +65,21 @@ const inspectorContent: Record<string, { title: string; type: string; detail: st
   "reranker-model": { title: "Reranker Model", type: "Model provider", detail: "Pinned local cross-encoder applied to no more than 40 candidates" },
   abstain: { title: "Insufficient Evidence", type: "Answer policy", detail: "Return no answer when no independently supported claim passes its gate" },
 };
+
+const developerWorkspaceTabs: DeveloperWorkspaceTab[] = [
+  "Graph",
+  "Sources",
+  "Jobs",
+  "Configuration",
+  "Evaluations",
+  "Versions",
+  "Settings",
+] as const;
+
+interface DeveloperConsoleProps {
+  activeTab?: DeveloperWorkspaceTab;
+  onActiveTabChange?: (tab: DeveloperWorkspaceTab) => void;
+}
 
 interface SurfaceDeploymentCheck {
   label: string;
@@ -486,9 +502,12 @@ function buildReleaseGateItems(
 }
 
 /** Render pipeline editing, inspection, publishing, and trace controls for builders. */
-export function DeveloperConsole() {
+export function DeveloperConsole({
+  activeTab: controlledActiveTab,
+  onActiveTabChange,
+}: DeveloperConsoleProps) {
   const [selectedNodeId, setSelectedNodeId] = useState("rerank");
-  const [activeTab, setActiveTab] = useState("Graph");
+  const [internalActiveTab, setInternalActiveTab] = useState<DeveloperWorkspaceTab>("Graph");
   const [publishState, setPublishState] = useState<"saved" | "validating" | "publishing" | "published">("saved");
   const [pipeline, setPipeline] = useState<PipelineGraph | null>(null);
   const [pipelineVersions, setPipelineVersions] = useState<PipelineVersionSummary[]>([]);
@@ -512,6 +531,7 @@ export function DeveloperConsole() {
   const traceSubscriptionRef = useRef<(() => void) | null>(null);
   const selectedInspector = useMemo(() => inspectorContent[selectedNodeId], [selectedNodeId]);
   const displayedEvents = tracePlayback.length > 0 ? tracePlayback : latestTrace?.stageEvents ?? [];
+  const activeTab = controlledActiveTab ?? internalActiveTab;
   const startupAlerts = getNonReadyComponents(startupHealth);
   const runtimeAlerts = getNonReadyComponents(runtimeHealth);
   const modelProfile = findRuntimeComponent(runtimeHealth, "model-profile");
@@ -775,6 +795,13 @@ export function DeveloperConsole() {
           ? "Blocked during startup-safe checks."
           : "Blocked while collecting worker startup readiness.";
 
+  function handleTabChange(tab: DeveloperWorkspaceTab): void {
+    if (controlledActiveTab === undefined) {
+      setInternalActiveTab(tab);
+    }
+    onActiveTabChange?.(tab);
+  }
+
   return (
     <main className="developer-console">
       <header className="developer-header">
@@ -794,8 +821,16 @@ export function DeveloperConsole() {
       </header>
 
       <div className="developer-tabs" role="tablist" aria-label="Pipeline workspace">
-        {["Graph", "Sources", "Jobs", "Configuration", "Evaluations", "Versions", "Settings"].map((tab) => (
-          <button className={activeTab === tab ? "is-active" : ""} type="button" key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>
+        {developerWorkspaceTabs.map((tab) => (
+          <button
+            aria-selected={activeTab === tab}
+            className={activeTab === tab ? "is-active" : ""}
+            type="button"
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+          >
+            {tab}
+          </button>
         ))}
         <div className="metric-strip">
           <span><small>Startup</small><strong>{packageReadinessStatus}</strong></span>
