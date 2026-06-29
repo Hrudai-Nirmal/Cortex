@@ -265,6 +265,25 @@ assert_query_contract_mode() {
   fi
 }
 
+assert_query_contract_schemas() {
+  local host="$1"
+  local contract_payload=""
+
+  contract_payload="$(get_json "$host" "/v1/chat/contracts/v1")"
+  if ! printf "%s" "$contract_payload" | grep -q '"requestSchemaPath":"/v1/chat/contracts/v1/schemas/request"'; then
+    echo "Package startup failed: query contract request schema path /v1/chat/contracts/v1/schemas/request was not advertised by ${host}." >&2
+    printf "%s\n" "$contract_payload" >&2
+    print_compose_diagnostics
+    exit 1
+  fi
+  if ! printf "%s" "$contract_payload" | grep -q '"responseSchemaPath":"/v1/chat/contracts/v1/schemas/response"'; then
+    echo "Package startup failed: query contract response schema path /v1/chat/contracts/v1/schemas/response was not advertised by ${host}." >&2
+    printf "%s\n" "$contract_payload" >&2
+    print_compose_diagnostics
+    exit 1
+  fi
+}
+
 wait_for_health_ready() {
   local host="$1"
   local path="$2"
@@ -340,6 +359,13 @@ wait_for_worker_startup_check() {
 
 wait_for_query_contract() {
   wait_for_endpoint "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1" '"contractVersion":"v1"' 40
+}
+
+wait_for_query_contract_schemas() {
+  local host="$1"
+
+  wait_for_endpoint "$host" "/v1/chat/contracts/v1/schemas/request" '"title":"ChatCompletionRequestSchema"' 40
+  wait_for_endpoint "$host" "/v1/chat/contracts/v1/schemas/response" '"title":"ChatCompletionResponseSchema"' 40
 }
 
 require_command docker
@@ -438,6 +464,8 @@ else
 fi
 wait_for_query_contract
 assert_query_contract_mode "$CORTEX_QUERY_HOST" "$CORTEX_QUERY_SURFACE_MODE"
+assert_query_contract_schemas "$CORTEX_QUERY_HOST"
+wait_for_query_contract_schemas "$CORTEX_QUERY_HOST"
 wait_for_worker_startup_check
 
 echo "Package is up."

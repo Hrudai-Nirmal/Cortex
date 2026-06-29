@@ -252,6 +252,10 @@ configure non-HTTPS public browser URLs, append a path to a public surface URL, 
 the model endpoint at a public host without explicitly allowing that dependency, or use
 a non-absolute object-storage mount path.
 
+Package bootstrap now also requires the live external query contract to publish both the
+request and response schema endpoints it advertises, so replacement employee UIs do not
+start integrating against a descriptor whose wire schemas are missing.
+
 When the package still cannot become healthy, `pnpm package:up` now prints the current
 Compose service state plus recent `api`, `worker`, and `edge` logs so operators are not
 left guessing whether the failure happened in static config, API startup, or the routed edge.

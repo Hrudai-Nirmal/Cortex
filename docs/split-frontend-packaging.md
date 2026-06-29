@@ -164,6 +164,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - when `CORTEX_QUERY_SURFACE_MODE=external`, `package:up` instead proves the employee host
   is API-only by requiring `GET /` to return `404` while still carrying
   `X-Cortex-Surface: query`
+- `package:up` now also waits for the live replacement-query request/response schema
+  endpoints and fails if the contract descriptor stops advertising their stable paths,
+  so client-owned employee UIs never inherit a half-published wire contract
 - package helper scripts now fail early with a clear operator message when Docker is
   installed but the daemon/runtime is not reachable
 - `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints

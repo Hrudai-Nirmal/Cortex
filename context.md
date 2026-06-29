@@ -116,6 +116,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - `package:up` now also validates that `GET /v1/chat/contracts/v1` advertises the expected
   `querySurfaceMode` and `bundledQueryUiAvailable` values for the chosen package mode, so
   bootstrap catches surface-contract drift before operators trust the rollout.
+- `package:up` now also waits for the live replacement-query request/response schema
+  endpoints and fails if the contract descriptor stops advertising their stable schema
+  paths, so packaged client rollouts cannot pass bootstrap with a half-published external
+  chat contract.
 - `package:status` now also prints the query-host root response code in `external` mode so
   operators can confirm the employee surface is intentionally API-only without probing the
   edge proxy by hand.

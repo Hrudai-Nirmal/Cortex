@@ -198,6 +198,12 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'assert_external_query_root_api_only "$CORTEX_QUERY_HOST"' in scriptText
     assert 'external query host should return HTTP 404 at / but returned ${status_code}' in scriptText
     assert 'assert_query_contract_mode "$CORTEX_QUERY_HOST" "$CORTEX_QUERY_SURFACE_MODE"' in scriptText
+    assert 'assert_query_contract_schemas "$CORTEX_QUERY_HOST"' in scriptText
+    assert 'query contract request schema path /v1/chat/contracts/v1/schemas/request' in scriptText
+    assert 'query contract response schema path /v1/chat/contracts/v1/schemas/response' in scriptText
+    assert 'wait_for_query_contract_schemas "$CORTEX_QUERY_HOST"' in scriptText
+    assert 'wait_for_endpoint "$host" "/v1/chat/contracts/v1/schemas/request" \'"title":"ChatCompletionRequestSchema"\' 40' in scriptText
+    assert 'wait_for_endpoint "$host" "/v1/chat/contracts/v1/schemas/response" \'"title":"ChatCompletionResponseSchema"\' 40' in scriptText
     assert 'query contract surface mode ${expected_mode}' in scriptText
     assert 'bundledQueryUiAvailable=${expected_bundled_availability}' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
