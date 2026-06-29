@@ -41,6 +41,8 @@ The console settings view now foregrounds:
 - packaged identity profile
 - packaged query-surface mode (`bundled` or `external`)
 - live replacement-query contract metadata from the running API
+- one replacement-query contract readiness summary that tells operators whether the live
+  descriptor plus both request/response schemas are all available
 - one surface-deployment contract table that makes split-host isolation, startup policy,
   and replacement-query contract availability explicit in a single operator view
 - distinct startup-contract and live-readiness sections so operators can see whether

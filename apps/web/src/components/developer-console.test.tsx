@@ -397,6 +397,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Version v4 is validated but not yet activated.")).toBeVisible();
     expect(screen.getByText("Bundled employee shell")).toBeVisible();
     expect(screen.getAllByText("This package ships the built-in query-web employee UI.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Replacement query contract readiness")).toBeVisible();
+    expect(screen.getByText("Live descriptor plus request/response schemas are all available for replacement employee UIs.")).toBeVisible();
     expect(screen.getByText("Contract headers")).toBeVisible();
     expect(screen.getAllByText("Query contract schemas").length).toBeGreaterThan(0);
     expect(screen.getByText("Request behavior")).toBeVisible();
@@ -577,6 +579,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("5")).toBeVisible();
     expect(screen.getByText("External client-owned employee shell")).toBeVisible();
     expect(screen.getAllByText("This package exposes the query host as an API-only surface for a client-owned employee UI.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Replacement query contract readiness")).toBeVisible();
+    expect(screen.getByText("Replacement query contract is degraded because the live contract descriptor is unavailable, the request schema is unavailable, and the response schema is unavailable.")).toBeVisible();
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
     expect(screen.getByText("Worker startup contract")).toBeVisible();
     expect(screen.getByText("Ready through shared startup and live-readiness checks.")).toBeVisible();

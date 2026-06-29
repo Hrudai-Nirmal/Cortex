@@ -250,6 +250,40 @@ function summarizeSchemaProperties(
   return orderedPropertyNames.join(", ");
 }
 
+function joinHumanReadableList(listItems: string[]): string {
+  if (listItems.length <= 1) {
+    return listItems[0] ?? "";
+  }
+  if (listItems.length === 2) {
+    return `${listItems[0]} and ${listItems[1]}`;
+  }
+  return `${listItems.slice(0, -1).join(", ")}, and ${listItems[listItems.length - 1]}`;
+}
+
+function buildQueryContractReadinessSummary(
+  queryContract: ExternalQueryContractDescriptor | null,
+  queryRequestSchema: QueryContractSchemaDocument | null,
+  queryResponseSchema: QueryContractSchemaDocument | null,
+): string {
+  const missingContractParts: string[] = [];
+
+  if (!queryContract) {
+    missingContractParts.push("the live contract descriptor is unavailable");
+  }
+  if (!queryRequestSchema) {
+    missingContractParts.push("the request schema is unavailable");
+  }
+  if (!queryResponseSchema) {
+    missingContractParts.push("the response schema is unavailable");
+  }
+
+  if (missingContractParts.length === 0) {
+    return "Live descriptor plus request/response schemas are all available for replacement employee UIs.";
+  }
+
+  return `Replacement query contract is degraded because ${joinHumanReadableList(missingContractParts)}.`;
+}
+
 function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
   return runtimeHealth?.components.filter((component) => component.status !== "ready") ?? [];
 }
@@ -698,6 +732,11 @@ export function DeveloperConsole() {
   const responseSchemaPropertySummary = queryResponseSchema
     ? summarizeSchemaProperties(queryResponseSchema, ["id", "object", "choices", "x_cortex"])
     : "Schema unavailable";
+  const queryContractReadinessSummary = buildQueryContractReadinessSummary(
+    queryContract,
+    queryRequestSchema,
+    queryResponseSchema,
+  );
   const workerStartupSummary = workerStartupHealth == null
     ? "Worker startup contract is still loading."
     : workerStartupHealth.blockingPhase === "none"
@@ -1189,6 +1228,10 @@ export function DeveloperConsole() {
                       ? "This package exposes the query host as an API-only surface for a client-owned employee UI."
                       : "This package ships the built-in query-web employee UI."}
                   </p>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <strong>Replacement query contract readiness</strong>
+                  <p style={{ marginTop: 6 }}>{queryContractReadinessSummary}</p>
                 </div>
                 {queryContract ? (
                   <div style={{ marginTop: 12 }}>
