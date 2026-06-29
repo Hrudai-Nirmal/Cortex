@@ -183,12 +183,14 @@ combining:
 - active immutable pipeline presence
 - validated-but-not-yet-promoted pipeline versions
 - live external query-contract availability
+- live replacement-query request/response schema availability
 - the outcome of the latest persisted evidence-bearing trace
 
 That same Settings lane now also summarizes the live replacement-query request and
 response schema titles plus their top-level fields. Operators can confirm the actual
 client-owned chat UI wire shape there without leaving the fixed console for
-`package:status` or raw JSON endpoints.
+`package:status` or raw JSON endpoints, and the release gate now stays degraded until
+those schema endpoints are live alongside the contract descriptor.
 
 Inside the `Sources` and `Jobs` tabs, the selected detail cards also keep polling their
 persisted records while the surrounding lists refresh. That means operators can stay on

@@ -325,8 +325,12 @@ function buildReleaseGateItems(
   activeVersion: PipelineVersionSummary | null,
   validatedVersions: PipelineVersionSummary[],
   queryContract: ExternalQueryContractDescriptor | null,
+  queryRequestSchema: QueryContractSchemaDocument | null,
+  queryResponseSchema: QueryContractSchemaDocument | null,
   latestTrace: TraceSummary | null,
 ): ReleaseGateItem[] {
+  const hasReplacementQuerySchemas = Boolean(queryRequestSchema && queryResponseSchema);
+
   return [
     {
       label: "Static package contract",
@@ -397,6 +401,16 @@ function buildReleaseGateItems(
         : "Restore GET /v1/chat/contracts/v1 before treating this package as integration-ready.",
     },
     {
+      label: "Replacement query schemas",
+      status: hasReplacementQuerySchemas ? "ready" : "degraded",
+      detail: hasReplacementQuerySchemas
+        ? "Live request/response schemas are available for replacement employee UIs."
+        : "Replacement query schemas are unavailable to client-owned employee shells.",
+      remediation: hasReplacementQuerySchemas
+        ? "Keep request and response schemas aligned with the live contract before updating bundled or client-owned chat surfaces."
+        : "Publish GET /v1/chat/contracts/v1 plus its request/response schema endpoints so replacement UIs can validate the live wire contract before sending traffic.",
+    },
+    {
       label: "Evidence sample",
       status: latestTrace?.outcome === "sufficient" ? "ready" : "degraded",
       detail: latestTrace
@@ -460,6 +474,8 @@ export function DeveloperConsole() {
     activeVersion,
     validatedVersions,
     queryContract,
+    queryRequestSchema,
+    queryResponseSchema,
     latestTrace,
   );
   const releaseBlockers = releaseGateItems.filter((item) => item.status !== "ready");

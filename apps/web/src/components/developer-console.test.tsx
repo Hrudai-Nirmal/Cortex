@@ -391,6 +391,8 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Client query contract")).toBeVisible();
     expect(screen.getByText("Operator release gate")).toBeVisible();
     expect(screen.getByText("Static package contract")).toBeVisible();
+    expect(screen.getByText("Replacement query schemas")).toBeVisible();
+    expect(screen.getByText("Live request/response schemas are available for replacement employee UIs.")).toBeVisible();
     expect(screen.getByText("Latest trace 4576b626 finished with outcome sufficient.")).toBeVisible();
     expect(screen.getByText("Version v4 is validated but not yet activated.")).toBeVisible();
     expect(screen.getByText("Bundled employee shell")).toBeVisible();
@@ -569,9 +571,10 @@ describe("DeveloperConsole", () => {
     expect(await screen.findByText("Surface deployment contract")).toBeVisible();
     expect(screen.getByText("Operator release gate")).toBeVisible();
     expect(screen.getByText("Database, model endpoint, storage, and runtime dependencies are currently healthy.")).toBeVisible();
+    expect(screen.getByText("Replacement query schemas are unavailable to client-owned employee shells.")).toBeVisible();
     expect(screen.getByText("No persisted trace is available yet to demonstrate retrieval, claims, and citations.")).toBeVisible();
     expect(screen.getByText("Release blockers")).toBeVisible();
-    expect(screen.getByText("4")).toBeVisible();
+    expect(screen.getByText("5")).toBeVisible();
     expect(screen.getByText("External client-owned employee shell")).toBeVisible();
     expect(screen.getAllByText("This package exposes the query host as an API-only surface for a client-owned employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
