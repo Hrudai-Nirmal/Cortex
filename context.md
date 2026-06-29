@@ -103,6 +103,9 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - Package verification now also proves that same `external` query-surface mode at the routed
   browser boundary by requiring `GET /` on the query host to return `404`, so a client-owned
   employee surface cannot silently regress into a leaked bundled shell.
+- `package:up` now enforces that same API-only root check during bootstrap, so packaged
+  external-query deployments fail before operators treat the rollout as healthy if the query
+  host accidentally serves a bundled browser shell.
 - `package:status` now also prints the query-host root response code in `external` mode so
   operators can confirm the employee surface is intentionally API-only without probing the
   edge proxy by hand.

@@ -177,6 +177,8 @@ The package now includes:
   accidentally leaking a bundled employee shell
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - package bootstrap now also proves both routed browser hosts publish the expected `cortex-runtime-config.js` values and no-store cache policy before declaring the package healthy
+- package bootstrap now also proves `querySurfaceMode=external` packages keep the query host
+  API-only at `/`, so operators fail fast if the employee host accidentally leaks a bundled shell
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
 - the fixed console now also shows that shared worker-startup contract directly from
   `GET /health/worker-startup`, including whether the durable loop is blocked during

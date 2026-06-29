@@ -191,8 +191,11 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'assert_runtime_config_cache_header "$CORTEX_QUERY_HOST"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host runtime readiness"' in scriptText
     assert 'else' in scriptText
+    assert 'read_status_code() {' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"' in scriptText
+    assert 'assert_external_query_root_api_only "$CORTEX_QUERY_HOST"' in scriptText
+    assert 'external query host should return HTTP 404 at / but returned ${status_code}' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'wait_for_worker_startup_check' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText

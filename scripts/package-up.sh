@@ -172,6 +172,12 @@ read_text() {
   curl --silent --show-error --fail -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
 }
 
+read_status_code() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error -o /dev/null -w "%{http_code}" -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 assert_surface_header() {
   local host="$1"
   local expected_surface="$2"
@@ -212,6 +218,18 @@ assert_runtime_config_cache_header() {
   if ! printf "%s" "$headers" | grep -qi '^Cache-Control: no-store, no-cache, must-revalidate$'; then
     echo "Expected ${host} runtime config to be served with Cache-Control: no-store, no-cache, must-revalidate." >&2
     printf "%s\n" "$headers" >&2
+    exit 1
+  fi
+}
+
+assert_external_query_root_api_only() {
+  local host="$1"
+  local status_code=""
+
+  status_code="$(read_status_code "$host" "/")"
+  if [ "$status_code" != "404" ]; then
+    echo "Package startup failed: external query host should return HTTP 404 at / but returned ${status_code}." >&2
+    print_compose_diagnostics
     exit 1
   fi
 }
@@ -390,6 +408,7 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
 else
   wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"
   wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"
+  assert_external_query_root_api_only "$CORTEX_QUERY_HOST"
 fi
 wait_for_query_contract
 wait_for_worker_startup_check
