@@ -158,8 +158,12 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:up` waits for `startup` and `ready` on both browser hosts
 - `package:up` confirms that the console host emits `X-Cortex-Surface: console`
   and the query host emits `X-Cortex-Surface: query`
-- `package:up` now also proves both routed browser hosts publish the expected runtime
-  `cortex-runtime-config.js` values and no-store cache policy before reporting success
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, `package:up` now also proves both routed browser
+  hosts publish the expected runtime `cortex-runtime-config.js` values and no-store cache
+  policy before reporting success
+- when `CORTEX_QUERY_SURFACE_MODE=external`, `package:up` instead proves the employee host
+  is API-only by requiring `GET /` to return `404` while still carrying
+  `X-Cortex-Surface: query`
 - package helper scripts now fail early with a clear operator message when Docker is
   installed but the daemon/runtime is not reachable
 - `package:up` blocks early on placeholder domains, non-HTTPS public URLs, relative object-storage roots, and unintended public model endpoints
@@ -169,8 +173,12 @@ The packaged operator scripts now verify the split-host contract directly:
 - `package:status` now also prints the startup-health deployment contract summary for
   the live console/query public URLs, fail-closed startup policy, and declared
   `querySurfaceMode`
-- `package:status` prints the runtime `cortex-runtime-config.js` public URLs served by both browser hosts
-- `package:status` also prints the observed runtime-config cache policy so operators can confirm browser clients are not caching stale host mappings after a rollout
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, `package:status` prints the runtime
+  `cortex-runtime-config.js` public URLs served by both browser hosts plus the observed
+  no-store cache policy
+- when `CORTEX_QUERY_SURFACE_MODE=external`, `package:status` reports the query host as
+  `external-query-ui (not bundled)` and prints the employee-host root status so operators
+  can confirm it stays API-only
 - `package:status` prints the worker startup-check result from the running package
 - the fixed console also reads the shared `GET /health/worker-startup` contract so operators
   can inspect durable-job safety without leaving the product, while `package:verify` still
@@ -182,8 +190,9 @@ The packaged operator scripts now verify the split-host contract directly:
 - that contract summary now also includes `querySurfaceMode` and `bundledQueryUiAvailable`
   so operators can confirm whether the running package ships `query-web` or expects a
   client-owned employee shell
-- `package:verify` confirms both browser hosts expose the expected runtime `cortex-runtime-config.js` values for console/query public URLs
-- `package:verify` confirms both browser hosts serve `cortex-runtime-config.js` with a `no-store` cache policy
+- when `CORTEX_QUERY_SURFACE_MODE=bundled`, `package:verify` confirms both browser hosts
+  expose the expected runtime `cortex-runtime-config.js` values for console/query public
+  URLs and that both serve the file with a `no-store` cache policy
 - `package:verify` confirms the query host publishes `GET /v1/chat/contracts/v1` for replacement UI discovery
 - `package:verify` also confirms the query host publishes the live request/response schema endpoints for replacement UI validation
 - `package:verify` now also confirms the startup-health `deployment-config` detail still
@@ -198,9 +207,11 @@ The packaged operator scripts now verify the split-host contract directly:
 - the edge proxy grants `/v1/` requests a 300-second upstream read/send window so offline local-model calls can complete behind Nginx without surfacing a false `504`
 
 In `external` query-surface mode, those operator scripts keep the API/contract checks on
-the query host but intentionally skip `query-web` HTML/runtime-config assertions. The
-package reports that mode explicitly so operators can tell “client-owned employee shell”
-from “broken bundled employee shell” without inspecting compose files by hand.
+the query host, intentionally skip bundled `query-web` HTML/runtime-config assertions,
+and prove the employee host is still the routed Cortex query surface by checking both
+`GET / -> 404` and `X-Cortex-Surface: query`. The package reports that mode explicitly so
+operators can tell “client-owned employee shell” from “broken bundled employee shell”
+without inspecting compose files by hand.
 
 ## Development Defaults
 
