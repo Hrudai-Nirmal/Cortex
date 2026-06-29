@@ -69,6 +69,12 @@ read_headers() {
   curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
 }
 
+read_status_code() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error -o /dev/null -w "%{http_code}" -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 require_command curl
 require_command docker
 require_docker_daemon
@@ -119,6 +125,12 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
   assert_contains "$query_runtime_config" "consolePublicUrl: \"${CORTEX_CONSOLE_PUBLIC_URL}\"" "query runtime-config consolePublicUrl"
   assert_contains "$query_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "query runtime-config queryPublicUrl"
 else
+  query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"
+  if [ "$query_root_status" != "404" ]; then
+    echo "Package verification failed: external query host should return HTTP 404 at / but returned ${query_root_status}." >&2
+    echo "Run pnpm package:status for the current routed health and contract summary." >&2
+    exit 1
+  fi
   echo "Package verification: query host is running in external-query mode; skipping bundled query-web shell checks."
 fi
 

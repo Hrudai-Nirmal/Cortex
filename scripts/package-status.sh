@@ -43,6 +43,12 @@ read_headers() {
   curl --silent --show-error --fail -D - -o /dev/null -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}" | tr -d '\r'
 }
 
+read_status_code() {
+  local host="$1"
+  local path="$2"
+  curl --silent --show-error -o /dev/null -w "%{http_code}" -H "Host: ${host}" "http://127.0.0.1:${CORTEX_EDGE_PORT}${path}"
+}
+
 read_text() {
   local host="$1"
   local path="$2"
@@ -348,7 +354,9 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
   query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
   print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"
 else
+  query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"
   echo "  ${CORTEX_QUERY_HOST} -> external-query-ui (not bundled)"
+  echo "  query host root status: ${query_root_status} (expected 404 for API-only mode)"
 fi
 print_health "console startup" "$startup_payload"
 print_health "console ready" "$ready_payload"

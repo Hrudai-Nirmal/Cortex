@@ -97,6 +97,12 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
   declared query-surface mode, so package readiness cannot drift behind a generic green
   health status.
 - The package scripts now keep those same query-contract checks active even when the employee chat shell is client-owned: in `external` query-surface mode they skip bundled `query-web` HTML/runtime-config assertions, switch the edge proxy to the API-only template, and report `external-query-ui (not bundled)` so operators can tell intentional surface omission from an actual packaging failure.
+- Package verification now also proves that same `external` query-surface mode at the routed
+  browser boundary by requiring `GET /` on the query host to return `404`, so a client-owned
+  employee surface cannot silently regress into a leaked bundled shell.
+- `package:status` now also prints the query-host root response code in `external` mode so
+  operators can confirm the employee surface is intentionally API-only without probing the
+  edge proxy by hand.
 - The fixed console now also falls back to startup-health deployment metadata when the contract endpoint is unavailable, so operators can still see whether the intended query-surface mode is bundled or client-owned during partial outages.
 - The fixed console and packaged API now expose a shared `GET /health/worker-startup`
   contract that mirrors the worker CLI startup gate with phase-aware status and blocking

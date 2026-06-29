@@ -169,6 +169,9 @@ The package now includes:
 - browser runtime-config delivery that serves `cortex-runtime-config.js` with `Cache-Control: no-store, no-cache, must-revalidate` so client-domain changes take effect immediately after a rollout instead of lingering in browser caches
 - package verification that also runs the worker startup check so durable job readiness is proven alongside API/browser readiness
 - package verification that checks query-contract route and abstention headers so third-party chat shells can rely on the packaged facade behavior
+- package verification now also proves `querySurfaceMode=external` deployments keep the
+  query host API-only by requiring `GET /` on the query host to return `404` instead of
+  accidentally leaking a bundled employee shell
 - package bootstrap/status now prove both routed browser hosts resolve to the expected Cortex surfaces before operators treat the package as healthy
 - package bootstrap now also proves both routed browser hosts publish the expected `cortex-runtime-config.js` values and no-store cache policy before declaring the package healthy
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
@@ -188,6 +191,8 @@ The package now includes:
 - package status now also prints the live startup deployment contract summary for the
   shipped console/query public URLs, fail-closed startup policy, and query-surface mode
 - package status now prints the browser runtime-config public URLs exposed by both frontend hosts so operators can catch split-host drift without opening dev tools
+- package status now also reports the query-host root response code in `external` mode so
+  operators can confirm the client-owned employee surface is truly API-only
 - frontend surface config that keeps localhost defaults for development but rejects missing, placeholder, localhost, non-HTTPS, or nested-path public URLs inside packaged production browser builds
 - frontend runtime-config injection that reads `CORTEX_CONSOLE_PUBLIC_URL` and `CORTEX_QUERY_PUBLIC_URL` at container startup so browser-surface links stay aligned with the deployed client domains
 - fixed-console cross-surface navigation that prefers the runtime deployment contract from `GET /health/startup`, so the “Open employee view” link follows the live packaged query host instead of stale local browser assumptions when package state drifts
