@@ -284,6 +284,33 @@ function buildQueryContractReadinessSummary(
   return `Replacement query contract is degraded because ${joinHumanReadableList(missingContractParts)}.`;
 }
 
+function buildWorkerReadinessSummary(
+  workerStartupHealth: WorkerStartupHealth | null,
+): string {
+  if (workerStartupHealth == null) {
+    return "Durable worker readiness is still loading.";
+  }
+  if (workerStartupHealth.blockingPhase === "none") {
+    return "Durable worker readiness is ready through shared startup and live-readiness checks.";
+  }
+
+  const degradedReasons: string[] = [];
+  if (workerStartupHealth.startupStatus !== "ready") {
+    degradedReasons.push("startup-safe checks are blocked");
+  }
+  if (workerStartupHealth.liveReadinessStatus === "degraded") {
+    degradedReasons.push("live runtime readiness is blocked");
+  }
+  if (workerStartupHealth.blockingPhase === "exception") {
+    degradedReasons.push("worker startup health could not be collected");
+  }
+  if (degradedReasons.length === 0) {
+    degradedReasons.push("worker startup checks are blocked");
+  }
+
+  return `Durable worker readiness is degraded because ${joinHumanReadableList(degradedReasons)}.`;
+}
+
 function getNonReadyComponents(runtimeHealth: RuntimeHealth | null) {
   return runtimeHealth?.components.filter((component) => component.status !== "ready") ?? [];
 }
@@ -737,6 +764,7 @@ export function DeveloperConsole() {
     queryRequestSchema,
     queryResponseSchema,
   );
+  const durableWorkerReadinessSummary = buildWorkerReadinessSummary(workerStartupHealth);
   const workerStartupSummary = workerStartupHealth == null
     ? "Worker startup contract is still loading."
     : workerStartupHealth.blockingPhase === "none"
@@ -1116,6 +1144,13 @@ export function DeveloperConsole() {
                 {identityProfile?.remediation ? (
                   <p style={{ marginTop: 8 }}><strong>Operator note:</strong> {identityProfile.remediation}</p>
                 ) : null}
+              </div>
+              <div className="source-form-card" style={{ marginTop: 16 }}>
+                <div className="source-form-card__heading">
+                  <Play aria-hidden size={18} />
+                  <strong>Durable worker readiness</strong>
+                </div>
+                <p>{durableWorkerReadinessSummary}</p>
               </div>
               <div className="source-form-card" style={{ marginTop: 16 }}>
                 <div className="source-form-card__heading">

@@ -419,6 +419,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getByText("Model profile")).toBeVisible();
     expect(screen.getByText("Package build profile")).toBeVisible();
     expect(screen.getByText("Identity profile")).toBeVisible();
+    expect(screen.getByText("Durable worker readiness")).toBeVisible();
+    expect(screen.getByText("Durable worker readiness is degraded because live runtime readiness is blocked.")).toBeVisible();
     expect(screen.getByText("Worker startup contract")).toBeVisible();
     expect(screen.getByText("Blocked during live readiness.")).toBeVisible();
     expect(screen.getByText("Durable worker startup")).toBeVisible();
@@ -581,6 +583,8 @@ describe("DeveloperConsole", () => {
     expect(screen.getAllByText("This package exposes the query host as an API-only surface for a client-owned employee UI.").length).toBeGreaterThan(0);
     expect(screen.getByText("Replacement query contract readiness")).toBeVisible();
     expect(screen.getByText("Replacement query contract is degraded because the live contract descriptor is unavailable, the request schema is unavailable, and the response schema is unavailable.")).toBeVisible();
+    expect(screen.getByText("Durable worker readiness")).toBeVisible();
+    expect(screen.getByText("Durable worker readiness is ready through shared startup and live-readiness checks.")).toBeVisible();
     expect(screen.getByText("Fail-closed startup gate")).toBeVisible();
     expect(screen.getByText("Worker startup contract")).toBeVisible();
     expect(screen.getByText("Ready through shared startup and live-readiness checks.")).toBeVisible();

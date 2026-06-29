@@ -40,6 +40,8 @@ The console settings view now foregrounds:
 - packaged build profile
 - packaged identity profile
 - packaged query-surface mode (`bundled` or `external`)
+- one durable-worker readiness summary that tells operators whether the shared worker
+  startup contract is ready before trusting background job processing
 - live replacement-query contract metadata from the running API
 - one replacement-query contract readiness summary that tells operators whether the live
   descriptor plus both request/response schemas are all available
