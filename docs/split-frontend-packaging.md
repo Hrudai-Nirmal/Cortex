@@ -183,6 +183,9 @@ The packaged operator scripts now verify the split-host contract directly:
   `external-query-ui (not bundled)` and prints the employee-host root status so operators
   can confirm it stays API-only
 - `package:status` prints the worker startup-check result from the running package
+- `package:status` now also emits a single `durable worker readiness` summary so
+  operators can see whether the routed worker-startup contract and the in-container
+  worker probe still agree without manually comparing two separate sections
 - the fixed console also reads the shared `GET /health/worker-startup` contract so operators
   can inspect durable-job safety without leaving the product, while `package:verify` still
   proves that same gate inside the real worker container

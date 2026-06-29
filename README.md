@@ -186,6 +186,7 @@ The package now includes:
 - package bootstrap now also checks that the live query contract advertises the expected
   `querySurfaceMode` and `bundledQueryUiAvailable` values before the rollout is considered healthy
 - package bootstrap/status now also show whether the worker startup check passes, so operators can distinguish “UI/API look healthy” from “safe to process jobs”
+- package status now also prints a single durable-worker readiness summary so operators can see whether the routed worker-startup contract and the in-container worker probe still agree
 - the fixed console now also shows that shared worker-startup contract directly from
   `GET /health/worker-startup`, including whether the durable loop is blocked during
   startup-safe checks or live readiness

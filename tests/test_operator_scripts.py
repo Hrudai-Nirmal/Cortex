@@ -256,8 +256,13 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_schema_summary "query request schema" "$query_request_schema_payload"' in scriptText
     assert 'print_schema_summary "query response schema" "$query_response_schema_payload"' in scriptText
     assert 'print_worker_contract_summary "$worker_startup_payload"' in scriptText
+    assert 'print_worker_readiness_summary "$worker_startup_payload" "$worker_probe_status"' in scriptText
+    assert "durable worker readiness:" in scriptText
+    assert "worker startup contract degraded" in scriptText
+    assert "worker exec probe blocked" in scriptText
     assert "worker startup contract:" in scriptText
     assert "blocking phase:" in scriptText
+    assert 'worker_probe_status="unknown"' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
     assert 'if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then' in scriptText
     assert 'read_text "$CORTEX_QUERY_HOST" "/cortex-runtime-config.js"' in scriptText
@@ -276,6 +281,7 @@ def testPackageStatusReportsBothHostsAndSurfaceIdentity() -> None:
     assert 'print_worker_status' in scriptText
     assert 'python -m cortex.worker --check-startup >/dev/null 2>&1' in scriptText
     assert 'echo "worker startup: ready"' in scriptText
+    assert 'echo "worker startup: blocked"' in scriptText
 
 
 def testSupportingPackageScriptsAlsoCheckDockerDaemon() -> None:

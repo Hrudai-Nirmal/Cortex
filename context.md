@@ -96,6 +96,10 @@ Cortex builds tailored, dedicated-per-client RAG deployments. Within each enterp
 - `package:status` now also collapses that same descriptor-plus-schema check into a single
   `replacement query contract readiness` summary, so operators can spot an incomplete
   third-party chat integration boundary without manually comparing three separate sections.
+- `package:status` now also collapses the routed `GET /health/worker-startup` payload plus
+  the in-container worker exec probe into one `durable worker readiness` summary, so
+  operators can catch disagreement between “API says jobs are safe” and “worker cannot
+  actually enter its loop” without reconciling two separate outputs by hand.
 - `package:status` now degrades gracefully when the live query-contract endpoint is unavailable, so operators still get the rest of the split-host/runtime summary instead of losing the entire status view to one missing dependency.
 - `package:status` now also lifts the startup-health `deployment-config` detail into a
   first-class deployment-contract summary for console/query public URLs, fail-closed

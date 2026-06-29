@@ -292,10 +292,51 @@ print_worker_status() {
   if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T worker \
     python -m cortex.worker --check-startup >/dev/null 2>&1; then
     echo "worker startup: ready"
+    return 0
   else
     echo "worker startup: blocked"
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=20 worker 2>/dev/null || true
+    return 1
   fi
+}
+
+print_worker_readiness_summary() {
+  local payload="$1"
+  local worker_probe_status="$2"
+  local contract_status="unknown"
+  local summary_status="ready"
+  local degraded_reasons=()
+
+  if command -v python3 >/dev/null 2>&1; then
+    contract_status="$(
+      WORKER_STARTUP_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["WORKER_STARTUP_PAYLOAD"])
+print(payload.get("status", "unknown"))
+PY
+    )"
+  fi
+
+  if [ "$contract_status" != "ready" ]; then
+    summary_status="degraded"
+    degraded_reasons+=("worker startup contract degraded")
+  fi
+  if [ "$worker_probe_status" != "ready" ]; then
+    summary_status="degraded"
+    degraded_reasons+=("worker exec probe blocked")
+  fi
+
+  echo "durable worker readiness:"
+  if [ "$summary_status" = "ready" ]; then
+    echo "  - status: ready"
+    echo "  - detail: routed worker startup contract and in-container worker probe are both ready"
+    return 0
+  fi
+
+  echo "  - status: degraded"
+  echo "  - detail: $(IFS=', '; echo "${degraded_reasons[*]}")"
 }
 
 print_worker_contract_summary() {
@@ -352,6 +393,7 @@ ready_payload="$(read_json "$CORTEX_CONSOLE_HOST" "/health/ready")"
 query_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/startup")"
 query_ready_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/ready")"
 worker_startup_payload="$(read_json "$CORTEX_QUERY_HOST" "/health/worker-startup")"
+worker_probe_status="unknown"
 query_contract_payload=""
 query_contract_error=""
 query_request_schema_payload=""
@@ -407,4 +449,9 @@ print_query_contract_readiness "$query_contract_payload" "$query_request_schema_
 print_schema_summary "query request schema" "$query_request_schema_payload"
 print_schema_summary "query response schema" "$query_response_schema_payload"
 print_worker_contract_summary "$worker_startup_payload"
-print_worker_status
+if print_worker_status; then
+  worker_probe_status="ready"
+else
+  worker_probe_status="blocked"
+fi
+print_worker_readiness_summary "$worker_startup_payload" "$worker_probe_status"
