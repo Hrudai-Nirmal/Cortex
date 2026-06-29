@@ -408,6 +408,7 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
 else
   wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"
   wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"
+  assert_surface_header "$CORTEX_QUERY_HOST" "query"
   assert_external_query_root_api_only "$CORTEX_QUERY_HOST"
 fi
 wait_for_query_contract

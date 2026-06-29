@@ -355,6 +355,8 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
   print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"
 else
   query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"
+  query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
+  print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"
   echo "  ${CORTEX_QUERY_HOST} -> external-query-ui (not bundled)"
   echo "  query host root status: ${query_root_status} (expected 404 for API-only mode)"
 fi

@@ -126,11 +126,13 @@ if [ "$CORTEX_QUERY_SURFACE_MODE" = "bundled" ]; then
   assert_contains "$query_runtime_config" "queryPublicUrl: \"${CORTEX_QUERY_PUBLIC_URL}\"" "query runtime-config queryPublicUrl"
 else
   query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"
+  query_root_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"
   if [ "$query_root_status" != "404" ]; then
     echo "Package verification failed: external query host should return HTTP 404 at / but returned ${query_root_status}." >&2
     echo "Run pnpm package:status for the current routed health and contract summary." >&2
     exit 1
   fi
+  assert_contains "$query_root_headers" "X-Cortex-Surface: query" "external query surface header"
   echo "Package verification: query host is running in external-query mode; skipping bundled query-web shell checks."
 fi
 

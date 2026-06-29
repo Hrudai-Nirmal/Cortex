@@ -194,6 +194,7 @@ def testPackageUpPrintsStructuredStartupFailures() -> None:
     assert 'read_status_code() {' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/startup" "query-host api startup validation"' in scriptText
     assert 'wait_for_health_ready "$CORTEX_QUERY_HOST" "/health/ready" "query-host api runtime readiness"' in scriptText
+    assert 'assert_surface_header "$CORTEX_QUERY_HOST" "query"' in scriptText
     assert 'assert_external_query_root_api_only "$CORTEX_QUERY_HOST"' in scriptText
     assert 'external query host should return HTTP 404 at / but returned ${status_code}' in scriptText
     assert 'echo "Query surface mode: ${CORTEX_QUERY_SURFACE_MODE}"' in scriptText
@@ -298,8 +299,10 @@ def testPackageVerifySupportsExternalQueryUiMode() -> None:
     assert 'assert_contains "$query_runtime_config" "queryPublicUrl: \\"${CORTEX_QUERY_PUBLIC_URL}\\"" "query runtime-config queryPublicUrl"' in verifyText
     assert 'else' in verifyText
     assert 'query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"' in verifyText
+    assert 'query_root_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"' in verifyText
     assert 'if [ "$query_root_status" != "404" ]; then' in verifyText
     assert 'Package verification failed: external query host should return HTTP 404 at / but returned ${query_root_status}.' in verifyText
+    assert 'assert_contains "$query_root_headers" "X-Cortex-Surface: query" "external query surface header"' in verifyText
     assert 'echo "Package verification: query host is running in external-query mode; skipping bundled query-web shell checks."' in verifyText
     assert 'assert_contains "$(read_json "$CORTEX_QUERY_HOST" "/health/live")" \'"status"\' "query live health payload"' in verifyText
     assert 'query_contract="$(read_json "$CORTEX_QUERY_HOST" "/v1/chat/contracts/v1")"' in verifyText
@@ -311,4 +314,6 @@ def testPackageStatusReportsApiOnlyQueryRootInExternalMode() -> None:
     scriptText = (rootDirectory / "scripts" / "package-status.sh").read_text(encoding="utf-8")
     assert 'read_status_code() {' in scriptText
     assert 'query_root_status="$(read_status_code "$CORTEX_QUERY_HOST" "/")"' in scriptText
+    assert 'query_headers="$(read_headers "$CORTEX_QUERY_HOST" "/")"' in scriptText
+    assert 'print_surface_identity "$CORTEX_QUERY_HOST" "$query_headers"' in scriptText
     assert 'query host root status: ${query_root_status} (expected 404 for API-only mode)' in scriptText
