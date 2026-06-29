@@ -145,7 +145,11 @@ services:
       console-web:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --header='Host: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}' -qO- http://127.0.0.1:8080/ >/dev/null || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 20

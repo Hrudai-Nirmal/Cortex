@@ -94,6 +94,33 @@ def testDockerComposePackageDefaultsStayOfflineCapable() -> None:
     assert 'test: ["CMD-SHELL", "python -m cortex.worker --check-startup"]' in composeText
 
 
+def testEdgeHealthchecksRespectSplitHostRouting() -> None:
+    """Shipped edge healthchecks must probe a routed host instead of the unrouted bare root."""
+    rootDirectory = Path(__file__).resolve().parents[1]
+    bundledComposeText = (rootDirectory / "docker-compose.package.yml").read_text(
+        encoding="utf-8"
+    )
+    externalComposeText = (
+        rootDirectory / "docker-compose.package.external-query.yml"
+    ).read_text(encoding="utf-8")
+    ecsTaskFamilyText = (
+        rootDirectory / "infra" / "ecs" / "cortex-task-family.json"
+    ).read_text(encoding="utf-8")
+
+    expectedComposeHostHeader = (
+        "wget --header='Host: ${CORTEX_CONSOLE_HOST:-cortex-console.hrudainirmal.in}' "
+        "-qO- http://127.0.0.1:8080/ >/dev/null || exit 1"
+    )
+    expectedEcsProbe = (
+        '"command": ["CMD-SHELL", "wget --header=\'Host: cortex-console.example.com\' '
+        '-qO- http://127.0.0.1:8080/ >/dev/null"]'
+    )
+
+    assert expectedComposeHostHeader in bundledComposeText
+    assert expectedComposeHostHeader in externalComposeText
+    assert expectedEcsProbe in ecsTaskFamilyText
+
+
 def testShippedManifestsDeclareQuerySurfaceModeExplicitly() -> None:
     """Client deployment examples should pin bundled vs external query mode instead of relying on defaults."""
     rootDirectory = Path(__file__).resolve().parents[1]

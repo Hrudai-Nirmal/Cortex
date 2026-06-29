@@ -467,7 +467,7 @@ class QueryService:
         deterministicClaims = buildDeterministicExtractiveClaims(
             queryText=queryText,
             retrievedChunks=retrievedChunks,
-            minimumSupportScore=max(self.settings.sourceConfidenceThreshold, 0.7),
+            minimumSupportScore=self.settings.sourceConfidenceThreshold,
         )
         if deterministicClaims is not None:
             return deterministicClaims
@@ -566,7 +566,7 @@ class QueryService:
         if claimRows:
             return claimRows, citationRows, "sufficient"
         topChunk = retrievedChunks[0]
-        if topChunk.supportScore >= max(self.settings.sourceConfidenceThreshold, 0.7):
+        if resolveExtractiveEvidenceScore(topChunk) >= self.settings.sourceConfidenceThreshold:
             fallbackCitation = CitationSchema(
                 citationId="C1",
                 documentTitle=topChunk.documentTitle,
@@ -853,7 +853,7 @@ def buildDeterministicExtractiveClaims(
     if not retrievedChunks:
         return None
     topChunk = retrievedChunks[0]
-    if topChunk.supportScore < minimumSupportScore:
+    if resolveExtractiveEvidenceScore(topChunk) < minimumSupportScore:
         return None
     queryTokens = {
         token
@@ -889,6 +889,11 @@ def extractNumericValues(retrievedChunks: list[RetrievedChunk]) -> list[float]:
     for chunk in retrievedChunks[:3]:
         extractedValues.extend(float(value) for value in NUMBER_PATTERN.findall(chunk.content))
     return extractedValues
+
+
+def resolveExtractiveEvidenceScore(retrievedChunk: RetrievedChunk) -> float:
+    """Use the strongest evidence-quality signal when deciding exact extractive answers."""
+    return max(retrievedChunk.sourceScore, retrievedChunk.supportScore)
 
 
 def buildCitations(retrievedChunks: list[RetrievedChunk]) -> list[CitationSchema]:

@@ -60,6 +60,49 @@ async def testDeterministicExtractiveClaimsSkipGeneratorForStrongTopEvidence() -
     assert citations[0].exactSpan == claims[0].text
 
 
+@pytest.mark.asyncio
+async def testDeterministicExtractiveClaimsRespectConfiguredSupportThreshold() -> None:
+    """Configured support thresholds should govern exact extractive answers in packaged profiles."""
+    settings = Settings(
+        environment="test",
+        requiredAccelerator="cpu",
+        sourceConfidenceThreshold=0.58,
+    )
+    modelProvider = GuardModelProvider()
+    service = QueryService(
+        session=object(),
+        settings=settings,
+        modelProvider=modelProvider,
+    )
+
+    claims, citations, evidenceStatus = await service._generateValidatedClaims(
+        [
+            RetrievedChunk(
+                chunkId="retention-v14",
+                content=(
+                    "Raw query and response content is retained for 30 days. Detailed traces "
+                    "are retained for 90 days."
+                ),
+                structuralLocator="p.1",
+                documentTitle="Cortex Retention Standard",
+                documentVersion="1.4",
+                fusedScore=0.51,
+                rerankScore=0.63,
+                sourceScore=0.8414,
+                supportScore=0.4053,
+                publishedAt=None,
+                metadata={},
+            )
+        ],
+        "What are our retention rules?",
+    )
+
+    assert modelProvider.wasCalled is False
+    assert evidenceStatus == "sufficient"
+    assert claims[0].text.startswith("Raw query and response content is retained for 30 days.")
+    assert citations[0].documentVersion == "1.4"
+
+
 def testRetrievedEvidenceRowsProjectPersistedTracePayload() -> None:
     """Persisted trace payloads should expose operator-friendly ranked evidence rows."""
     evidenceRows = buildRetrievedEvidenceRows(
